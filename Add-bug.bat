@@ -154,7 +154,14 @@ sub syncFieldsWithClearQuest {
 	INFO "Synchronization of Clearquest fields is required.";
 	
 	my $session = CQSession::Build(); 
-	$session->UserLogon ($Config{clearquest}->{login}, $Config{clearquest}->{password}, "atvcm", "");
+	
+	eval( '$session->UserLogon ($Config{clearquest}->{login}, $Config{clearquest}->{password}, "atvcm", "")' );
+	if($@) {
+		my $error_msg = $@;
+		DEBUG "Error message is : $error_msg";
+		ERROR "Clearquest database is not reachable actually. Check network settings. It can be considered as normal if you are not currently connected to the Alstom intranet" and return if($error_msg =~ /Unable to logon to the ORACLE database "cqueste"/);
+		LOGDIE "An unknown error has happened during Clearquest connection. Please report this issue.";
+	}
 	
 	my @fields = qw(sub_system submitter_CR_origin submitter_CR_type submitter_priority submitter_severity frequency product_version site defect_detection_phase zone);
 	
