@@ -252,6 +252,7 @@ my $balloon = $mw->Balloon();
 my $textSendLater;
 my $textSendNow;
 my $textSendAllNow;
+my $editMode = 1;
 
 # Building listboxes
 my @mandatoryFields;
@@ -284,12 +285,25 @@ push(@mandatoryFields, {Text => 'Description', CQ_Field => 'description' });
 # Building buttons
 my $bottomPanel = $mw->Frame() -> pack(-side => 'bottom', -fill => 'x');
 
-$bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2) -> pack(-side => 'left', -fill => 'x', -expand =>1);
-my $buttonSendLater = $bottomPanel->Button(-text => 'Add CR in memory', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, \%bugDescription, 0], -height => 2) -> pack(-side => 'left', -fill => 'x', -expand => 1);
-my $buttonSendNow = $bottomPanel->Button(-text => 'Add and send CR now', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, \%bugDescription, 1], -height => 2) -> pack(-side => 'left', -fill => 'x', -expand => 1);
-my $buttonSendAllNow = $bottomPanel->Button(-text => 'Send all CRs now', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, undef, -1], -height => 2) -> pack(-side => 'left', -fill => 'x', -expand => 1);
-my $buttonExport = $bottomPanel->Button(-text => 'Export', -font => 'arial 9 bold', -command => [ \&ExportEncryptedDb], -height => 2) -> pack(-side => 'right', -fill => 'x', -expand => 1);
+$bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => 10) -> pack(-side => 'left');
+$bottomPanel->Button(-text => "Switch\nmode",-font => 'arial 9', -command => [ \&switchActions], -height => 2, -width => 10) -> pack(-side => 'left');
 
+my $actionsPanel = $bottomPanel->Frame() -> pack(-side => 'right', -fill => 'x', -expand => 1);
+my $containerActions = $actionsPanel->Frame();
+
+my $buttonSendLater = $containerActions->Button(-text => 'Add CR in memory', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, \%bugDescription, 0], -height => 2) -> pack(-side => 'left', -fill => 'x', -expand => 1);
+my $buttonSendNow = $containerActions->Button(-text => 'Add and send CR now', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, \%bugDescription, 1], -height => 2) -> pack(-side => 'left', -fill => 'x', -expand => 1);
+my $buttonSendAllNow = $containerActions->Button(-text => 'Send all CRs now', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, undef, -1], -height => 2) -> pack(-side => 'left', -fill => 'x', -expand => 1);
+my $buttonExport = $containerActions->Button(-text => 'Export', -font => 'arial 9 bold', -command => [ \&ExportEncryptedDb], -height => 2) -> pack(-side => 'right', -fill => 'x', -expand => 1);
+
+my $containerEdit = $actionsPanel->Frame();
+my $navigationlabel = $containerEdit->Label(-text => "test" )->pack( -side => 'left', -fill => 'x', -expand => 1);
+my $buttonDelete = $containerEdit->Button(-text => 'Delete', -font => 'arial 9 bold', -command => [ \&ExportEncryptedDb], -width => 10, -height => 2) -> pack(-side => 'right');
+my $buttonModify = $containerEdit->Button(-text => 'Modify', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, undef, -1], -width => 10, -height => 2) -> pack(-side => 'right');
+my $buttonNext = $containerEdit->Button(-text => '> >', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, \%bugDescription, 1], -width => 5, -height => 2) -> pack(-side => 'right');
+my $buttonPrevious = $containerEdit->Button(-text => '< <', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, \%bugDescription, 0], -width => 5, -height => 2) -> pack(-side => 'right');
+
+switchActions();
 
 INFO "displaying graphical interface";
 my $results = getNumberOfBugs(1);
@@ -445,6 +459,22 @@ sub cancel {
 	$Thread->detach(); 
 	while($killThread == 1) { sleep 1; } # Wait that thread finishes.
 	exit(-1);
+}
+
+sub switchActions {
+	$editMode = ($editMode + 1) % 2;
+	
+	if($editMode) {
+		DEBUG "Edit mode is selected";
+		$containerActions->packForget();
+		$containerEdit->pack(-fill => 'both', -expand => 1);
+	}
+	else {
+		DEBUG "Action mode is selected";
+		$containerEdit->packForget();
+		$containerActions->pack(-fill => 'both', -expand => 1);
+	}
+	return;
 }
 
 sub AddAndSendCr {
