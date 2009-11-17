@@ -247,12 +247,15 @@ my @listSubSystems = @{$CqFieldsDesc{sub_system}{shortDesc}};
 #my @listSubSystems = ();
 my @listComponents = ();
 my %bugDescription;
+my %backupDescription;
 my $lastSelectedSubsystem = '';
 my $balloon = $mw->Balloon();
 my $textSendLater;
 my $textSendNow;
 my $textSendAllNow;
 my $editMode = 1;
+my $totalNumberOfBugs = 0;
+my $currentBugIndex = 0;
 
 # Building listboxes
 my @mandatoryFields;
@@ -286,7 +289,7 @@ push(@mandatoryFields, {Text => 'Description', CQ_Field => 'description' });
 my $bottomPanel = $mw->Frame() -> pack(-side => 'bottom', -fill => 'x');
 
 $bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => 10) -> pack(-side => 'left');
-$bottomPanel->Button(-text => "Switch\nmode",-font => 'arial 9', -command => [ \&switchActions], -height => 2, -width => 10) -> pack(-side => 'left');
+my $buttonSwitch = $bottomPanel->Button(-text => "Switch\nmode",-font => 'arial 9', -command => [ \&switchActions], -height => 2, -width => 10) -> pack(-side => 'left');
 
 my $actionsPanel = $bottomPanel->Frame() -> pack(-side => 'right', -fill => 'x', -expand => 1);
 my $containerActions = $actionsPanel->Frame();
@@ -297,11 +300,12 @@ my $buttonSendAllNow = $containerActions->Button(-text => 'Send all CRs now', -f
 my $buttonExport = $containerActions->Button(-text => 'Export', -font => 'arial 9 bold', -command => [ \&ExportEncryptedDb], -height => 2) -> pack(-side => 'right', -fill => 'x', -expand => 1);
 
 my $containerEdit = $actionsPanel->Frame();
-my $navigationlabel = $containerEdit->Label(-text => "test" )->pack( -side => 'left', -fill => 'x', -expand => 1);
-my $buttonDelete = $containerEdit->Button(-text => 'Delete', -font => 'arial 9 bold', -command => [ \&ExportEncryptedDb], -width => 10, -height => 2) -> pack(-side => 'right');
-my $buttonModify = $containerEdit->Button(-text => 'Modify', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, undef, -1], -width => 10, -height => 2) -> pack(-side => 'right');
-my $buttonNext = $containerEdit->Button(-text => '> >', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, \%bugDescription, 1], -width => 5, -height => 2) -> pack(-side => 'right');
-my $buttonPrevious = $containerEdit->Button(-text => '< <', -font => 'arial 9 bold', -command => [ \&AddAndSendCr, \%bugDescription, 0], -width => 5, -height => 2) -> pack(-side => 'right');
+my $navigationlabelText = "";
+my $navigationlabel = $containerEdit->Label(-textvariable => \$navigationlabelText )->pack( -side => 'left', -fill => 'x', -expand => 1);
+my $buttonDelete = $containerEdit->Button(-text => 'Delete', -state => "disabled", -font => 'arial 9 bold', -command => [ \&ExportEncryptedDb], -width => 10, -height => 2) -> pack(-side => 'right');
+my $buttonModify = $containerEdit->Button(-text => 'Modify', -state => "disabled", -font => 'arial 9 bold', -command => [ \&AddAndSendCr, undef, -1], -width => 10, -height => 2) -> pack(-side => 'right');
+my $buttonNext = $containerEdit->Button(-text => '> >', -font => 'arial 9 bold', -command => [ \&manageNavigation, 1], -width => 5, -height => 2) -> pack(-side => 'right');
+my $buttonPrevious = $containerEdit->Button(-text => '< <', -font => 'arial 9 bold', -command => [ \&manageNavigation, -1], -width => 5, -height => 2) -> pack(-side => 'right');
 
 switchActions();
 
@@ -316,7 +320,6 @@ MainLoop();
 ##########################################
 sub addBug {
 	my $bug = shift;
-	my $refreshLastBug = shift;
 	
 	my %bug = %$bug;
 	$bug{product} = $CqFieldsDesc{product};
@@ -324,18 +327,7 @@ sub addBug {
 	my %data;
 	%data = %{retrieve($bugsDatabase)} if -r $bugsDatabase;
 	
-	my %bug_trans;
-	foreach my $field (keys(%bug)) {
-		DEBUG "Processing field '$field'";
-		DEBUG "Skipped equivalence" and $bug_trans{$field} = $bug{$field} and next if($field eq "headline" or $field eq "description" or $field eq "product");
-		my $newText = $CqFieldsDesc{$field}{equivTable}{$bug{$field}};
-		$newText = $CqFieldsDesc{component}{equivTable}{$bug{sub_system}}{$bug{component}} if $field eq "component";
-		DEBUG "Value '$bug{$field}' has been associated with '$newText'";
-		$bug_trans{$field} = $newText;
-	}
-	
-	push(@{$data{bugList}}, \%bug_trans);
-	$data{lastBugInserted} = \%bug if $refreshLastBug;
+	push(@{$data{bugList}}, \%bug);
 	
 	store (\%data, $bugsDatabase) and $mw->messageBox(-title => "Information", -message => "Anomaly \"$bug{headline}\" has been registered inside offline database.", -type => 'ok', -icon => 'info');
 
@@ -350,6 +342,10 @@ sub addBug {
 
 sub sendCrToCQ {
 	my $session = shift;
+	
+	return 0 unless -r $CqDatabase;
+	my $CQFields = retrieve($CqDatabase);
+
 	return 0 unless -r $bugsDatabase;
 	my $data = retrieve($bugsDatabase);
 	
@@ -359,6 +355,16 @@ sub sendCrToCQ {
 	INFO "No bug to send to ClearQuest" and return 0 unless defined $bug->{headline};
 
 	INFO "Trying to send \"$bug->{headline}\"";
+	
+	my %bug_trans;
+	foreach my $field (keys(%bug)) {
+		DEBUG "Processing field '$field'";
+		DEBUG "Skipped equivalence" and $bug_trans{$field} = $bug{$field} and next if($field eq "headline" or $field eq "description" or $field eq "product");
+		my $newText = $CQFields->{$field}{equivTable}{$bug{$field}};
+		$newText = $CQFields->{component}{equivTable}{$bug{sub_system}}{$bug{component}} if $field eq "component";
+		DEBUG "Value '$bug{$field}' has been associated with '$newText'";
+		$bug_trans{$field} = $newText;
+	}
 		
 	####################################
 	
@@ -370,10 +376,10 @@ sub sendCrToCQ {
 	$rec->SetFieldValue('State', 'Submitted');
 	$rec->SetFieldValue('substate', 'new');
 	
-	$rec->SetFieldValue('product', $bug{product});
-	$rec->SetFieldValue('sub_system', $bug{sub_system});
+	$rec->SetFieldValue('product', $bug_trans{product});
+	$rec->SetFieldValue('sub_system', $bug_trans{sub_system});
 	
-	while(my($field, $value) = each(%bug)) {
+	while(my($field, $value) = each(%bug_trans)) {
 		next if ($field eq 'product' or $field eq 'sub_system'); # We can skip those because it is already selected
 		$rec->SetFieldValue($field, $value);
 	}
@@ -424,6 +430,47 @@ sub sendCrToCQ {
 	store ($data, $bugsDatabase) and return $insertionOK;
 }
 
+sub fillInterfaceWithBug {
+	my $bugToRetrieve = shift;
+	my %data = %{retrieve($bugsDatabase)} if -r $bugsDatabase;
+
+	my %tmpBug = %{$data{bugList}[$bugToRetrieve]};
+	
+	foreach my $key(keys(%tmpBug)) {
+		$bugDescription{$key} = $tmpBug{$key};
+	}
+	
+	$description->Contents($bugDescription{description});
+	
+	return;
+}
+
+sub manageNavigation {
+	my $newIndex = shift;
+	$totalNumberOfBugs = getNumberOfBugs();
+	
+	if($totalNumberOfBugs == 0) {
+		$currentBugIndex = 0;
+		switchActions() if $editMode;		
+	}
+	else {
+		$currentBugIndex += $newIndex if $newIndex;
+		$currentBugIndex = 0 if $currentBugIndex < 0;
+		$currentBugIndex = $totalNumberOfBugs - 1 if $currentBugIndex >= $totalNumberOfBugs;
+		
+		$navigationlabelText = "Viewing issue ".($currentBugIndex+1)."/$totalNumberOfBugs";
+		fillInterfaceWithBug($currentBugIndex);
+		
+		if(($currentBugIndex -1) < 0) { $buttonPrevious->configure(-state => "disabled"); }
+		else { $buttonPrevious->configure(-state => "normal"); }
+		
+		if(($currentBugIndex +1) < $totalNumberOfBugs) { $buttonNext->configure(-state => "normal"); }
+		else { $buttonNext->configure(-state => "disabled"); }	
+	}
+		
+	my $currentBugIndex = 0;
+}
+
 sub getNumberOfBugs {
 	my $alterButtons = shift;
 	my $nbrOfIssues = 0;
@@ -431,16 +478,20 @@ sub getNumberOfBugs {
 	my %data = %{retrieve($bugsDatabase)};
 	$nbrOfIssues = scalar(@{$data{bugList}}) if $data{bugList};
 	
-	if($alterButtons) {
-		if($nbrOfIssues > 0) {
-			$buttonSendAllNow->configure(-state => "normal");
-			$buttonExport->configure(-state => "normal");
-		}
-		else {
-			$buttonSendAllNow->configure(-state => "disabled");
-			$buttonExport->configure(-state => "disabled");
-		}
+	return $nbrOfIssues unless $alterButtons;
+	
+	if($nbrOfIssues > 0) {
+		$buttonSendAllNow->configure(-state => "normal");
+		$buttonExport->configure(-state => "normal");
+		$buttonSwitch->configure(-state => "normal");
 	}
+	else {
+		$buttonSendAllNow->configure(-state => "disabled");
+		$buttonExport->configure(-state => "disabled");
+		$buttonSwitch->configure(-state => "disabled");
+		switchActions() if $editMode;
+	}
+	
 	return $nbrOfIssues;
 }
 
@@ -466,11 +517,19 @@ sub switchActions {
 	
 	if($editMode) {
 		DEBUG "Edit mode is selected";
+		%backupDescription = %bugDescription;
 		$containerActions->packForget();
 		$containerEdit->pack(-fill => 'both', -expand => 1);
+		manageNavigation();
+
 	}
 	else {
 		DEBUG "Action mode is selected";
+		foreach my $key (keys(%bugDescription)) {
+			unless (exists $backupDescription{$key}) { $bugDescription{$key} = ''; next;  }
+			$bugDescription{$key} = $backupDescription{$key};
+		}
+		$description->Contents($bugDescription{description});
 		$containerEdit->packForget();
 		$containerActions->pack(-fill => 'both', -expand => 1);
 	}
@@ -558,7 +617,12 @@ sub addListBox {
 
 sub analyseListboxes {	
 	if($bugDescription{sub_system} and $bugDescription{sub_system} ne $lastSelectedSubsystem) {
-		@listComponents = @{$CqFieldsDesc{component}{shortDesc}{$bugDescription{sub_system}}};
+		if($CqFieldsDesc{component}{shortDesc}{$bugDescription{sub_system}}) {
+			@listComponents = @{$CqFieldsDesc{component}{shortDesc}{$bugDescription{sub_system}}};
+		}
+		else {
+			@listComponents = ();
+		}
 		$lastSelectedSubsystem = $bugDescription{sub_system};
 	}
 }
