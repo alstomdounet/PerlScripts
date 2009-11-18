@@ -302,8 +302,8 @@ my $buttonExport = $containerActions->Button(-text => 'Export', -font => 'arial 
 my $containerEdit = $actionsPanel->Frame();
 my $navigationlabelText = "";
 my $navigationlabel = $containerEdit->Label(-textvariable => \$navigationlabelText )->pack( -side => 'left', -fill => 'x', -expand => 1);
-my $buttonDelete = $containerEdit->Button(-text => 'Delete', -font => 'arial 9 bold', -command => [ \&deleteDisplayedBug], -width => 10, -height => 2) -> pack(-side => 'right');
-my $buttonModify = $containerEdit->Button(-text => 'Modify', -state => "disabled", -font => 'arial 9 bold', -command => [ \&AddAndSendCr, undef, -1], -width => 10, -height => 2) -> pack(-side => 'right');
+my $buttonDelete = $containerEdit->Button(-text => 'Delete', -font => 'arial 9 bold', -command => [ \&editDisplayedBug], -width => 10, -height => 2) -> pack(-side => 'right');
+my $buttonModify = $containerEdit->Button(-text => 'Modify', -font => 'arial 9 bold', -command => [ \&editDisplayedBug, 1], -width => 10, -height => 2) -> pack(-side => 'right');
 my $buttonNext = $containerEdit->Button(-text => '> >', -font => 'arial 9 bold', -command => [ \&manageNavigation, 1], -width => 5, -height => 2) -> pack(-side => 'right');
 my $buttonPrevious = $containerEdit->Button(-text => '< <', -font => 'arial 9 bold', -command => [ \&manageNavigation, -1], -width => 5, -height => 2) -> pack(-side => 'right');
 
@@ -340,17 +340,30 @@ sub addBug {
 	$description->Contents('');
 }
 
-sub deleteDisplayedBug {
+sub editDisplayedBug {
 	my $index = $currentBugIndex;
+	my $editMode = shift;
 	
-	my $response = $mw->messageBox(-title => "Removal confirmation requested", -message => "Do you confirm the removal of this issue?", -type => 'yesno', -icon => 'question');
-
-	DEBUG "User has answered \"$response\" to removal of bug #$index";
-	return unless $response eq "Yes";
-	INFO "User has confirmed a removal of an issue";
-
 	my %data = %{retrieve($bugsDatabase)};	
-	splice (@{$data{bugList}}, $index, 1);
+	
+	if($editMode) {
+		return unless validate();
+		delete $data{bugList}[$index];
+		foreach my $key (keys(%bugDescription)) {
+			$data{bugList}[$index]{$key} = $bugDescription{$key}; 		
+		}
+
+		$mw->messageBox(-title => "Information", -message => "Issue has been modified", -type => 'ok', -icon => 'info');
+	}
+	else {
+		my $response = $mw->messageBox(-title => "Removal confirmation requested", -message => "Do you confirm the removal of this issue?", -type => 'yesno', -icon => 'question');
+
+		DEBUG "User has answered \"$response\" to removal of bug #$index";
+		return unless $response eq "Yes";
+		INFO "User has confirmed a removal of an issue";
+		splice (@{$data{bugList}}, $index, 1);	
+	}
+	
 	store (\%data, $bugsDatabase);
 	
 	manageNavigation();
