@@ -302,7 +302,7 @@ my $buttonExport = $containerActions->Button(-text => 'Export', -font => 'arial 
 my $containerEdit = $actionsPanel->Frame();
 my $navigationlabelText = "";
 my $navigationlabel = $containerEdit->Label(-textvariable => \$navigationlabelText )->pack( -side => 'left', -fill => 'x', -expand => 1);
-my $buttonDelete = $containerEdit->Button(-text => 'Delete', -state => "disabled", -font => 'arial 9 bold', -command => [ \&ExportEncryptedDb], -width => 10, -height => 2) -> pack(-side => 'right');
+my $buttonDelete = $containerEdit->Button(-text => 'Delete', -font => 'arial 9 bold', -command => [ \&deleteDisplayedBug], -width => 10, -height => 2) -> pack(-side => 'right');
 my $buttonModify = $containerEdit->Button(-text => 'Modify', -state => "disabled", -font => 'arial 9 bold', -command => [ \&AddAndSendCr, undef, -1], -width => 10, -height => 2) -> pack(-side => 'right');
 my $buttonNext = $containerEdit->Button(-text => '> >', -font => 'arial 9 bold', -command => [ \&manageNavigation, 1], -width => 5, -height => 2) -> pack(-side => 'right');
 my $buttonPrevious = $containerEdit->Button(-text => '< <', -font => 'arial 9 bold', -command => [ \&manageNavigation, -1], -width => 5, -height => 2) -> pack(-side => 'right');
@@ -338,6 +338,22 @@ sub addBug {
 	$bug->{frequency} = '';
 	$bug->{submitter_CR_type} = '';
 	$description->Contents('');
+}
+
+sub deleteDisplayedBug {
+	my $index = $currentBugIndex;
+	
+	my $response = $mw->messageBox(-title => "Removal confirmation requested", -message => "Do you confirm the removal of this issue?", -type => 'yesno', -icon => 'question');
+
+	DEBUG "User has answered \"$response\" to removal of bug #$index";
+	return unless $response eq "Yes";
+	INFO "User has confirmed a removal of an issue";
+
+	my %data = %{retrieve($bugsDatabase)};	
+	splice (@{$data{bugList}}, $index, 1);
+	store (\%data, $bugsDatabase);
+	
+	manageNavigation();
 }
 
 sub sendCrToCQ {
@@ -447,7 +463,7 @@ sub fillInterfaceWithBug {
 
 sub manageNavigation {
 	my $newIndex = shift;
-	$totalNumberOfBugs = getNumberOfBugs();
+	$totalNumberOfBugs = getNumberOfBugs(1);
 	
 	if($totalNumberOfBugs == 0) {
 		$currentBugIndex = 0;
@@ -467,8 +483,6 @@ sub manageNavigation {
 		if(($currentBugIndex +1) < $totalNumberOfBugs) { $buttonNext->configure(-state => "normal"); }
 		else { $buttonNext->configure(-state => "disabled"); }	
 	}
-		
-	my $currentBugIndex = 0;
 }
 
 sub getNumberOfBugs {
@@ -517,6 +531,7 @@ sub switchActions {
 	
 	if($editMode) {
 		DEBUG "Edit mode is selected";
+		$bugDescription{description} = '' unless $bugDescription{description};
 		%backupDescription = %bugDescription;
 		$containerActions->packForget();
 		$containerEdit->pack(-fill => 'both', -expand => 1);
