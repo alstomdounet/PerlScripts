@@ -21,96 +21,121 @@ my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configur
 
 my ($foundComponents,$suggested_path) = filterFile($Config{script_params}->{properties_file}, "backup_props_$Config{function_params}->{function_name}.csv");
 
-my @foundComponents = keys(%$foundComponents);
-my @selectedComponents;
-foreach my $component (@foundComponents)
-{
-	push (@selectedComponents, $component) if -d "$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}\\$component";
-}
+my @selectedComponents = selectComponents($foundComponents);
 
-my %Components;
-@Components{@selectedComponents}=();
 
-unless (exists $Components{$Config{function_params}->{function_name}})
-{
-	WARN "No selected components have the name '$Config{function_params}->{function_name}'. \nIT IS HIGHLY POSSIBLE THAT YOU DID A MISTAKE with configuration file!!!\n";
-	WARN "Maybe it should be better to replace field <function_params> / <tree_view> / <function_path> of configuration file with '$suggested_path'\n" if $suggested_path;
-	<>;
-}
-
-INFO scalar(@foundComponents)." components found";
-INFO scalar(@selectedComponents)." components selected";
-my $pause_btw_step = "ECHO No particular message should be displayed. If it is OK, then you can continue\nPAUSE\nCLS\n";
-my $batch_template = <<EOF;
-\@ECHO OFF
-SET OLDDIR=$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}
-SET NEWDIR=$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$Config{function_params}->{function_name}\\functional
-
-ECHO WARNING : PLEASE CHECK FOLLOWING POINTS:
-ECHO ----------------------------------------
-ECHO  - CHECK IF THIS BATCH FILE IS CORRECT BEFORE EXECUTING IT :
-ECHO  - HAVE YOU EXECUTED THIS SCRIPT WITH AN UPDATED CSV FILE
-ECHO  - CHECK COMPONENTS WHICH WILL BE MOVED
-ECHO  - FUNCTION WHICH WILL BE MOVED IS IN A STABLE STATE
-ECHO -------
-ECHO IF YOU HAVE UNDERSTOOD THIS MESSAGE, YOU CAN PROCEED...
-PAUSE
-CLS
-
-ECHO Checking out 'fbs' and '$Config{function_params}->{function_name}' applications
-ECHO --------------
-cleartool co -c "Migration de la fonction '$Config{function_params}->{function_name}'" "%OLDDIR%"
-cleartool co -c "Migration de la fonction '$Config{function_params}->{function_name}'" ".%NEWDIR%"
-$pause_btw_step
-
-ECHO <DISABLED FOR SECURITY>Deletion Of top-level MAC
-ECHO --------------
-rem cleartool rmname ".\\Applications\\%FUNCTION_NAME%\\functional\\%FUNCTION_NAME%"
-$pause_btw_step
-
-EOF
-
-my $i = 0;
-my $total = scalar(@selectedComponents);
-foreach my $component (@selectedComponents)
-{
-	$i++;
+sub selectComponents {
+	my $foundComponents = shift;
 	
-	$batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n$pause_btw_step\n";
+	my @selectedComponents;
+	foreach my $component (@$foundComponents)
+	{
+		push (@selectedComponents, $component) if -d "$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}\\$component";
+	}
+
+	unless (grep(/$Config{function_params}->{function_name}/, @selectedComponents))
+	{
+		WARN "No selected components have the name '$Config{function_params}->{function_name}'. \nIT IS HIGHLY POSSIBLE THAT YOU DID A MISTAKE with configuration file!!!\n";
+		WARN "Maybe it should be better to replace field <function_params> / <tree_view> / <function_path> of configuration file with '$suggested_path'\n" if $suggested_path;
+		<>;
+	}
+
+	INFO scalar(@selectedComponents)." components selected";
+	return @selectedComponents;
 }
 
-$batch_template .= <<EOF;
 
-ECHO Checking in 'fbs' and '$Config{function_params}->{function_name}' applications
-ECHO --------------
-cleartool ci -c "Migration de la fonction '$Config{function_params}->{function_name}'" "%OLDDIR%"
-cleartool ci -c "Migration de la fonction '$Config{function_params}->{function_name}'" ".%NEWDIR%"
-$pause_btw_step
+sub createFilesStructure {
+	my $selectedComponents = shift;
+	my $directory = shift;
+	
+	my $pause_btw_step = "ECHO No particular message should be displayed. If it is OK, then you can continue\nPAUSE\nCLS\n";
+	my $batch_template = <<EOF;
+	\@ECHO OFF
+	SET OLDDIR=$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}
+	SET NEWDIR=$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$Config{function_params}->{function_name}\\functional
 
-echo ----------------------------------------------------------------
-echo  Program is finished. You have now to follow hereafter operations:
-echo ----------------------------------------------------------------
+	ECHO WARNING : PLEASE CHECK FOLLOWING POINTS:
+	ECHO ----------------------------------------
+	ECHO  - CHECK IF THIS BATCH FILE IS CORRECT BEFORE EXECUTING IT :
+	ECHO  - HAVE YOU EXECUTED THIS SCRIPT WITH AN UPDATED CSV FILE
+	ECHO  - CHECK COMPONENTS WHICH WILL BE MOVED
+	ECHO  - FUNCTION WHICH WILL BE MOVED IS IN A STABLE STATE
+	ECHO -------
+	ECHO IF YOU HAVE UNDERSTOOD THIS MESSAGE, YOU CAN PROCEED...
+	PAUSE
+	CLS
 
-CALL postscript_instructions.bat
+	ECHO Checking out 'fbs' and '$Config{function_params}->{function_name}' applications
+	ECHO --------------
+	cleartool co -c "Migration de la fonction '$Config{function_params}->{function_name}'" "%OLDDIR%"
+	cleartool co -c "Migration de la fonction '$Config{function_params}->{function_name}'" ".%NEWDIR%"
+	$pause_btw_step
+
+	ECHO <DISABLED FOR SECURITY>Deletion Of top-level MAC
+	ECHO --------------
+	rem cleartool rmname ".\\Applications\\%FUNCTION_NAME%\\functional\\%FUNCTION_NAME%"
+	$pause_btw_step
+
 EOF
 
-my $output_file = "move_$Config{function_params}->{function_name}.bat";
-write_file($output_file, $batch_template);
-print "\n---- Output file -------------\n\t'$output_file' has been written\n\n";
+	my $i = 0;
+	my $total = scalar(@selectedComponents);
+	foreach my $component (@selectedComponents)
+	{
+		$i++;
+		
+		$batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n$pause_btw_step\n";
+	}
 
-my $instructions .= <<EOF;
-\@ECHO  1 / Save all components which were moved (they are located inside $Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$Config{function_params}->{function_name}\\functional);
-\@ECHO  2 / Open all MACS which has these components instanciated, and change model. BE VERY CAREFULL TO SELECT THE RIGHT MODEL BEFORE CHANGING.
-\@ECHO  3 / Save all the modified MACS;
-\@ECHO  4 / For safety, reimport backup advanced properties into top-level tree;
-\@ECHO  5 / For safety, run a coherency test. No new error messages should have appeared.
-\@PAUSE
+	$batch_template .= <<EOF;
+
+	ECHO Checking in 'fbs' and '$Config{function_params}->{function_name}' applications
+	ECHO --------------
+	cleartool ci -c "Migration de la fonction '$Config{function_params}->{function_name}'" "%OLDDIR%"
+	cleartool ci -c "Migration de la fonction '$Config{function_params}->{function_name}'" ".%NEWDIR%"
+	$pause_btw_step
+
+	echo ----------------------------------------------------------------
+	echo  Program is finished. You have now to follow hereafter operations:
+	echo ----------------------------------------------------------------
+
+	CALL postscript_instructions.bat
 EOF
 
-write_file("postscript_instructions.bat", $instructions);
+	my $output_file = "move_$Config{function_params}->{function_name}.bat";
+	write_file($output_file, $batch_template);
+	print "\n---- Output file -------------\n\t'$output_file' has been written\n\n";
 
-close FILE;
-close BACKUP;
+	my $instructions .= <<EOF;
+	\@ECHO  1 / Save all components which were moved (they are located inside $Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$Config{function_params}->{function_name}\\functional);
+	\@ECHO  2 / Open all MACS which has these components instanciated, and change model. BE VERY CAREFULL TO SELECT THE RIGHT MODEL BEFORE CHANGING.
+	\@ECHO  3 / Save all the modified MACS;
+	\@ECHO  4 / For safety, reimport backup advanced properties into top-level tree;
+	\@ECHO  5 / For safety, run a coherency test. No new error messages should have appeared.
+	\@PAUSE
+EOF
+
+	write_file("postscript_instructions.bat", $instructions);
+
+	close FILE;
+	close BACKUP;
+}
+
+sub cleanup {
+        my $dir = shift;
+	local *DIR;
+
+	opendir DIR, $dir or die "opendir $dir: $!";
+	for (readdir DIR) {
+	        next if /^\.{1,2}$/;
+	        my $path = "$dir/$_";
+		unlink $path if -f $path;
+		cleanup($path) if -d $path;
+	}
+	closedir DIR;
+	rmdir $dir or print "error - $!";
+}
 
 sub filterFile {
 	my $inputFile = shift;
@@ -163,7 +188,9 @@ sub filterFile {
 	INFO "$i lines processed ($matches matches found)";
 	INFO " $matches lines were match for backup";
 		
-	return \%foundComponents, $suggested_path;
+	my @foundComponents = keys(%foundComponents);
+	INFO scalar(@foundComponents)." components found";
+	return \@foundComponents, $suggested_path;
 }
 
 sub write_file
