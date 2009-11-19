@@ -4,63 +4,24 @@ ccperl %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto endofperl
 @rem ';
 
+use lib qw(lib);
 use strict;
 use warnings;
-use XML::Simple;
+use Common;
 
-my %Config = %{XMLin("config.xml")}; # Loading / preprocessing of the configuration file
+my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configuration file
 
-print "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder};
-print "Controlbuild application has to be created before executing this program\nFollow this rule:\n\t - Create A new application with ControlBuild called '$Config{function_params}->{function_name}'\n" and exit unless -d "$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$Config{function_params}->{function_name}\\functional";
+# Preliminary checks
+#ERROR "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder};
+#ERROR "Controlbuild application has to be created before executing this program\nFollow this rule:\n\t - Create A new application with ControlBuild called '$Config{function_params}->{function_name}'\n" and exit unless -d "$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$Config{function_params}->{function_name}\\functional";
 
-open FILE, $Config{script_params}->{properties_file} or die $!;
-binmode FILE;
-open BACKUP, ">backup_props_$Config{function_params}->{function_name}.csv" or die $!; 
-binmode BACKUP;
+###########################################
+# MISSING : Building 
+###########################################
 
-my $header = <FILE>; # Skip first line
-print BACKUP $header;
+my ($foundComponents,$suggested_path) = filterFile($Config{script_params}->{properties_file}, "backup_props_$Config{function_params}->{function_name}.csv");
 
- $| = 1;
-my $i = 0;
-my $matches = 0;
-
-my $matching_path = "^$Config{project_params}->{tree_view}->{fbs_path}$Config{function_params}->{tree_view}->{function_path}";
-
-print "---- Selected tree path ------\n\t'$matching_path'\n\n---- Processing lines --------\n";
-
-my %foundComponents;
-
-my $suggested_path = undef;
-
-while (my $line = <FILE>) {
-
-	my @items = split (/;/, $line);
-	my $path = $items[3];
-	
-	my $component_name = $items[11];
-	
-	if (not $suggested_path and $component_name =~ /$Config{function_params}->{function_name}/) {
-		$suggested_path = $path;
-		$suggested_path =~ s/^$Config{project_params}->{tree_view}->{fbs_path}//;
-	}
-	
-	if($path =~ /$matching_path/) 
-	{
-		print BACKUP $line;
-		$component_name =~ s/_$items[0]//;
-		$foundComponents{$component_name}++;
-		
-		$matches++;
-	}
-	
-	$i++;
-	print "$i lines processed ($matches matches found)\r" if $i % 10000 == 0;
-}
-
-print "$i lines processed ($matches matches found)\r";
-
-my @foundComponents = keys(%foundComponents);
+my @foundComponents = keys(%$foundComponents);
 my @selectedComponents;
 foreach my $component (@foundComponents)
 {
@@ -72,12 +33,13 @@ my %Components;
 
 unless (exists $Components{$Config{function_params}->{function_name}})
 {
-	print "\n\nWARNING : No selected components have the name '$Config{function_params}->{function_name}'. \nIT IS HIGHLY POSSIBLE THAT YOU DID A MISTAKE with configuration file!!!\n";
-	print "Maybe it should be better to replace field <function_params> / <tree_view> / <function_path> of configuration file with '$suggested_path'\n" if $suggested_path;
+	WARN "No selected components have the name '$Config{function_params}->{function_name}'. \nIT IS HIGHLY POSSIBLE THAT YOU DID A MISTAKE with configuration file!!!\n";
+	WARN "Maybe it should be better to replace field <function_params> / <tree_view> / <function_path> of configuration file with '$suggested_path'\n" if $suggested_path;
 	<>;
 }
 
-print "\n\n---- Resume ------------------\nOn $i lines processed:\n - $matches lines were match for backup\n - ".scalar(@foundComponents)." components found\n - ".scalar(@selectedComponents)." components selected\n";
+INFO scalar(@foundComponents)." components found";
+INFO scalar(@selectedComponents)." components selected";
 my $pause_btw_step = "ECHO No particular message should be displayed. If it is OK, then you can continue\nPAUSE\nCLS\n";
 my $batch_template = <<EOF;
 \@ECHO OFF
@@ -108,7 +70,7 @@ $pause_btw_step
 
 EOF
 
-$i = 0;
+my $i = 0;
 my $total = scalar(@selectedComponents);
 foreach my $component (@selectedComponents)
 {
@@ -149,6 +111,60 @@ write_file("postscript_instructions.bat", $instructions);
 
 close FILE;
 close BACKUP;
+
+sub filterFile {
+	my $inputFile = shift;
+	my $outputFile = shift;
+	my $matchingPaths = shift;
+	
+	my %foundComponents;
+	
+	 $| = 1;
+	my $i = 0;
+	my $matches = 0;
+	open FILE, $Config{script_params}->{properties_file} or die $!;
+	binmode FILE;
+	open BACKUP, ">backup_props_$Config{function_params}->{function_name}.csv" or die $!; 
+	binmode BACKUP;
+	
+	my $header = <FILE>; # Skip first line
+	print BACKUP $header;
+	
+	my $matching_path = "^$Config{project_params}->{tree_view}->{fbs_path}$Config{function_params}->{tree_view}->{function_path}";
+	print "---- Selected tree path ------\n\t'$matching_path'\n\n---- Processing lines --------\n";
+	
+	my $suggested_path = undef;
+
+	while (my $line = <FILE>) {
+
+		my @items = split (/;/, $line);
+		my $path = $items[3];
+		
+		my $component_name = $items[11];
+		
+		if (not $suggested_path and $component_name =~ /$Config{function_params}->{function_name}/) {
+			$suggested_path = $path;
+			$suggested_path =~ s/^$Config{project_params}->{tree_view}->{fbs_path}//;
+		}
+		
+		if($path =~ /$matching_path/) 
+		{
+			print BACKUP $line;
+			$component_name =~ s/_$items[0]//;
+			$foundComponents{$component_name}++;
+			
+			$matches++;
+		}
+		
+		$i++;
+		INFO "$i lines processed ($matches matches found)\r" if $i % 10000 == 0;
+	}
+
+	INFO "$i lines processed ($matches matches found)";
+	INFO " $matches lines were match for backup";
+		
+	return \%foundComponents, $suggested_path;
+}
 
 sub write_file
 {

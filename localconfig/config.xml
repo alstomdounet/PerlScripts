@@ -16,6 +16,6 @@
 		</tree_view>
 	</function_params>
 	<script_params>
-		<properties_file>advanced_properties_ref.csv</properties_file><!-- Name of UP-TO-DATE csv file (PrimeEL2 treeview cross-references CSV file)  -->
+		<properties_file>advanced_properties_v3.2.2.csv</properties_file><!-- Name of UP-TO-DATE csv file (PrimeEL2 treeview cross-references CSV file)  -->
 	</script_params>
 </Config>
