@@ -28,6 +28,22 @@ my $bugsDatabase = 'bugsDatabase.db';
 
 my %results;
 
+if(-r "$bugsDatabase.edb") {
+	print "Insert hereafter keypass to decrypt database: ";
+	chomp(my $password = <>);
+	my $data = importEncryptedDb ("$bugsDatabase.edb",$password);
+	
+	my $session = CQSession::Build(); 
+	my $nbrOfBugsToInsert  = scalar(@{$data->{bugList}});
+	INFO "You will insert $nbrOfBugsToInsert bugs into Clearquest database";
+	while($nbrOfBugsToInsert > 0) {
+		my $result = sendCrToCQ($session, $data);
+		$nbrOfBugsToInsert--;
+	}
+	INFO "If not errors has occured, you can safely delete \"$bugsDatabase.edb\" (to avoid duplicate inserts)";
+	exit;
+}
+
 #################################
 #
 #################################
@@ -39,6 +55,7 @@ my $FunctionName : shared;         # Contient le nom de la fonction à appeler
 my $ThreadWorking : shared;       # Contient la valeur permettant au thread de lancer une procédure
 my @ArgumentsThread : shared;     # Contient les arguements à passer à une éventuelle procédure
 my $ResultFunction : shared;    # Contient le résultat des fonctions lancées dans le thread
+my $frozenCQFields : shared;
 
 $ThreadWorking = 0;               # 0 : thread ne fait rien, 1 : il bosse
 $killThread    = 0;               # 0 : thread en vie, 1 : thread se termine
@@ -76,13 +93,6 @@ use Tk;
 use Tk::JComboBox;
 use Tk::Balloon;
 use CQPerlExt; 
-
-
-if(-r "$bugsDatabase.edb") {
-	print "Insert hereafter keypass to decrypt database: ";
-	chomp(my $password = <>);
-	importEncryptedDb ("$bugsDatabase.edb",$password);
-}
 
 my $Clearquest_login = $Config{clearquest}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
 my $crypted_string = $Clearquest_login;
@@ -145,6 +155,8 @@ else { $syncNeeded = 1; }
 if($syncNeeded) {
 	syncFieldsWithClearQuest(\%CqFieldsDesc);
 } else { DEBUG "Using all Clearquest data stored in database."; }
+
+$frozenCQFields = freeze(\%CqFieldsDesc);
 
 ##########################################
 # Synchronizing with ClearQuest database
@@ -371,14 +383,25 @@ sub editDisplayedBug {
 
 sub sendCrToCQ {
 	my $session = shift;
+	my $externalParams = shift;
 	
-	return 0 unless -r $CqDatabase;
-	my $CQFields = retrieve($CqDatabase);
+	my ($CQFields,$data,$cfg, $bug);
+	if($externalParams) {
+		DEBUG "Using parameters provided externally";
+		$data = $externalParams;
+		$CQFields = $externalParams->{CQFields};
+		$cfg = $externalParams->{config};
+	}
+	else {
+		DEBUG "Using parameters provided by some database files";
+		$CQFields = thaw($frozenCQFields);
 
-	return 0 unless -r $bugsDatabase;
-	my $data = retrieve($bugsDatabase);
+		return 0 unless -r $bugsDatabase;
+		$data = retrieve($bugsDatabase);
+		$cfg = \%Config;
+	}
 	
-	my $bug = pop(@{$data->{bugList}});
+	$bug = pop(@{$data->{bugList}});
 	return 0 unless $bug;
 	my %bug = %$bug;
 	INFO "No bug to send to ClearQuest" and return 0 unless defined $bug->{headline};
@@ -394,11 +417,10 @@ sub sendCrToCQ {
 		DEBUG "Value '$bug{$field}' has been associated with '$newText'";
 		$bug_trans{$field} = $newText;
 	}
-		
 	####################################
 	
 	$session = CQSession::Build() unless $session; 
-	$session->UserLogon ($Config{clearquest}->{login}, $Config{clearquest}->{password}, "atvcm", "");
+	$session->UserLogon ($cfg->{clearquest}->{login}, $cfg->{clearquest}->{password}, "atvcm", "");
 			
 	my $rec = $session->BuildEntity("ChangeRequest");
 	#$rec->SetFieldValue('write_arrival_state', 'Submitted - new');
@@ -455,8 +477,9 @@ sub sendCrToCQ {
 		}
 		close FILE;
 	}
-
-	store ($data, $bugsDatabase) and return $insertionOK;
+	
+	store ($data, $bugsDatabase) unless $externalParams;
+	return $insertionOK;
 }
 
 sub fillInterfaceWithBug {
@@ -681,9 +704,8 @@ sub ExportEncryptedDb {
 
 	my %data;
 	%data = %{retrieve($bugsDatabase)} if -r $bugsDatabase;
-	$data{infos} = \%Config;
-	$data{login} = $Config{clearquest}->{login};
-	$data{password} = $Config{clearquest}->{login};
+	$data{config} = \%Config;
+	$data{CQFields} = thaw($frozenCQFields);
 	
 	my $data = freeze(\%data);
 	
