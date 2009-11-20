@@ -50,6 +50,8 @@ foreach my $element (@{$Config{function_params}}) {
 	
 	my ($foundComponents,$suggested_path) = filterFile(\@lines, "$finalDirectory/$functionName.backup.csv", $fbsTreePath, $functionName);
 	my @selectedComponents = selectComponents($foundComponents);
+	createFilesStructure($functionName, \@selectedComponents, $finalDirectory);
+	
 }
 
 close MAINBACKUPFILE;
@@ -187,74 +189,70 @@ sub write_file {
 }
 
 sub createFilesStructure {
+	my $functionName = shift;
 	my $selectedComponents = shift;
 	my $directory = shift;
 	
 	my $pause_btw_step = "ECHO No particular message should be displayed. If it is OK, then you can continue\nPAUSE\nCLS\n";
 	my $batch_template = <<EOF;
-	\@ECHO OFF
-	SET OLDDIR=$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}
-	SET NEWDIR=$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$Config{function_params}->{function_name}\\functional
+\@ECHO OFF
+SET OLDDIR=$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}
+SET NEWDIR=$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$functionName\\functional
+ECHO WARNING : PLEASE CHECK FOLLOWING POINTS:
+ECHO ----------------------------------------
+ECHO  - CHECK IF THIS BATCH FILE IS CORRECT BEFORE EXECUTING IT :
+ECHO  - HAVE YOU EXECUTED THIS SCRIPT WITH AN UPDATED CSV FILE
+ECHO  - CHECK COMPONENTS WHICH WILL BE MOVED
+ECHO  - FUNCTION WHICH WILL BE MOVED IS IN A STABLE STATE
+ECHO -------
+ECHO IF YOU HAVE UNDERSTOOD THIS MESSAGE, YOU CAN PROCEED...
+PAUSE
+CLS
+ECHO Checking out 'fbs' and '$functionName' applications
+ECHO --------------
+cleartool co -c "Migration de la fonction '$functionName'" "\%OLDDIR\%"
+cleartool co -c "Migration de la fonction '$functionName'" ".\%NEWDIR\%"
+$pause_btw_step
 
-	ECHO WARNING : PLEASE CHECK FOLLOWING POINTS:
-	ECHO ----------------------------------------
-	ECHO  - CHECK IF THIS BATCH FILE IS CORRECT BEFORE EXECUTING IT :
-	ECHO  - HAVE YOU EXECUTED THIS SCRIPT WITH AN UPDATED CSV FILE
-	ECHO  - CHECK COMPONENTS WHICH WILL BE MOVED
-	ECHO  - FUNCTION WHICH WILL BE MOVED IS IN A STABLE STATE
-	ECHO -------
-	ECHO IF YOU HAVE UNDERSTOOD THIS MESSAGE, YOU CAN PROCEED...
-	PAUSE
-	CLS
-
-	ECHO Checking out 'fbs' and '$Config{function_params}->{function_name}' applications
-	ECHO --------------
-	cleartool co -c "Migration de la fonction '$Config{function_params}->{function_name}'" "%OLDDIR%"
-	cleartool co -c "Migration de la fonction '$Config{function_params}->{function_name}'" ".%NEWDIR%"
-	$pause_btw_step
-
-	ECHO <DISABLED FOR SECURITY>Deletion Of top-level MAC
-	ECHO --------------
-	rem cleartool rmname ".\\Applications\\%FUNCTION_NAME%\\functional\\%FUNCTION_NAME%"
-	$pause_btw_step
-
+ECHO <DISABLED FOR SECURITY>Deletion Of top-level MAC
+ECHO --------------
+rem cleartool rmname ".\\Applications\\\%FUNCTION_NAME\%\\functional\\\%FUNCTION_NAME\%"
+$pause_btw_step
 EOF
 
 	my $i = 0;
-	#my $total = scalar(@selectedComponents);
-	#foreach my $component (@selectedComponents)
-	# {
-		# $i++;
+	my $total = scalar(@$selectedComponents);
+	foreach my $component (@$selectedComponents) {
+		$i++;
 		
-		# $batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n$pause_btw_step\n";
-	# }
+		$batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n$pause_btw_step\n";
+	}
 
 	$batch_template .= <<EOF;
+ECHO Checking in 'fbs' and '$functionName' applications
+ECHO --------------
+cleartool ci -c "Migration de la fonction '$functionName'" "%OLDDIR%"
+cleartool ci -c "Migration de la fonction '$functionName'" ".%NEWDIR%"
+$pause_btw_step
 
-	ECHO Checking in 'fbs' and '$Config{function_params}->{function_name}' applications
-	ECHO --------------
-	cleartool ci -c "Migration de la fonction '$Config{function_params}->{function_name}'" "%OLDDIR%"
-	cleartool ci -c "Migration de la fonction '$Config{function_params}->{function_name}'" ".%NEWDIR%"
-	$pause_btw_step
+echo ----------------------------------------------------------------
+echo  Program is finished. You have now to follow hereafter operations:
+echo ----------------------------------------------------------------
 
-	echo ----------------------------------------------------------------
-	echo  Program is finished. You have now to follow hereafter operations:
-	echo ----------------------------------------------------------------
-
-	CALL postscript_instructions.bat
+CALL postscript_instructions.bat
 EOF
 
-	my $output_file = "move_$Config{function_params}->{function_name}.bat";
+	my $output_file = "$directory/move_$functionName.bat";
 	write_file($output_file, $batch_template);
 	print "\n---- Output file -------------\n\t'$output_file' has been written\n\n";
 
 	my $instructions .= <<EOF;
-	\@ECHO  1 / Save all components which were moved (they are located inside $Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$Config{function_params}->{function_name}\\functional);
-	\@ECHO  2 / Open all MACS which has these components instanciated, and change model. BE VERY CAREFULL TO SELECT THE RIGHT MODEL BEFORE CHANGING.
-	\@ECHO  3 / Save all the modified MACS;
-	\@ECHO  4 / For safety, reimport backup advanced properties into top-level tree;
-	\@ECHO  5 / For safety, run a coherency test. No new error messages should have appeared.
-	\@PAUSE
+\@ECHO  1 / Save all components which were moved (they are located inside $Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$functionName\\functional);
+\@ECHO  2 / Open all MACS which has these components instanciated, and change model. BE VERY CAREFULL TO SELECT THE RIGHT MODEL BEFORE CHANGING.
+\@ECHO  3 / Save all the modified MACS;
+\@ECHO  4 / For safety, reimport backup advanced properties into top-level tree;
+\@ECHO  5 / For safety, run a coherency test. No new error messages should have appeared.
+\@PAUSE
 EOF
 
 	write_file("postscript_instructions.bat", $instructions);
