@@ -225,13 +225,13 @@ EOF
 	foreach my $component (@$selectedComponents) {
 		$i++;
 		
-		$batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n$pause_btw_step\n";
+		$batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n\n";
 	}
 
 	$batch_template .= <<EOF;
 ECHO Checking in 'fbs' and '$functionName' applications
 ECHO --------------
-cleartool ci -c "Migration de la fonction '$functionName'" "%OLDDIR%"
+rem cleartool ci -c "Migration de la fonction '$functionName'" "%OLDDIR%"
 cleartool ci -c "Migration de la fonction '$functionName'" ".%NEWDIR%"
 $pause_btw_step
 
@@ -244,7 +244,7 @@ EOF
 
 	my $output_file = "$directory/move_$functionName.bat";
 	write_file($output_file, $batch_template);
-	print "\n---- Output file -------------\n\t'$output_file' has been written\n\n";
+	DEBUG "'$output_file' has been written";
 
 	my $instructions .= <<EOF;
 \@ECHO  1 / Save all components which were moved (they are located inside $Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$functionName\\functional);
@@ -255,7 +255,7 @@ EOF
 \@PAUSE
 EOF
 
-	write_file("postscript_instructions.bat", $instructions);
+	write_file("$directory/postscript_instructions.bat", $instructions);
 
 	close FILE;
 	close BACKUP;
