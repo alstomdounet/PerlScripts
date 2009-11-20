@@ -28,6 +28,11 @@ cleanup("output");
 LOGDIE "Directory was not purged successfully" if -d "output";
 mkdir "output";
 LOGDIE "Destination directory \"output\" was not created successfully" unless -d "output";
+
+open MAINBACKUPFILE, ">output/allFunctions.backup.csv";
+binmode MAINBACKUPFILE;
+print MAINBACKUPFILE $lines[0];
+
 foreach my $element (@{$Config{function_params}}) {
 	my $finalDirectory = "output/".$element->{function_name};
 	my $functionName = $element->{function_name};
@@ -46,6 +51,8 @@ foreach my $element (@{$Config{function_params}}) {
 	my ($foundComponents,$suggested_path) = filterFile(\@lines, "$finalDirectory/$functionName.backup.csv", $fbsTreePath, $functionName);
 	my @selectedComponents = selectComponents($foundComponents);
 }
+
+close MAINBACKUPFILE;
 
 exit;
 
@@ -82,6 +89,7 @@ sub filterFile {
 		if($line->{path} =~ /$matchingPath/) 
 		{
 			print BACKUP $line->{all};
+			print MAINBACKUPFILE $line->{all};
 			my $componentName = $line->{component_name};
 			$componentName =~ s/_$line->{variable}//;
 			$foundComponents{$componentName}++;
