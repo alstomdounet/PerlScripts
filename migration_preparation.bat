@@ -8,6 +8,8 @@ use lib qw(lib);
 use strict;
 use warnings;
 use Common;
+use Storable qw(store retrieve);
+use Data::Dumper;
 
 my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configuration file
 
@@ -19,9 +21,22 @@ my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configur
 # MISSING : Building 
 ###########################################
 
-my ($foundComponents,$suggested_path) = filterFile($Config{script_params}->{properties_file}, "backup_props_$Config{function_params}->{function_name}.csv");
+my @lines = putFileInMemory($Config{script_params}->{properties_file});
 
-my @selectedComponents = selectComponents($foundComponents);
+foreach my $element (@{$Config{function_params}}) {
+	print Dumper $element;
+	
+	my ($foundComponents,$suggested_path) = filterFile($Config{script_params}->{properties_file}, "backup_props_$Config{function_params}->{function_name}.csv");
+	my @selectedComponents = selectComponents($foundComponents);
+}
+
+<>;
+
+
+exit;
+
+
+
 
 
 sub selectComponents {
@@ -44,6 +59,117 @@ sub selectComponents {
 	return @selectedComponents;
 }
 
+sub cleanup {
+        my $dir = shift;
+	local *DIR;
+
+	opendir DIR, $dir or die "opendir $dir: $!";
+	for (readdir DIR) {
+	        next if /^\.{1,2}$/;
+	        my $path = "$dir/$_";
+		unlink $path if -f $path;
+		cleanup($path) if -d $path;
+	}
+	closedir DIR;
+	rmdir $dir or print "error - $!";
+}
+
+sub putFileInMemory {
+	my $inputFile = shift;
+	
+	my @lines;
+	if(-r "db.tmp") {
+		DEBUG "Beginning reading of database";
+		my $lines = retrieve("db.tmp");
+		@lines = @$lines;
+		DEBUG "Finished reading of database";
+	}
+	else {
+		open FILE, $inputFile or die $!;
+		binmode FILE;
+		my $header = <FILE>;
+		push(@lines, $header);
+		my $linesProcessed = 0;
+		while (my $line = <FILE>) {
+			my %line;
+			my @items = split (/;/, $line);
+			my $path = $items[3];
+			
+			my $component_name = $items[11];
+			$line{path} = $items[3];
+			$line{component_name} = $items[11];
+			$line{all} = $line;
+			$line{variable} = $items[0];
+			push(@lines, \%line);
+			$linesProcessed++;
+			DEBUG "$linesProcessed lines processed" if $linesProcessed % 10000 == 0;
+		}
+		close FILE;
+	
+		store(\@lines, "db.tmp");
+	}
+	
+	INFO "Script has read ".scalar(@lines)." lines of properties";
+	return @lines;
+}
+
+sub filterFile {
+	my $lines = shift;
+	my $outputFile = shift;
+	my $matchingPaths = shift;
+	
+	my %foundComponents;
+	my @lines = @$lines;
+	
+	 $| = 1;
+	my $i = 0;
+	my $matches = 0;
+	open BACKUP, ">backup_props_$Config{function_params}->{function_name}.csv" or die $!; 
+	binmode BACKUP;
+	print BACKUP pop(@lines);
+	
+	my $matching_path = "^$Config{project_params}->{tree_view}->{fbs_path}$Config{function_params}->{tree_view}->{function_path}";
+	INFO "Selected path  : '$matching_path'";
+	
+	my $suggested_path = undef;
+
+	foreach my $line (@lines) {
+		if (not $suggested_path and $line->{component_name} =~ /$Config{function_params}->{function_name}/) {
+			$suggested_path = $line->{path};
+			$suggested_path =~ s/^$Config{project_params}->{tree_view}->{fbs_path}//;
+		}
+		
+		if($line->{path} =~ /$matching_path/) 
+		{
+			print BACKUP $line->{all};
+			$line->{component_name} =~ s/_$line->{variable}//;
+			$foundComponents{$line->{component_name}}++;
+			
+			$matches++;
+		}
+		
+		$i++;
+	}
+	
+	close BACKUP;
+
+	INFO "$i lines processed ($matches matches found)";
+	INFO " $matches lines were match for backup";
+		
+	my @foundComponents = keys(%foundComponents);
+	INFO scalar(@foundComponents)." components found";
+	return \@foundComponents, $suggested_path;
+}
+
+sub write_file
+{
+	my $file = shift;
+	my $text = shift;
+	
+	open WRITE_FILE, ">$file" or die "Script was not able to write '$file' : $!";
+	print WRITE_FILE $text;
+	close WRITE_FILE;
+}
 
 sub createFilesStructure {
 	my $selectedComponents = shift;
@@ -122,86 +248,6 @@ EOF
 	close BACKUP;
 }
 
-sub cleanup {
-        my $dir = shift;
-	local *DIR;
-
-	opendir DIR, $dir or die "opendir $dir: $!";
-	for (readdir DIR) {
-	        next if /^\.{1,2}$/;
-	        my $path = "$dir/$_";
-		unlink $path if -f $path;
-		cleanup($path) if -d $path;
-	}
-	closedir DIR;
-	rmdir $dir or print "error - $!";
-}
-
-sub filterFile {
-	my $inputFile = shift;
-	my $outputFile = shift;
-	my $matchingPaths = shift;
-	
-	my %foundComponents;
-	
-	 $| = 1;
-	my $i = 0;
-	my $matches = 0;
-	open FILE, $Config{script_params}->{properties_file} or die $!;
-	binmode FILE;
-	open BACKUP, ">backup_props_$Config{function_params}->{function_name}.csv" or die $!; 
-	binmode BACKUP;
-	
-	my $header = <FILE>; # Skip first line
-	print BACKUP $header;
-	
-	my $matching_path = "^$Config{project_params}->{tree_view}->{fbs_path}$Config{function_params}->{tree_view}->{function_path}";
-	print "---- Selected tree path ------\n\t'$matching_path'\n\n---- Processing lines --------\n";
-	
-	my $suggested_path = undef;
-
-	while (my $line = <FILE>) {
-
-		my @items = split (/;/, $line);
-		my $path = $items[3];
-		
-		my $component_name = $items[11];
-		
-		if (not $suggested_path and $component_name =~ /$Config{function_params}->{function_name}/) {
-			$suggested_path = $path;
-			$suggested_path =~ s/^$Config{project_params}->{tree_view}->{fbs_path}//;
-		}
-		
-		if($path =~ /$matching_path/) 
-		{
-			print BACKUP $line;
-			$component_name =~ s/_$items[0]//;
-			$foundComponents{$component_name}++;
-			
-			$matches++;
-		}
-		
-		$i++;
-		INFO "$i lines processed ($matches matches found)\r" if $i % 10000 == 0;
-	}
-
-	INFO "$i lines processed ($matches matches found)";
-	INFO " $matches lines were match for backup";
-		
-	my @foundComponents = keys(%foundComponents);
-	INFO scalar(@foundComponents)." components found";
-	return \@foundComponents, $suggested_path;
-}
-
-sub write_file
-{
-	my $file = shift;
-	my $text = shift;
-	
-	open WRITE_FILE, ">$file" or die "Script was not able to write '$file' : $!";
-	print WRITE_FILE $text;
-	close WRITE_FILE;
-}
 
 __END__
 :endofperl
