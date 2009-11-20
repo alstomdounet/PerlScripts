@@ -14,8 +14,7 @@ use Data::Dumper;
 my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configuration file
 
 # Preliminary checks
-#ERROR "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder};
-#ERROR "Controlbuild application has to be created before executing this program\nFollow this rule:\n\t - Create A new application with ControlBuild called '$Config{function_params}->{function_name}'\n" and exit unless -d "$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$Config{function_params}->{function_name}\\functional";
+ERROR "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder}."\\Applications";
 
 ###########################################
 # MISSING : Building 
@@ -23,21 +22,82 @@ my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configur
 
 my @lines = putFileInMemory($Config{script_params}->{properties_file});
 
+my $fbsTreePath = $Config{project_params}->{tree_view}->{fbs_path};
+
+cleanup("output");
+LOGDIE "Directory was not purged successfully" if -d "output";
+mkdir "output";
+LOGDIE "Destination directory \"output\" was not created successfully" unless -d "output";
 foreach my $element (@{$Config{function_params}}) {
-	print Dumper $element;
+	my $finalDirectory = "output/".$element->{function_name};
+	my $functionName = $element->{function_name};
 	
-	my ($foundComponents,$suggested_path) = filterFile($Config{script_params}->{properties_file}, "backup_props_$Config{function_params}->{function_name}.csv");
+	ERROR "Controlbuild application has to be created before executing this program\nFollow this rule:\n\t - Create A new application with ControlBuild called '$functionName'\n" unless -d "$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$functionName\\functional";
+	
+	mkdir "$finalDirectory";
+	LOGDIE "Destination directory \"$finalDirectory\" was not created successfully" unless -d "output";
+	
+	INFO "Processing function $functionName";
+	# Removing old structure if it exists
+
+	mkdir $finalDirectory;
+	LOGDIE "Destination directory \"$finalDirectory\" was not created successfully" unless -d $finalDirectory;
+	
+	my ($foundComponents,$suggested_path) = filterFile(\@lines, "$finalDirectory/$functionName.backup.csv", $fbsTreePath, $functionName);
 	my @selectedComponents = selectComponents($foundComponents);
 }
 
-<>;
-
-
 exit;
 
+sub filterFile {
+	my $lines = shift;
+	my $outputFile = shift;
+	my $baseTreePath = shift;
+	my $functionName = shift;
+	
+	my %foundComponents;
+	my @lines = @$lines;
+	
+	 $| = 1;
+	my $matches = 0;
+	open BACKUP, ">$outputFile" or LOGDIE "Not possible to write in file \"$outputFile\" : $!"; 
+	binmode BACKUP;
+	print BACKUP shift(@lines);
+	
+	my $suggestedPath = undef;
+	
+	foreach my $line (@lines) {
+		if ($line->{component_name} =~ /$functionName/) {
+			$suggestedPath = $line->{path};
+			$suggestedPath =~ s/^$baseTreePath//;
+			DEBUG "Found automatic path \"$suggestedPath\"";
+			last;
+		}
+	}
+	
+	my $matchingPath = "^".$baseTreePath.$suggestedPath;
+	DEBUG "Selected path  : '$matchingPath'";	
+	
+	foreach my $line (@lines) {
+		if($line->{path} =~ /$matchingPath/) 
+		{
+			print BACKUP $line->{all};
+			my $componentName = $line->{component_name};
+			$componentName =~ s/_$line->{variable}//;
+			$foundComponents{$componentName}++;
+			
+			$matches++;
+		}
+	}
+	
+	close BACKUP;
 
-
-
+	INFO "$matches lines were written for backup";
+		
+	my @foundComponents = keys(%foundComponents);
+	INFO scalar(@foundComponents)." components found";
+	return \@foundComponents, $suggestedPath;
+}
 
 sub selectComponents {
 	my $foundComponents = shift;
@@ -45,14 +105,8 @@ sub selectComponents {
 	my @selectedComponents;
 	foreach my $component (@$foundComponents)
 	{
-		push (@selectedComponents, $component) if -d "$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}\\$component";
-	}
-
-	unless (grep(/$Config{function_params}->{function_name}/, @selectedComponents))
-	{
-		WARN "No selected components have the name '$Config{function_params}->{function_name}'. \nIT IS HIGHLY POSSIBLE THAT YOU DID A MISTAKE with configuration file!!!\n";
-		WARN "Maybe it should be better to replace field <function_params> / <tree_view> / <function_path> of configuration file with '$suggested_path'\n" if $suggested_path;
-		<>;
+		my $componentPath = "$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}\\$component";
+		push (@selectedComponents, $component) if -d $componentPath;
 	}
 
 	INFO scalar(@selectedComponents)." components selected";
@@ -60,18 +114,20 @@ sub selectComponents {
 }
 
 sub cleanup {
-        my $dir = shift;
+    my $dir = shift;
 	local *DIR;
 
-	opendir DIR, $dir or die "opendir $dir: $!";
+	return unless -d $dir;
+	opendir DIR, $dir or LOGDIE "opendir failed for \"$dir\" : $!";
 	for (readdir DIR) {
 	        next if /^\.{1,2}$/;
 	        my $path = "$dir/$_";
 		unlink $path if -f $path;
 		cleanup($path) if -d $path;
+		LOGDIE "It was not possible to remove element \"$path\" : $!" if -e $path;
 	}
 	closedir DIR;
-	rmdir $dir or print "error - $!";
+	rmdir $dir or LOGDIE "Deletion of \"$dir\" is not possible  : $!";
 }
 
 sub putFileInMemory {
@@ -113,56 +169,7 @@ sub putFileInMemory {
 	return @lines;
 }
 
-sub filterFile {
-	my $lines = shift;
-	my $outputFile = shift;
-	my $matchingPaths = shift;
-	
-	my %foundComponents;
-	my @lines = @$lines;
-	
-	 $| = 1;
-	my $i = 0;
-	my $matches = 0;
-	open BACKUP, ">backup_props_$Config{function_params}->{function_name}.csv" or die $!; 
-	binmode BACKUP;
-	print BACKUP pop(@lines);
-	
-	my $matching_path = "^$Config{project_params}->{tree_view}->{fbs_path}$Config{function_params}->{tree_view}->{function_path}";
-	INFO "Selected path  : '$matching_path'";
-	
-	my $suggested_path = undef;
-
-	foreach my $line (@lines) {
-		if (not $suggested_path and $line->{component_name} =~ /$Config{function_params}->{function_name}/) {
-			$suggested_path = $line->{path};
-			$suggested_path =~ s/^$Config{project_params}->{tree_view}->{fbs_path}//;
-		}
-		
-		if($line->{path} =~ /$matching_path/) 
-		{
-			print BACKUP $line->{all};
-			$line->{component_name} =~ s/_$line->{variable}//;
-			$foundComponents{$line->{component_name}}++;
-			
-			$matches++;
-		}
-		
-		$i++;
-	}
-	
-	close BACKUP;
-
-	INFO "$i lines processed ($matches matches found)";
-	INFO " $matches lines were match for backup";
-		
-	my @foundComponents = keys(%foundComponents);
-	INFO scalar(@foundComponents)." components found";
-	return \@foundComponents, $suggested_path;
-}
-
-sub write_file
-{
+sub write_file {
 	my $file = shift;
 	my $text = shift;
 	
@@ -206,13 +213,13 @@ sub createFilesStructure {
 EOF
 
 	my $i = 0;
-	my $total = scalar(@selectedComponents);
-	foreach my $component (@selectedComponents)
-	{
-		$i++;
+	#my $total = scalar(@selectedComponents);
+	#foreach my $component (@selectedComponents)
+	# {
+		# $i++;
 		
-		$batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n$pause_btw_step\n";
-	}
+		# $batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n$pause_btw_step\n";
+	# }
 
 	$batch_template .= <<EOF;
 
