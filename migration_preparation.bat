@@ -14,7 +14,7 @@ use Data::Dumper;
 my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configuration file
 
 # Preliminary checks
-ERROR "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder}."\\Applications";
+#ERROR "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder}."\\Applications";
 
 ###########################################
 # MISSING : Building 
@@ -24,19 +24,39 @@ my @lines = putFileInMemory($Config{script_params}->{properties_file});
 
 my $fbsTreePath = $Config{project_params}->{tree_view}->{fbs_path};
 
-cleanup("output");
-LOGDIE "Directory was not purged successfully" if -d "output";
+#cleanup("output");
+#LOGDIE "Directory was not purged successfully" if -d "output";
 mkdir "output";
 LOGDIE "Destination directory \"output\" was not created successfully" unless -d "output";
 
 open MAINBACKUPFILE, ">output/allFunctions.backup.csv";
 binmode MAINBACKUPFILE;
 print MAINBACKUPFILE $lines[0];
+my $MAINSCRIPTFILE;
+open $MAINSCRIPTFILE, ">output/allFunctions.bat";
+printScriptHeader($MAINSCRIPTFILE);
+my $OLDDIR = "$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}";
+my $message;
+
+	$message = <<EOF;
+INFO 'Putting FBS in checkout state';
+doCommand('cleartool co -nc "$OLDDIR"');
+
+EOF
+	printProtected ($MAINSCRIPTFILE, $message);
 
 foreach my $element (@{$Config{function_params}}) {
 	my $finalDirectory = "output/".$element->{function_name};
 	my $functionName = $element->{function_name};
-	
+	my $NEWDIR = $Config{project_params}->{folders}->{cb_project_folder}."\\Applications\\".$functionName."\\functional";
+
+	$message = <<EOF;
+INFO 'Putting function $functionName in checkout state';
+doCommand('cleartool co -c "Migration de la fonction $functionName" "$NEWDIR"');
+
+EOF
+	printProtected ($MAINSCRIPTFILE, $message);
+
 	ERROR "Controlbuild application has to be created before executing this program\nFollow this rule:\n\t - Create A new application with ControlBuild called '$functionName'\n" unless -d "$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$functionName\\functional";
 	
 	mkdir "$finalDirectory";
@@ -50,11 +70,27 @@ foreach my $element (@{$Config{function_params}}) {
 	
 	my ($foundComponents,$suggested_path) = filterFile(\@lines, "$finalDirectory/$functionName.backup.csv", $fbsTreePath, $functionName);
 	my @selectedComponents = selectComponents($foundComponents);
-	createFilesStructure($functionName, \@selectedComponents, $finalDirectory);
+	createFilesStructure($functionName, \@selectedComponents, $finalDirectory, $MAINSCRIPTFILE, $NEWDIR);
+	
+	$message = <<EOF;
+INFO 'Putting function $functionName in checkin state';
+doCommand('cleartool ci -c "Migration de la fonction $functionName" "$NEWDIR"');
+
+EOF
+	printProtected ($MAINSCRIPTFILE, $message);
 	
 }
 
+$message = <<EOF;
+INFO 'Putting FBS in checkin state';
+doCommand('cleartool ci -nc "$OLDDIR"');
+
+EOF
+printProtected ($MAINSCRIPTFILE, $message);
+
+printScriptFooter($MAINSCRIPTFILE);
 close MAINBACKUPFILE;
+close $MAINSCRIPTFILE;
 
 exit;
 
@@ -188,10 +224,98 @@ sub write_file {
 	close WRITE_FILE;
 }
 
+sub printProtected {
+	my $handler  = shift;
+	my $message = shift;
+	
+	$message =~ s/\\/\\\\/g;
+	print $handler $message;
+	
+}
+
+sub printScriptHeader {
+	my $handler = shift;
+	
+	print $handler <<'EOF';
+@rem = ' PERL for Windows NT - ccperl must be in search path
+@echo off
+ccperl %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
+goto endofperl
+@rem ';
+
+use lib qw(../lib);
+use strict;
+use warnings;
+use Common;
+
+print <<EOM;
+WARNING : PLEASE CHECK FOLLOWING POINTS:
+----------------------------------------
+  - CHECK IF THIS BATCH FILE IS CORRECT BEFORE EXECUTING IT :
+  - HAVE YOU EXECUTED THIS SCRIPT WITH AN UPDATED CSV FILE
+  - CHECK COMPONENTS WHICH WILL BE MOVED
+  - FUNCTION WHICH WILL BE MOVED IS IN A STABLE STATE
+----------------------------------------
+IF YOU HAVE UNDERSTOOD THIS MESSAGE, YOU CAN PROCEED...
+----------------------------------------
+EOM
+<>;
+
+EOF
+}
+
+sub printScriptFooter {
+	my $handler = shift;
+	
+	print $handler <<'EOF';
+print <<EOM;
+----------------------------------------
+Here are all remaining operations:
+  1 / Save all components which were moved;
+  2 / Open all MACS which has these components instanciated, and change model. BE VERY CAREFULL TO SELECT THE RIGHT MODEL BEFORE CHANGING.
+  3 / Save all the modified MACS;
+  4 / For safety, reimport backup advanced properties into top-level tree;
+  5 / For safety, run a coherency test. No new error messages should have appeared.
+----------------------------------------
+EOM
+<>;
+	
+sub doCommand {
+	my $command = shift;
+	my $skipCheckpoint = shift;
+	
+	DEBUG "Command entered : >>>$command<<<";
+	my $result = `$command 2>&1 1>NUL`;
+	
+	if ($result eq "") {
+		return "OK";
+	} elsif ($result =~ /^cleartool: Error:\s*(.*)/) {
+		ERROR "Error returned by command: $1";
+		<> unless $skipCheckpoint;
+		return "ERROR";
+	} elsif ($result =~ /^cleartool: Warning:\s*(.*)/) {
+		WARN "Warning returned by command: $1";
+		<> unless $skipCheckpoint;
+		return "WARNING";
+	} else {
+		ERROR "Unknown event : >>>$result<<<";
+		return "UNKNOWN";
+	}
+}
+
+
+__END__
+:endofperl
+pause
+EOF
+}
+
 sub createFilesStructure {
 	my $functionName = shift;
 	my $selectedComponents = shift;
 	my $directory = shift;
+	my $MAINSCRIPTFILE = shift;
+	my $NEWDIR = shift;
 	
 	my $pause_btw_step = "ECHO No particular message should be displayed. If it is OK, then you can continue\nPAUSE\nCLS\n";
 	my $batch_template = <<EOF;
@@ -226,6 +350,15 @@ EOF
 		$i++;
 		
 		$batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n\n";
+		$message = <<EOF;
+EOF
+
+		$message = <<EOF;
+		INFO 'Moving "$component"';
+		doCommand('cleartool move "$OLDDIR\\$component" "$NEWDIR\\$component"');
+
+EOF
+		printProtected ($MAINSCRIPTFILE, $message);
 	}
 
 	$batch_template .= <<EOF;
