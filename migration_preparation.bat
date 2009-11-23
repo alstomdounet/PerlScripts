@@ -62,7 +62,7 @@ EOF
 	mkdir "$finalDirectory";
 	LOGDIE "Destination directory \"$finalDirectory\" was not created successfully" unless -d "output";
 	
-	INFO "Processing function $functionName";
+	INFO "Processing function \"$functionName\"";
 	# Removing old structure if it exists
 
 	mkdir $finalDirectory;
@@ -120,6 +120,7 @@ sub filterFile {
 		}
 	}
 	
+	LOGDIE "No matches were found for function \"$functionName\". It has to be an existing function." unless $suggestedPath;
 	my $matchingPath = "^".$baseTreePath.$suggestedPath;
 	DEBUG "Selected path  : '$matchingPath'";	
 	
