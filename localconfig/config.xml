@@ -2,7 +2,7 @@
 <Config>
 	<project_params>
 		<folders>
-			<cb_project_folder>D:\clearcase_storage\gmanciet_view\PRIMA2\AppCB\PRIMAELII</cb_project_folder><!-- Path to ControlBuild project -->
+			<cb_project_folder>D:\clearcase_storage\gmanciet_view\GMT_s_VOB\AppCB\PRIMAELII</cb_project_folder><!-- Path to ControlBuild project -->
 			<fbs_folder>Specific\fbs\functional</fbs_folder><!-- Path to FBS upper level folder (physical path, not ControlBuild one) -->
 		</folders>
 		<tree_view>
@@ -10,10 +10,7 @@
 		</tree_view>
 	</project_params>
 	<function_params>
-		<function_name>fme_f17</function_name><!-- Name of the function you want to move (it has to be created with CB on 'Applications' directory before) -->
-		<tree_view>
-			<function_path>Freinage_mecanique/Interfacer_Systeme_Freinage_Electronique/</function_path><!-- tree structure corresponding to the function on PrimeEL2 treeview -->
-		</tree_view>
+		<function_name>fme_f12</function_name><!-- Name of the function you want to move (it has to be created with CB on 'Applications' directory before) -->
 	</function_params>
 	<script_params>
 		<properties_file>advanced_properties_v3.2.2.csv</properties_file><!-- Name of UP-TO-DATE csv file (PrimeEL2 treeview cross-references CSV file)  -->
