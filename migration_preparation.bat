@@ -11,7 +11,7 @@ use Common;
 use Storable qw(store retrieve);
 use Data::Dumper;
 
-my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configuration file
+my %Config = loadConfig("config.xml", ForceArray => qr/_list$/); # Loading / preprocessing of the configuration file
 
 # Preliminary checks
 #ERROR "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder}."\\Applications";
@@ -45,7 +45,7 @@ doCommand('cleartool co -nc "$OLDDIR"');
 EOF
 	printProtected ($MAINSCRIPTFILE, $message);
 
-foreach my $element (@{$Config{function_params}}) {
+foreach my $element (@{$Config{function_list}}) {
 	my $finalDirectory = "output/".$element->{function_name};
 	my $functionName = $element->{function_name};
 	my $NEWDIR = $Config{project_params}->{folders}->{cb_project_folder}."\\Applications\\".$functionName."\\functional";
@@ -247,6 +247,7 @@ use lib qw(../lib);
 use strict;
 use warnings;
 use Common;
+use Time::HiRes qw(gettimeofday tv_interval);
 
 print <<EOM;
 WARNING : PLEASE CHECK FOLLOWING POINTS:
@@ -284,8 +285,10 @@ sub doCommand {
 	my $command = shift;
 	my $skipCheckpoint = shift;
 	
+	my $t0 = [gettimeofday];
 	DEBUG "Command entered : >>>$command<<<";
 	my $result = `$command 2>&1 1>NUL`;
+	DEBUG "Command has taken ".tv_interval ( $t0, [gettimeofday] )." seconds";
 	
 	if ($result eq "") {
 		return "OK";
@@ -299,6 +302,7 @@ sub doCommand {
 		return "WARNING";
 	} else {
 		ERROR "Unknown event : >>>$result<<<";
+		<>;
 		return "UNKNOWN";
 	}
 }
