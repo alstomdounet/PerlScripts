@@ -24,8 +24,8 @@ my @lines = putFileInMemory($Config{script_params}->{properties_file});
 
 my $fbsTreePath = $Config{project_params}->{tree_view}->{fbs_path};
 
-#cleanup("output");
-#LOGDIE "Directory was not purged successfully" if -d "output";
+cleanup("output");
+LOGDIE "Directory was not purged successfully" if -d "output";
 mkdir "output";
 LOGDIE "Destination directory \"output\" was not created successfully" unless -d "output";
 
@@ -354,6 +354,7 @@ EOF
 	foreach my $component (@$selectedComponents) {
 		$i++;
 		
+		DEBUG "Component \"$component\" will be migrated";
 		$batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n\n";
 		$message = <<EOF;
 EOF
