@@ -9,9 +9,9 @@
 			<fbs_path>Embarquee/Controle_Commande/FBS/</fbs_path><!-- Path to FBS highest level on PrimeEL2 treeview -->
 		</tree_view>
 	</project_params>
-	<function_params>
+	<function_list>
 		<function_name>fme_f12</function_name><!-- Name of the function you want to move (it has to be created with CB on 'Applications' directory before) -->
-	</function_params>
+	</function_list>
 	<script_params>
 		<properties_file>advanced_properties_v3.2.2.csv</properties_file><!-- Name of UP-TO-DATE csv file (PrimeEL2 treeview cross-references CSV file)  -->
 	</script_params>
