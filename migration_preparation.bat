@@ -249,6 +249,7 @@ use strict;
 use warnings;
 use Common;
 use Time::HiRes qw(gettimeofday tv_interval);
+use File::Find;
 
 print <<EOM;
 WARNING : PLEASE CHECK FOLLOWING POINTS:
@@ -281,15 +282,32 @@ Here are all remaining operations:
 ----------------------------------------
 EOM
 <>;
-	
+
+sub doMove {
+	my $oldDir = shift;
+	my $newDir = shift;
+	doCommand("cleartool move \"$oldDir\" \"$newDir\"");
+	my $t1 = [gettimeofday];
+	find(\&checkoutFile, $newDir);
+	DEBUG "Checkout has taken ".tv_interval ( $t1, [gettimeofday] )." seconds";
+}
+
+
+sub checkoutFile {
+	my $file = $File::Find::name;
+	$file =~ s/\//\\/g;
+	doCommand("cleartool co -nc \"$file\"", 0, 1);
+}
+
 sub doCommand {
 	my $command = shift;
 	my $skipCheckpoint = shift;
+	my $skipRecording = shift;
 	
 	my $t0 = [gettimeofday];
-	DEBUG "Command entered : >>>$command<<<";
+	DEBUG "Command entered : >>>$command<<<" unless $skipRecording;
 	my $result = `$command 2>&1 1>NUL`;
-	DEBUG "Command has taken ".tv_interval ( $t0, [gettimeofday] )." seconds";
+	DEBUG "Command has taken ".tv_interval ( $t0, [gettimeofday] )." seconds" unless $skipRecording;
 	
 	if ($result eq "") {
 		return "OK";
@@ -360,9 +378,9 @@ EOF
 EOF
 
 		$message = <<EOF;
-		INFO 'Moving "$component"';
-		doCommand('cleartool move "$OLDDIR\\$component" "$NEWDIR\\$component"');
-
+		INFO 'Processing "$component"';
+		doMove('$OLDDIR\\$component', '$NEWDIR\\$component');
+		
 EOF
 		printProtected ($MAINSCRIPTFILE, $message);
 	}
