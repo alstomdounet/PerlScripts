@@ -68,8 +68,8 @@ EOF
 	mkdir $finalDirectory;
 	LOGDIE "Destination directory \"$finalDirectory\" was not created successfully" unless -d $finalDirectory;
 	
-	my ($foundComponents,$suggested_path) = filterFile(\@lines, "$finalDirectory/$functionName.backup.csv", $fbsTreePath, $functionName);
-	my @selectedComponents = selectComponents($foundComponents);
+	my @foundComponents = filterFile(\@lines, "$finalDirectory/$functionName.backup.csv", $fbsTreePath, $functionName);
+	my @selectedComponents = selectComponents(@foundComponents);
 	createFilesStructure($functionName, \@selectedComponents, $finalDirectory, $MAINSCRIPTFILE, $NEWDIR);
 	
 	$message = <<EOF;
@@ -120,7 +120,11 @@ sub filterFile {
 		}
 	}
 	
-	LOGDIE "No matches were found for function \"$functionName\". It has to be an existing function." unless $suggestedPath;
+	unless ($suggestedPath) {
+		WARN "Function \"$functionName\" doesn't appear in file properties." and return ($functionName) if -d $OLDDIR."\\$functionName";
+		LOGDIE "Function \"$functionName\" doesn't exists. Check your writing.";
+	}
+
 	my $matchingPath = "^".$baseTreePath.$suggestedPath;
 	DEBUG "Selected path  : '$matchingPath'";	
 	
@@ -143,14 +147,14 @@ sub filterFile {
 		
 	my @foundComponents = keys(%foundComponents);
 	INFO scalar(@foundComponents)." components found";
-	return \@foundComponents, $suggestedPath;
+	return @foundComponents;
 }
 
 sub selectComponents {
-	my $foundComponents = shift;
+	my @foundComponents = @_;
 	
 	my @selectedComponents;
-	foreach my $component (@$foundComponents)
+	foreach my $component (@foundComponents)
 	{
 		my $componentPath = "$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}\\$component";
 		push (@selectedComponents, $component) if -d $componentPath;
