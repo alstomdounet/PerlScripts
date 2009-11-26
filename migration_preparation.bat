@@ -50,13 +50,6 @@ foreach my $element (@{$Config{function_list}}) {
 	my $functionName = $element->{function_name};
 	my $NEWDIR = $Config{project_params}->{folders}->{cb_project_folder}."\\Applications\\".$functionName."\\functional";
 
-	$message = <<EOF;
-INFO 'Putting function $functionName in checkout state';
-doCommand('cleartool co -c "Migration de la fonction $functionName" "$NEWDIR"');
-
-EOF
-	printProtected ($MAINSCRIPTFILE, $message);
-
 	ERROR "Controlbuild application has to be created before executing this program\nFollow this rule:\n\t - Create A new application with ControlBuild called '$functionName'\n" unless -d "$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$functionName\\functional";
 	
 	mkdir "$finalDirectory";
@@ -70,6 +63,18 @@ EOF
 	
 	my @foundComponents = filterFile(\@lines, "$finalDirectory/$functionName.backup.csv", $fbsTreePath, $functionName);
 	my @selectedComponents = selectComponents(@foundComponents);
+	
+	my $components = join(" ", @selectedComponents);
+	$message = <<EOF;
+INFO 'Locking all components of \"$functionName\"';
+doLockRecursive('$OLDDIR', qw($components));
+
+INFO 'Putting function $functionName in checkout state';
+doCommand('cleartool co -c "Migration de la fonction $functionName" "$NEWDIR"');
+
+EOF
+	printProtected ($MAINSCRIPTFILE, $message);
+	
 	createFilesStructure($functionName, \@selectedComponents, $finalDirectory, $MAINSCRIPTFILE, $NEWDIR);
 	
 	$message = <<EOF;
@@ -121,8 +126,9 @@ sub filterFile {
 	}
 	
 	unless ($suggestedPath) {
-		WARN "Function \"$functionName\" doesn't appear in file properties." and return ($functionName) if -d $OLDDIR."\\$functionName";
-		LOGDIE "Function \"$functionName\" doesn't exists. Check your writing.";
+		LOGDIE "No matches were found for function \"$functionName\". It has to be an existing function." unless -d $OLDDIR."\\$functionName";
+		WARN "Only one component has been found. It is probably an empty component.";
+		return ($functionName);
 	}
 
 	my $matchingPath = "^".$baseTreePath.$suggestedPath;
@@ -151,11 +157,8 @@ sub filterFile {
 }
 
 sub selectComponents {
-	my @foundComponents = @_;
-	
-	my @selectedComponents;
-	foreach my $component (@foundComponents)
-	{
+	my @selectedComponents = ();
+	foreach my $component (@_) {
 		my $componentPath = "$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}\\$component";
 		push (@selectedComponents, $component) if -d $componentPath;
 	}
@@ -296,6 +299,22 @@ sub doMove {
 	DEBUG "Checkout has taken ".tv_interval ( $t1, [gettimeofday] )." seconds";
 }
 
+sub doLockRecursive {
+	my $oldDir = shift;
+	my @directories = ();
+	foreach my $dir (@_) {
+		push(@directories, $oldDir."\\".$dir);
+	}
+	my $t1 = [gettimeofday];
+	find(\&lockFile, @directories);
+	INFO "Locking has taken ".tv_interval ( $t1, [gettimeofday] )." seconds";
+}
+
+sub lockFile {
+	my $file = $File::Find::name;
+	$file =~ s/\//\\/g;
+	doCommand("cleartool lock -user gmanciet \"$file\"", 0, 1);
+}
 
 sub checkoutFile {
 	my $file = $File::Find::name;
@@ -316,14 +335,17 @@ sub doCommand {
 	if ($result eq "") {
 		return "OK";
 	} elsif ($result =~ /^cleartool: Error:\s*(.*)/) {
+		DEBUG "Command entered : >>>$command<<<" if $skipRecording;
 		ERROR "Error returned by command: $1";
 		<> unless $skipCheckpoint;
 		return "ERROR";
 	} elsif ($result =~ /^cleartool: Warning:\s*(.*)/) {
+		DEBUG "Command entered : >>>$command<<<" if $skipRecording;
 		WARN "Warning returned by command: $1";
 		<> unless $skipCheckpoint;
 		return "WARNING";
 	} else {
+		DEBUG "Command entered : >>>$command<<<" if $skipRecording;
 		ERROR "Unknown event : >>>$result<<<";
 		<>;
 		return "UNKNOWN";
