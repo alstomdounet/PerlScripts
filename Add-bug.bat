@@ -284,6 +284,9 @@ my $listOrigins = addListBox($mw, 'Origin', 'submitter_CR_origin', 'Mandatory', 
 my $listSites = addListBox($mw, 'Site', 'site', 'Mandatory', "Determine who will process the issue.", $CqFieldsDesc{site}{shortDesc});
 my $listDetPhasis = addListBox($mw, 'Detection phase', 'defect_detection_phase', 'Mandatory', "Determine when was the problem detected.", $CqFieldsDesc{defect_detection_phase}{shortDesc});
 my $listTypes = addListBox($mw, 'Type', 'submitter_CR_type', 'Mandatory', "Type of modification:\n - defect for non-compliance of a requirement (specification, etc.)\n - enhancement is for various improvements (functionality, reliability, speed, etc.)", $CqFieldsDesc{submitter_CR_type}{shortDesc});
+my $listAnalyser = addListBox($mw, 'Analyst', 'analyst', 'Mandatory', "Determine who will analyse the issue.", $CqFieldsDesc{analyst}{shortDesc});
+my $listCROrigin = addListBox($mw, 'Category', 'CR_category', 'Mandatory', "TBD", $CqFieldsDesc{CR_category}{shortDesc});
+
 
 # Building title / description
 my $TitlePanel = $mw->Frame() -> pack(-side => 'top', -fill => 'both', -expand => 1);
@@ -428,8 +431,8 @@ sub sendCrToCQ {
 	my $identifier = $rec->GetDisplayName();
 	$rec->SetFieldValue('product', $bug_trans{product});
 	$rec->SetFieldValue('sub_system', $bug_trans{sub_system});
-	$rec->SetFieldValue('write_arrival_state', 'Submitted - new');
-	#$rec->SetFieldValue('write_arrival_state', 'Recorded');
+	#$rec->SetFieldValue('write_arrival_state', 'Submitted - new');
+	$rec->SetFieldValue('write_arrival_state', 'Recorded');
 	
 	while(my($field, $value) = each(%bug_trans)) {
 		next if ($field eq 'product' or $field eq 'sub_system'); # We can skip those because it is already selected
