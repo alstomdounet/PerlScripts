@@ -13,7 +13,7 @@
 		</filtering>
 		<refreshPeriod>
 			<bugs>60</bugs>
-			<subSystems>8600</subSystems>
+			<subSystems>86400</subSystems><!-- Refreshness of fields database (default is 86400 seconds - one day) -->
 		</refreshPeriod>
 	</clearquest>
 	<clearcase />
