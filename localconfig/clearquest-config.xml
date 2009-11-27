@@ -13,7 +13,7 @@
 		</filtering>
 		<refreshPeriod>
 			<bugs>60</bugs>
-			<subSystems>86400</subSystems>
+			<subSystems>8600</subSystems>
 		</refreshPeriod>
 	</clearquest>
 	<clearcase />
