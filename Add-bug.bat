@@ -175,12 +175,13 @@ sub syncFieldsWithClearQuest {
 		LOGDIE "An unknown error has happened during Clearquest connection. Please report this issue.";
 	}
 	
-	my @fields = qw(sub_system submitter_CR_origin submitter_CR_type submitter_priority submitter_severity frequency product_version site defect_detection_phase zone);
+	my @fields = qw(sub_system submitter_CR_origin submitter_CR_type submitter_priority submitter_severity frequency product_version site defect_detection_phase zone analyst CR_category);
 	
 	my $rec = $session->BuildEntity("ChangeRequest");
 
 	$data->{product} = $Config{clearquest}->{product};
 	$rec->SetFieldValue('product', $data->{product});
+	$rec->SetFieldValue('write_arrival_state', 'Recorded');
 	
 	foreach my $key (@fields) {
 		DEBUG "Extracting field '$key'";
@@ -423,10 +424,12 @@ sub sendCrToCQ {
 	$session->UserLogon ($cfg->{clearquest}->{login}, $cfg->{clearquest}->{password}, "atvcm", "");
 			
 	my $rec = $session->BuildEntity("ChangeRequest");
+
 	my $identifier = $rec->GetDisplayName();
-	
 	$rec->SetFieldValue('product', $bug_trans{product});
 	$rec->SetFieldValue('sub_system', $bug_trans{sub_system});
+	$rec->SetFieldValue('write_arrival_state', 'Submitted - new');
+	#$rec->SetFieldValue('write_arrival_state', 'Recorded');
 	
 	while(my($field, $value) = each(%bug_trans)) {
 		next if ($field eq 'product' or $field eq 'sub_system'); # We can skip those because it is already selected
