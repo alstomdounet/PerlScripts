@@ -4,13 +4,20 @@ use XML::Simple;
 my $localConfigPath = "./localconfig/";
 
 my $config_text = <<TEXT;
-log4perl.rootLogger = DEBUG, LOGFILE, Screen
+log4perl.rootLogger = DEBUG, LOGFILE, PERMLOGFILE, Screen
 
 log4perl.appender.LOGFILE = Log::Log4perl::Appender::File
 log4perl.appender.LOGFILE.filename = logFile.csv
 log4perl.appender.LOGFILE.mode = write
 log4perl.appender.LOGFILE.layout = PatternLayout
 log4perl.appender.LOGFILE.layout.ConversionPattern = %p;%d;(%F:%L);%m%n
+
+log4perl.appender.PERMLOGFILE = Log::Log4perl::Appender::File
+log4perl.appender.PERMLOGFILE.filename = history.csv
+log4perl.appender.PERMLOGFILE.mode = append
+log4perl.appender.PERMLOGFILE.layout = PatternLayout
+log4perl.appender.PERMLOGFILE.Threshold=INFO
+log4perl.appender.PERMLOGFILE.layout.ConversionPattern = %p;%d;(%F:%L);%m%n
 
 log4perl.appender.Screen=Log::Log4perl::Appender::Screen
 log4perl.appender.Screen.stderr=0
