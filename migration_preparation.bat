@@ -313,7 +313,7 @@ sub doLockRecursive {
 sub lockFile {
 	my $file = $File::Find::name;
 	$file =~ s/\//\\/g;
-	doCommand("cleartool lock -user gmanciet \"$file\"", 0, 1);
+	doCommand("cleartool lock -c \"Migration des fonctions. Demander a gmanciet en cas de problemes.\" -nuser gmanciet \"$file\"", 0, 1);
 }
 
 sub checkoutFile {
