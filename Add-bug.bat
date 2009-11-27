@@ -17,7 +17,7 @@ use Data::Dumper;
 use Crypt::Rijndael_PP qw(rijndael_encrypt rijndael_decrypt MODE_CBC);
 use Storable qw(store retrieve thaw freeze);
 
-my $PROGRAM_VERSION = "1.1";
+my $PROGRAM_VERSION = "1.2";
 
 INFO "Starting program (V $PROGRAM_VERSION)";
 my %Config = loadConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
@@ -194,6 +194,8 @@ sub syncFieldsWithClearQuest {
 			push(@shortDesc, $simpleText);
 			$data->{$key}{equivTable}{$simpleText} = $text;
 		}
+		
+		@shortDesc = sort (@shortDesc) if $key eq "analyst";
 		
 		$data->{$key}{shortDesc} = \@shortDesc;
 	}
