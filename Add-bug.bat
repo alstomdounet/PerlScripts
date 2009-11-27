@@ -423,9 +423,7 @@ sub sendCrToCQ {
 	$session->UserLogon ($cfg->{clearquest}->{login}, $cfg->{clearquest}->{password}, "atvcm", "");
 			
 	my $rec = $session->BuildEntity("ChangeRequest");
-	#$rec->SetFieldValue('write_arrival_state', 'Submitted - new');
-	$rec->SetFieldValue('State', 'Submitted');
-	$rec->SetFieldValue('substate', 'new');
+	my $identifier = $rec->GetDisplayName();
 	
 	$rec->SetFieldValue('product', $bug_trans{product});
 	$rec->SetFieldValue('sub_system', $bug_trans{sub_system});
@@ -435,37 +433,13 @@ sub sendCrToCQ {
 		$rec->SetFieldValue($field, $value);
 	}
 	
-	my $RetVal = "";
-	my $insertionOK = -1;
-	
-	eval { $RetVal = $rec->Validate(); };
-	# EXCEPTION information is in $@ 
-	# RetVal is either an empty string or contains a failure message string 
-	if ($@){ 
-		ERROR "Exception while validating: ’$@’"; 
-	}
-	if ($RetVal eq "") {
-		DEBUG "Clearquest validation passed successfully";
-		eval {$RetVal = $rec->Commit(); };
-		if ($@){ 
-			ERROR "Exception while commiting: ’$@’"; 
-			$rec->Revert();
-		}
-		if ($RetVal eq "") {
-			$insertionOK = 1;
-		}
-		else {
-			ERROR "Commit of bug has failed on Clearquest side for following reason(s) : $RetVal";
-			$rec->Revert();
-		}
+	my $result = makeCQValidation($rec);
+	$result = makeCQCommit($rec) if($result);
 		
-	}
-	else {
-		ERROR "Validation of bug has failed on Clearquest side for following reason(s) : $RetVal";
-	}
-		
-	if($insertionOK > 0) {
-		INFO "Insertion of bug inside Clearquest has passed successfully";
+	if($result > 0) {
+		INFO "Issue was inserted with identifier : $identifier";
+		#$rec = $session->EditEntity($identifier, "Submit") if($result);
+		#$result = makeCQCommit($rec) if($result);
 	}
 	else {
 		ERROR("Insertion of bug has failed");
@@ -479,7 +453,52 @@ sub sendCrToCQ {
 	}
 	
 	store ($data, $bugsDatabase) unless $externalParams;
-	return $insertionOK;
+
+	return $result;
+}
+
+sub makeCQValidation {
+	my $rec = shift;
+	my $RetVal;
+	
+	DEBUG "Trying to validate $rec";
+	eval { $RetVal = $rec->Validate(); };
+	# EXCEPTION information is in $@ 
+	# RetVal is either an empty string or contains a failure message string 
+	if ($@){ 
+		ERROR "Exception while validating: ’$@’"; 
+	}
+	if ($RetVal eq "") {
+		DEBUG "Clearquest validation passed successfully";
+
+		return 1;
+	}
+	else {
+		ERROR "Validation of bug has failed on Clearquest side for following reason(s) : $RetVal";
+	}
+	return 0;
+}
+
+sub makeCQCommit {
+	my $record = shift;
+	my $RetVal;
+	
+	DEBUG "Trying to commit $record";
+	eval {$RetVal = $record->Commit(); };
+	# EXCEPTION information is in $@ 
+	# RetVal is either an empty string or contains a failure message string 
+	if ($@){ 
+		ERROR "Exception while commiting: ’$@’"; 
+		$record->Revert();
+	}
+	if ($RetVal eq "") {
+		return 1;
+	}
+	else {
+		ERROR "Commit of bug has failed on Clearquest side for following reason(s) : $RetVal";
+		$record->Revert();
+	}
+	return 0;
 }
 
 sub fillInterfaceWithBug {
