@@ -81,6 +81,10 @@ EOF
 INFO 'Putting function $functionName in checkin state';
 doCommand('cleartool ci -c "Migration de la fonction $functionName" "$NEWDIR"');
 
+INFO 'PostProcessing function '$functionName'(checkout, unlocking)';
+doCheckoutRecursive('$NEWDIR', '');
+doUnlockRecursive('$NEWDIR', '');
+
 EOF
 	printProtected ($MAINSCRIPTFILE, $message);
 	
@@ -294,20 +298,45 @@ sub doMove {
 	my $oldDir = shift;
 	my $newDir = shift;
 	doCommand("cleartool move \"$oldDir\" \"$newDir\"");
+}
+
+sub doCheckoutRecursive {
+	my $baseDir = shift;
+	my @directories = ();
+	foreach my $dir (@_) {
+		push(@directories, $baseDir."\\".$dir);
+	}
 	my $t1 = [gettimeofday];
 	find(\&checkoutFile, $newDir);
 	DEBUG "Checkout has taken ".tv_interval ( $t1, [gettimeofday] )." seconds";
 }
 
 sub doLockRecursive {
-	my $oldDir = shift;
+	my $baseDir = shift;
 	my @directories = ();
 	foreach my $dir (@_) {
-		push(@directories, $oldDir."\\".$dir);
+		push(@directories, $baseDir."\\".$dir);
 	}
 	my $t1 = [gettimeofday];
 	find(\&lockFile, @directories);
 	INFO "Locking has taken ".tv_interval ( $t1, [gettimeofday] )." seconds";
+}
+
+sub doUnlockRecursive {
+	my $baseDir = shift;
+	my @directories = ();
+	foreach my $dir (@_) {
+		push(@directories, $baseDir."\\".$dir);
+	}
+	my $t1 = [gettimeofday];
+	find(\&lockFile, @directories);
+	INFO "Locking has taken ".tv_interval ( $t1, [gettimeofday] )." seconds";
+}
+
+sub unlockFile {
+	my $file = $File::Find::name;
+	$file =~ s/\//\\/g;
+	doCommand("cleartool unlock -c \"Migration des fonctions. Demander a gmanciet en cas de problemes.\" \"$file\"", 0, 1);
 }
 
 sub lockFile {
@@ -366,43 +395,11 @@ sub createFilesStructure {
 	my $MAINSCRIPTFILE = shift;
 	my $NEWDIR = shift;
 	
-	my $pause_btw_step = "ECHO No particular message should be displayed. If it is OK, then you can continue\nPAUSE\nCLS\n";
-	my $batch_template = <<EOF;
-\@ECHO OFF
-SET OLDDIR=$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}
-SET NEWDIR=$Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$functionName\\functional
-ECHO WARNING : PLEASE CHECK FOLLOWING POINTS:
-ECHO ----------------------------------------
-ECHO  - CHECK IF THIS BATCH FILE IS CORRECT BEFORE EXECUTING IT :
-ECHO  - HAVE YOU EXECUTED THIS SCRIPT WITH AN UPDATED CSV FILE
-ECHO  - CHECK COMPONENTS WHICH WILL BE MOVED
-ECHO  - FUNCTION WHICH WILL BE MOVED IS IN A STABLE STATE
-ECHO -------
-ECHO IF YOU HAVE UNDERSTOOD THIS MESSAGE, YOU CAN PROCEED...
-PAUSE
-CLS
-ECHO Checking out 'fbs' and '$functionName' applications
-ECHO --------------
-cleartool co -c "Migration de la fonction '$functionName'" "\%OLDDIR\%"
-cleartool co -c "Migration de la fonction '$functionName'" ".\%NEWDIR\%"
-$pause_btw_step
-
-ECHO <DISABLED FOR SECURITY>Deletion Of top-level MAC
-ECHO --------------
-rem cleartool rmname ".\\Applications\\\%FUNCTION_NAME\%\\functional\\\%FUNCTION_NAME\%"
-$pause_btw_step
-EOF
-
 	my $i = 0;
 	my $total = scalar(@$selectedComponents);
 	foreach my $component (@$selectedComponents) {
 		$i++;
 		
-		DEBUG "Component \"$component\" will be migrated";
-		$batch_template .= "ECHO [$i/$total]  Moving directory '$component'\nECHO --------------\ncleartool move \"%OLDDIR%\\$component\" \"%NEWDIR%\\$component\"\n\n";
-		$message = <<EOF;
-EOF
-
 		$message = <<EOF;
 		INFO 'Processing "$component"';
 		doMove('$OLDDIR\\$component', '$NEWDIR\\$component');
@@ -410,35 +407,6 @@ EOF
 EOF
 		printProtected ($MAINSCRIPTFILE, $message);
 	}
-
-	$batch_template .= <<EOF;
-ECHO Checking in 'fbs' and '$functionName' applications
-ECHO --------------
-rem cleartool ci -c "Migration de la fonction '$functionName'" "%OLDDIR%"
-cleartool ci -c "Migration de la fonction '$functionName'" ".%NEWDIR%"
-$pause_btw_step
-
-echo ----------------------------------------------------------------
-echo  Program is finished. You have now to follow hereafter operations:
-echo ----------------------------------------------------------------
-
-CALL postscript_instructions.bat
-EOF
-
-	my $output_file = "$directory/move_$functionName.bat";
-	write_file($output_file, $batch_template);
-	DEBUG "'$output_file' has been written";
-
-	my $instructions .= <<EOF;
-\@ECHO  1 / Save all components which were moved (they are located inside $Config{project_params}->{folders}->{cb_project_folder}\\Applications\\$functionName\\functional);
-\@ECHO  2 / Open all MACS which has these components instanciated, and change model. BE VERY CAREFULL TO SELECT THE RIGHT MODEL BEFORE CHANGING.
-\@ECHO  3 / Save all the modified MACS;
-\@ECHO  4 / For safety, reimport backup advanced properties into top-level tree;
-\@ECHO  5 / For safety, run a coherency test. No new error messages should have appeared.
-\@PAUSE
-EOF
-
-	write_file("$directory/postscript_instructions.bat", $instructions);
 
 	close FILE;
 	close BACKUP;
