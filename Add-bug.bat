@@ -17,7 +17,7 @@ use Data::Dumper;
 use Crypt::Rijndael_PP qw(rijndael_encrypt rijndael_decrypt MODE_CBC);
 use Storable qw(store retrieve thaw freeze);
 
-my $PROGRAM_VERSION = "1.2";
+my $PROGRAM_VERSION = "1.3";
 
 INFO "Starting program (V $PROGRAM_VERSION)";
 my %Config = loadConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
@@ -59,6 +59,7 @@ my $ThreadWorking : shared;       # Contient la valeur permettant au thread de l
 my @ArgumentsThread : shared;     # Contient les arguements à passer à une éventuelle procédure
 my $ResultFunction : shared;    # Contient le résultat des fonctions lancées dans le thread
 my $frozenCQFields : shared;
+my $Clearquest_password : shared;
 
 $ThreadWorking = 0;               # 0 : thread ne fait rien, 1 : il bosse
 $killThread    = 0;               # 0 : thread en vie, 1 : thread se termine
@@ -102,9 +103,10 @@ my $crypted_string = $Clearquest_login;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
 
-my $Clearquest_password = $Config{clearquest}->{password};
 
-if (ref($Clearquest_password)) {
+
+
+if (ref($Config{clearquest}->{password})) {
 	DEBUG "No credential given. Asking one for current session.";
 	
 	$| = 1;
@@ -122,6 +124,9 @@ if (ref($Clearquest_password)) {
 
 	INFO("Clearquest password was defined for current session.");
 	$Config{clearquest}->{password} = $Clearquest_password;
+}
+else {
+	$Clearquest_password = $Config{clearquest}->{password};	
 }
 
 $crypted_string = $Clearquest_password;
@@ -427,15 +432,16 @@ sub sendCrToCQ {
 	}
 	####################################
 	
+	DEBUG "Building session";
 	$session = CQSession::Build() unless $session; 
-	$session->UserLogon ($cfg->{clearquest}->{login}, $cfg->{clearquest}->{password}, "atvcm", "");
-			
+	DEBUG "Connecting to database.";
+	$session->UserLogon ($cfg->{clearquest}->{login}, $Clearquest_password, "atvcm", "");
+	DEBUG "Building entity";	
 	my $rec = $session->BuildEntity("ChangeRequest");
-
+	DEBUG "Retrieving identifier.";	
 	my $identifier = $rec->GetDisplayName();
 	$rec->SetFieldValue('product', $bug_trans{product});
 	$rec->SetFieldValue('sub_system', $bug_trans{sub_system});
-	#$rec->SetFieldValue('write_arrival_state', 'Submitted - new');
 	$rec->SetFieldValue('write_arrival_state', 'Recorded');
 	
 	while(my($field, $value) = each(%bug_trans)) {
