@@ -113,14 +113,12 @@ if (ref($Clearquest_password)) {
 	use Term::ReadKey;
 	my $key;
 	$Clearquest_password = '';
-	ReadMode 4; # Turn off controls keys
-	while ($key = ReadKey(0)) {
-		last if ord $key == 13;
-		$Clearquest_password .= $key;
-		print "**";
-	}
-
-	ReadMode 0; # Reset tty mode before exiting
+	#ReadMode 5; # Turn off controls keys
+	ReadMode('noecho');
+	$Clearquest_password = ReadLine(0);
+	chomp $Clearquest_password;
+	print "\n";
+	ReadMode 'normal';
 
 	INFO("Clearquest password was defined for current session.");
 	$Config{clearquest}->{password} = $Clearquest_password;
