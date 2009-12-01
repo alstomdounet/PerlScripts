@@ -16,10 +16,6 @@ my %Config = loadConfig("config.xml", ForceArray => qr/_list$/); # Loading / pre
 # Preliminary checks
 #ERROR "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder}."\\Applications";
 
-###########################################
-# MISSING : Building 
-###########################################
-
 my @lines = putFileInMemory($Config{script_params}->{properties_file});
 
 my $fbsTreePath = $Config{project_params}->{tree_view}->{fbs_path};
@@ -45,6 +41,7 @@ doCommand('cleartool co -nc "$OLDDIR"');
 EOF
 	printProtected ($MAINSCRIPTFILE, $message);
 
+my $selectedComponents = 0;
 foreach my $element (@{$Config{function_list}}) {
 	my $finalDirectory = "output/".$element->{function_name};
 	my $functionName = $element->{function_name};
@@ -64,9 +61,11 @@ foreach my $element (@{$Config{function_list}}) {
 	my @foundComponents = filterFile(\@lines, "$finalDirectory/$functionName.backup.csv", $fbsTreePath, $functionName);
 	my @selectedComponents = selectComponents(@foundComponents);
 	
+	$selectedComponents += scalar(@selectedComponents);
+	INFO "$selectedComponents components ready to be migrated";
 	my $components = join(" ", @selectedComponents);
 	$message = <<EOF;
-INFO 'Locking all components of \"$functionName\"';
+INFO 'Locking all components of \"$functionName\""';
 doLockRecursive('$OLDDIR', qw($components));
 
 INFO 'Putting function $functionName in checkout state';
@@ -81,7 +80,7 @@ EOF
 INFO 'Putting function $functionName in checkin state';
 doCommand('cleartool ci -c "Migration de la fonction $functionName" "$NEWDIR"');
 
-INFO 'PostProcessing function '$functionName'(checkout, unlocking)';
+INFO 'Postprocessing of function \"$functionName\"(checkout, unlocking)';
 doCheckoutRecursive('$NEWDIR', '');
 doUnlockRecursive('$NEWDIR', '');
 
@@ -261,6 +260,7 @@ use warnings;
 use Common;
 use Time::HiRes qw(gettimeofday tv_interval);
 use File::Find;
+use Term::ReadKey;
 
 print <<EOM;
 WARNING : PLEASE CHECK FOLLOWING POINTS:
@@ -307,7 +307,7 @@ sub doCheckoutRecursive {
 		push(@directories, $baseDir."\\".$dir);
 	}
 	my $t1 = [gettimeofday];
-	find(\&checkoutFile, $newDir);
+	find(\&checkoutFile, @directories);
 	DEBUG "Checkout has taken ".tv_interval ( $t1, [gettimeofday] )." seconds";
 }
 
@@ -356,29 +356,44 @@ sub doCommand {
 	my $skipCheckpoint = shift;
 	my $skipRecording = shift;
 	
+RETRY:
 	my $t0 = [gettimeofday];
 	DEBUG "Command entered : >>>$command<<<" unless $skipRecording;
 	my $result = `$command 2>&1 1>NUL`;
 	DEBUG "Command has taken ".tv_interval ( $t0, [gettimeofday] )." seconds" unless $skipRecording;
 	
-	if ($result eq "") {
-		return "OK";
+	my $returnString = 'UNKNOWN';
+	my $message = '';
+	if ($result eq '') {
+		$returnString = "OK";
 	} elsif ($result =~ /^cleartool: Error:\s*(.*)/) {
-		DEBUG "Command entered : >>>$command<<<" if $skipRecording;
-		ERROR "Error returned by command: $1";
-		<> unless $skipCheckpoint;
-		return "ERROR";
+		$message = $1;
+		$returnString = "ERROR";
 	} elsif ($result =~ /^cleartool: Warning:\s*(.*)/) {
-		DEBUG "Command entered : >>>$command<<<" if $skipRecording;
-		WARN "Warning returned by command: $1";
-		<> unless $skipCheckpoint;
-		return "WARNING";
-	} else {
-		DEBUG "Command entered : >>>$command<<<" if $skipRecording;
-		ERROR "Unknown event : >>>$result<<<";
-		<>;
-		return "UNKNOWN";
+		$message = $1;
+		$returnString = "WARNING";
+	} 
+	
+	if($returnString ne 'OK') {
+		WARN "Command entered was : >>>$command<<<";
+		if($returnString eq 'WARNING') {
+			WARN "Warning returned by command: $message";
+		} elsif ($returnString eq 'WARNING') {
+			ERROR "Error returned by command: $message";
+		} else {
+			ERROR "Unknown event : >>>$result<<<";
+		}
+		
+		print "Something strange happened. Do you want to ignore (i) or retry (r)? ";
+		ReadMode('cbreak');
+		my $key = ReadKey(0);
+		ReadMode('normal');
+		#print "\n".ord($key)."\n";
+		print "\rRetrying                                                           \r" and goto RETRY unless $key eq 'i' or $key eq 'I';
+		print "\r                                                                    \r";
+		return $returnString;
 	}
+	return $returnString;
 }
 
 
