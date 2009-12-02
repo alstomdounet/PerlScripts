@@ -28,20 +28,16 @@ LOGDIE "Destination directory \"output\" was not created successfully" unless -d
 open MAINBACKUPFILE, ">output/allFunctions.backup.csv";
 binmode MAINBACKUPFILE;
 print MAINBACKUPFILE $lines[0];
+open LISTOFMIGRATEDFUNCTIONS, ">output/details.txt";
+open REMAININGFUNCTIONS, ">output/remainingFunctions.xml";
 my $MAINSCRIPTFILE;
 open $MAINSCRIPTFILE, ">output/allFunctions.bat";
 printScriptHeader($MAINSCRIPTFILE);
 my $OLDDIR = "$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}";
 my $message;
 
-	$message = <<EOF;
-INFO 'Putting FBS in checkout state';
-doCommand('cleartool co -nc "$OLDDIR"');
-
-EOF
-	printProtected ($MAINSCRIPTFILE, $message);
-
 my $selectedComponents = 0;
+my %remainingElements;
 foreach my $element (@{$Config{function_list}}) {
 	my $finalDirectory = "output/".$element->{function_name};
 	my $functionName = $element->{function_name};
@@ -63,12 +59,17 @@ foreach my $element (@{$Config{function_list}}) {
 	
 	WARN "Function is skipped (nothing to migrate)" and next unless scalar(@selectedComponents);
 	
+	$remainingElements{$functionName} = scalar(@selectedComponents);
+	
 	$selectedComponents += scalar(@selectedComponents);
 	INFO "$selectedComponents components ready to be migrated";
 	my $components = join(" ", @selectedComponents);
 	$message = <<EOF;
 INFO 'Locking all components of \"$functionName\""';
-doLockRecursive('$OLDDIR', qw($components));
+#doLockRecursive('$OLDDIR', qw($components));
+
+INFO 'Putting FBS in checkout state';
+doCommand('cleartool co -nc "$OLDDIR"');
 
 INFO 'Putting function $functionName in checkout state';
 doCommand('cleartool co -c "Migration de la fonction $functionName" "$NEWDIR"');
@@ -86,20 +87,33 @@ INFO 'Postprocessing of function \"$functionName\"(checkout, unlocking)';
 doCheckoutRecursive('$NEWDIR', '..');
 doUnlockRecursive('$NEWDIR', '');
 
+INFO 'Putting FBS in checkin state';
+#doCommand('cleartool ci -nc "$OLDDIR"');
+
 EOF
 	printProtected ($MAINSCRIPTFILE, $message);
 	
 }
 
-$message = <<EOF;
-INFO 'Putting FBS in checkin state';
-doCommand('cleartool ci -nc "$OLDDIR"');
-
+my $key;
+foreach $key (sort {$remainingElements{$a} <=> $remainingElements{$b} } (keys(%remainingElements))) {
+   print LISTOFMIGRATEDFUNCTIONS "$key ($remainingElements{$key} components)\n";
+   
+   	print REMAININGFUNCTIONS <<EOF
+	<function_list>
+		<function_name>$key</function_name><!-- Name of the function you want to move ($remainingElements{$key} components) -->
+	</function_list>
 EOF
-printProtected ($MAINSCRIPTFILE, $message);
+}
+
+
+
+
 
 printScriptFooter($MAINSCRIPTFILE);
 close MAINBACKUPFILE;
+close LISTOFMIGRATEDFUNCTIONS;
+close REMAININGFUNCTIONS;
 close $MAINSCRIPTFILE;
 
 exit;
@@ -131,7 +145,7 @@ sub filterFile {
 	}
 	
 	unless ($suggestedPath) {
-		LOGDIE "No matches were found for function \"$functionName\". It has to be an existing function." unless -d $OLDDIR."\\$functionName";
+		ERROR "No matches were found for function \"$functionName\". It has to be an existing function." and return () unless -d $OLDDIR."\\$functionName";
 		WARN "Only one component has been found. It is probably an empty component.";
 		return ($functionName);
 	}
