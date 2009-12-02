@@ -14,7 +14,7 @@ use Data::Dumper;
 my %Config = loadConfig("config.xml", ForceArray => qr/_list$/); # Loading / preprocessing of the configuration file
 
 # Preliminary checks
-#ERROR "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder}."\\Applications";
+ERROR "ControlBuild project was not found inside '$Config{project_params}->{folders}->{cb_project_folder}'" and exit unless -d $Config{project_params}->{folders}->{cb_project_folder}."\\Applications";
 
 my @lines = putFileInMemory($Config{script_params}->{properties_file});
 
@@ -61,6 +61,8 @@ foreach my $element (@{$Config{function_list}}) {
 	my @foundComponents = filterFile(\@lines, "$finalDirectory/$functionName.backup.csv", $fbsTreePath, $functionName);
 	my @selectedComponents = selectComponents(@foundComponents);
 	
+	WARN "Function is skipped (nothing to migrate)" and next unless scalar(@selectedComponents);
+	
 	$selectedComponents += scalar(@selectedComponents);
 	INFO "$selectedComponents components ready to be migrated";
 	my $components = join(" ", @selectedComponents);
@@ -81,7 +83,7 @@ INFO 'Putting function $functionName in checkin state';
 doCommand('cleartool ci -c "Migration de la fonction $functionName" "$NEWDIR"');
 
 INFO 'Postprocessing of function \"$functionName\"(checkout, unlocking)';
-doCheckoutRecursive('$NEWDIR', '');
+doCheckoutRecursive('$NEWDIR', '..');
 doUnlockRecursive('$NEWDIR', '');
 
 EOF
@@ -120,7 +122,7 @@ sub filterFile {
 	my $suggestedPath = undef;
 	
 	foreach my $line (@lines) {
-		if ($line->{component_name} =~ /$functionName/) {
+		if ($line->{component_name} =~ /^$functionName$/) {
 			$suggestedPath = $line->{path};
 			$suggestedPath =~ s/^$baseTreePath//;
 			DEBUG "Found automatic path \"$suggestedPath\"";
@@ -162,6 +164,7 @@ sub filterFile {
 sub selectComponents {
 	my @selectedComponents = ();
 	foreach my $component (@_) {
+		LOGDIE "Empty component found" if $component eq "";
 		my $componentPath = "$Config{project_params}->{folders}->{cb_project_folder}\\$Config{project_params}->{folders}->{fbs_folder}\\$component";
 		push (@selectedComponents, $component) if -d $componentPath;
 	}
@@ -208,9 +211,16 @@ sub putFileInMemory {
 			my @items = split (/;/, $line);
 			my $path = $items[3];
 			
-			my $component_name = $items[11];
+			my $offsetDuToCommas = 0;
+			while(!($items[8+$offsetDuToCommas] =~ /^\d+$/)) { $offsetDuToCommas++; }
+			WARN "Line $linesProcessed -> Offset inserted : $offsetDuToCommas (stopped at ".$items[8+$offsetDuToCommas].")" if $offsetDuToCommas > 0;
+			
+			my $component_name = $items[11+$offsetDuToCommas];
 			$line{path} = $items[3];
-			$line{component_name} = $items[11];
+			$line{component_name} = substr($component_name, 0, -(length($items[0]) + 1));
+			
+			LOGDIE "Empty component name. parameters are '$component_name' and '$items[0]' and '".(-(length($items[0]) + 1))."'" unless $line{component_name};
+			
 			$line{all} = $line;
 			$line{variable} = $items[0];
 			push(@lines, \%line);
@@ -304,7 +314,7 @@ sub doCheckoutRecursive {
 	my $baseDir = shift;
 	my @directories = ();
 	foreach my $dir (@_) {
-		push(@directories, $baseDir."\\".$dir);
+		push(@directories, File::Spec->canonpath($baseDir."\\".$dir));
 	}
 	my $t1 = [gettimeofday];
 	find(\&checkoutFile, @directories);
@@ -315,7 +325,7 @@ sub doLockRecursive {
 	my $baseDir = shift;
 	my @directories = ();
 	foreach my $dir (@_) {
-		push(@directories, $baseDir."\\".$dir);
+		push(@directories, File::Spec->canonpath($baseDir."\\".$dir));
 	}
 	my $t1 = [gettimeofday];
 	find(\&lockFile, @directories);
@@ -326,7 +336,7 @@ sub doUnlockRecursive {
 	my $baseDir = shift;
 	my @directories = ();
 	foreach my $dir (@_) {
-		push(@directories, $baseDir."\\".$dir);
+		push(@directories, File::Spec->canonpath($baseDir."\\".$dir));
 	}
 	my $t1 = [gettimeofday];
 	find(\&lockFile, @directories);
