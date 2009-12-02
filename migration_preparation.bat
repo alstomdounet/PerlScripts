@@ -65,7 +65,10 @@ foreach my $element (@{$Config{function_list}}) {
 	INFO "$selectedComponents components ready to be migrated";
 	my $components = join(" ", @selectedComponents);
 	$message = <<EOF;
-INFO 'Locking all components of \"$functionName\""';
+
+INFO 'Checking prequisites for function \"$functionName\"';
+checkFunctionAvailability('$OLDDIR', qw($components));
+#INFO 'Locking all components of \"$functionName\""';
 #doLockRecursive('$OLDDIR', qw($components));
 
 INFO 'Putting FBS in checkout state';
@@ -85,7 +88,7 @@ doCommand('cleartool ci -c "Migration de la fonction $functionName" "$NEWDIR"');
 
 INFO 'Postprocessing of function \"$functionName\"(checkout, unlocking)';
 doCheckoutRecursive('$NEWDIR', '..');
-doUnlockRecursive('$NEWDIR', '');
+#doUnlockRecursive('$NEWDIR', '');
 
 INFO 'Putting FBS in checkin state';
 #doCommand('cleartool ci -nc "$OLDDIR"');
@@ -333,6 +336,28 @@ sub doCheckoutRecursive {
 	my $t1 = [gettimeofday];
 	find(\&checkoutFile, @directories);
 	DEBUG "Checkout has taken ".tv_interval ( $t1, [gettimeofday] )." seconds";
+}
+
+sub checkFunctionAvailability {
+	my $baseDir = shift;
+	my @directories = @_;
+	my $files;
+RETRY:
+	$files = '';
+	foreach my $dir (@directories) {
+		my $path = File::Spec->canonpath($baseDir."\\".$dir);
+		$files .= `cleartool lsco -r "$path" 2>&1`;
+	}
+
+	unless ($files =~ /^\s*$/) {
+		ERROR "Below are all errors found:\n$files";
+		print "Something strange happened. Do you want to ignore (i) or retry (r)? ";
+		ReadMode('cbreak');
+		my $key = ReadKey(0);
+		ReadMode('normal');
+		print "\rRetrying                                                           \r" and goto RETRY unless $key eq 'i' or $key eq 'I';
+		print "\r                                                                    \r";
+	}
 }
 
 sub doLockRecursive {
