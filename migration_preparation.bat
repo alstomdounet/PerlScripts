@@ -72,7 +72,7 @@ checkFunctionAvailability('$OLDDIR', qw($components));
 #doLockRecursive('$OLDDIR', qw($components));
 
 INFO 'Putting FBS in checkout state';
-doCommand('cleartool co -nc "$OLDDIR"');
+doCommand('cleartool co -c "Migration de la fonction $functionName" "$OLDDIR"');
 
 INFO 'Putting function $functionName in checkout state';
 doCommand('cleartool co -c "Migration de la fonction $functionName" "$NEWDIR"');
@@ -91,7 +91,7 @@ doCheckoutRecursive('$NEWDIR', '..');
 #doUnlockRecursive('$NEWDIR', '');
 
 INFO 'Putting FBS in checkin state';
-#doCommand('cleartool ci -nc "$OLDDIR"');
+doCommand('cleartool ci -c "Migration de la fonction $functionName" "$OLDDIR"');
 
 EOF
 	printProtected ($MAINSCRIPTFILE, $message);
