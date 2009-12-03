@@ -229,7 +229,8 @@ sub putFileInMemory {
 			my $path = $items[3];
 			
 			my $offsetDuToCommas = 0;
-			while(!($items[8+$offsetDuToCommas] =~ /^\d+$/)) { $offsetDuToCommas++; }
+			while(defined($items[8+$offsetDuToCommas]) and !($items[8+$offsetDuToCommas] =~ /^(-1|\d+)$/)) { $offsetDuToCommas++; }
+			LOGDIE "Line $linesProcessed -> No match found:\n$line" unless defined($items[8+$offsetDuToCommas]);
 			WARN "Line $linesProcessed -> Offset inserted : $offsetDuToCommas (stopped at ".$items[8+$offsetDuToCommas].")" if $offsetDuToCommas > 0;
 			
 			my $component_name = $items[11+$offsetDuToCommas];
