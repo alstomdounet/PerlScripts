@@ -38,6 +38,7 @@ my $message;
 
 my $selectedComponents = 0;
 my %remainingElements;
+my %componentsToBeMigrated;
 foreach my $element (@{$Config{function_list}}) {
 	my $finalDirectory = "output/".$element->{function_name};
 	my $functionName = $element->{function_name};
@@ -59,6 +60,11 @@ foreach my $element (@{$Config{function_list}}) {
 	
 	WARN "Function is skipped (nothing to migrate)" and next unless scalar(@selectedComponents);
 	
+	foreach my $component (@selectedComponents) {
+		ERROR "\"$component\" has already been selected by function \"$componentsToBeMigrated{$component}\"" if exists($componentsToBeMigrated{$component});
+		$componentsToBeMigrated{$component} = $functionName;
+	}
+	
 	$remainingElements{$functionName} = scalar(@selectedComponents);
 	
 	$selectedComponents += scalar(@selectedComponents);
@@ -67,15 +73,15 @@ foreach my $element (@{$Config{function_list}}) {
 	$message = <<EOF;
 
 INFO 'Checking prequisites for function \"$functionName\"';
-checkFunctionAvailability('$OLDDIR', qw($components));
-#INFO 'Locking all components of \"$functionName\""';
-#doLockRecursive('$OLDDIR', qw($components));
+if (checkFunctionAvailability('$OLDDIR', qw($components))) {
+	#INFO 'Locking all components of \"$functionName\""';
+	#doLockRecursive('$OLDDIR', qw($components));
 
-INFO 'Putting FBS in checkout state';
-doCommand('cleartool co -c "Migration de la fonction $functionName" "$OLDDIR"');
+	INFO 'Putting FBS in checkout state';
+	doCommand('cleartool co -c "Migration de la fonction $functionName" "$OLDDIR"');
 
-INFO 'Putting function $functionName in checkout state';
-doCommand('cleartool co -c "Migration de la fonction $functionName" "$NEWDIR"');
+	INFO 'Putting function $functionName in checkout state';
+	doCommand('cleartool co -c "Migration de la fonction $functionName" "$NEWDIR"');
 
 EOF
 	printProtected ($MAINSCRIPTFILE, $message);
@@ -83,15 +89,16 @@ EOF
 	createFilesStructure($functionName, \@selectedComponents, $finalDirectory, $MAINSCRIPTFILE, $NEWDIR);
 	
 	$message = <<EOF;
-INFO 'Putting function $functionName in checkin state';
-doCommand('cleartool ci -c "Migration de la fonction $functionName" "$NEWDIR"');
+	INFO 'Putting function $functionName in checkin state';
+	doCommand('cleartool ci -c "Migration de la fonction $functionName" "$NEWDIR"');
 
-INFO 'Postprocessing of function \"$functionName\"(checkout, unlocking)';
-doCheckoutRecursive('$NEWDIR', '..');
-#doUnlockRecursive('$NEWDIR', '');
+	INFO 'Postprocessing of function \"$functionName\"(checkout, unlocking)';
+	doCheckoutRecursive('$NEWDIR', '..');
+	#doUnlockRecursive('$NEWDIR', '');
 
-INFO 'Putting FBS in checkin state';
-doCommand('cleartool ci -c "Migration de la fonction $functionName" "$OLDDIR"');
+	INFO 'Putting FBS in checkin state';
+	doCommand('cleartool ci -c "Migration de la fonction $functionName" "$OLDDIR"');
+}
 
 EOF
 	printProtected ($MAINSCRIPTFILE, $message);
@@ -352,13 +359,15 @@ RETRY:
 
 	unless ($files =~ /^\s*$/) {
 		ERROR "Below are all errors found:\n$files";
-		print "Something strange happened. Do you want to ignore (i) or retry (r)? ";
+		print "Something strange happened. Do you want to ignore (i), skip (s) or retry (r)? ";
 		ReadMode('cbreak');
 		my $key = ReadKey(0);
 		ReadMode('normal');
+		INFO "Function is skipped" and return 0 if $key eq 's' or $key eq 'S';
 		print "\rRetrying                                                           \r" and goto RETRY unless $key eq 'i' or $key eq 'I';
 		print "\r                                                                    \r";
 	}
+	return 1;
 }
 
 sub doLockRecursive {
@@ -398,7 +407,7 @@ sub lockFile {
 sub checkoutFile {
 	my $file = $File::Find::name;
 	$file =~ s/\//\\/g;
-	doCommand("cleartool co -nc \"$file\"", 0, 1);
+	doCommand("cleartool co -c \"Migration de la fonction.\" \"$file\"", 0, 1);
 }
 
 sub doCommand {
@@ -428,7 +437,7 @@ RETRY:
 		WARN "Command entered was : >>>$command<<<";
 		if($returnString eq 'WARNING') {
 			WARN "Warning returned by command: $message";
-		} elsif ($returnString eq 'WARNING') {
+		} elsif ($returnString eq 'ERROR') {
 			ERROR "Error returned by command: $message";
 		} else {
 			ERROR "Unknown event : >>>$result<<<";
