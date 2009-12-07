@@ -362,6 +362,7 @@ sub addBug {
 	$bug->{submitter_severity} = '';
 	$bug->{frequency} = '';
 	$bug->{submitter_CR_type} = '';
+	$bug->{description} = '';
 	$description->Contents('');
 }
 
