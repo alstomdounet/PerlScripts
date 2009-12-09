@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC -//W3C//DTD HTML 4.01 Transitional//EN>
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1 http-equiv=content-type">
+  <title>Analysis Report</title>
+ <style type="text/css">
+  body { margin: 1em;
+    font-family: Arial,Helvetica,sans-serif;
+    color: rgb(255, 255, 255);
+    text-align: left;
+    background-color: rgb(0, 0, 0);
+    }
+
+  table { border: 0.2em solid rgb(255, 255, 255);
+    font-size: 0.8em;
+    background-color: rgb(204, 204, 255);
+    color: rgb(0, 0, 0);
+    width: 90%;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-bottom: 10px;
+    border-collapse: collapse;
+    }
+
+  td { border: 1px dotted rgb(255, 255, 255);
+    padding: 0.2em 1em;
+    }
+
+  td.head { padding: 0.2em 1em;
+    text-align: right;
+    font-weight: bold;
+    }
+
+  tr { border: 0.1em solid rgb(255, 255, 255);
+    }
+
+  th.subheader { padding: 0.4em 1.5em;
+    text-align: left;
+    opacity: 1;
+    background-color: rgb(175, 175, 255);
+    }
+
+  th { border: 0.1em solid rgb(255, 255, 255);
+    padding: 0.5em;
+    font-size: 1.2em;
+    background-color: rgb(255, 204, 153);
+    }
+
+  caption { margin: 1em;
+    font-size: 2em;
+    font-weight: bold;
+    font-style: italic;
+    text-align: left;
+    color: rgb(255, 255, 255);
+    }
+
+
+  </style>
+</head>
+<body>
+<TMPL_LOOP name=MAIN_STEPS>
+<table summary="<TMPL_VAR name=MAIN_STEP_NAME>">
+    <caption><TMPL_VAR name=MAIN_STEP_NAME></caption>
+    <tr class="header1">
+      <th>Description</th>
+      <th>Status</th>
+	  <th>&nbsp;</th>
+    </tr>
+	<TMPL_LOOP name=STEPS>
+    <tr>
+      <td><TMPL_VAR name=STEP_NAME></td>
+      <td><TMPL_VAR name=STATUS></td>
+	  <td><TMPL_VAR name=REPORT></td>
+    </tr>
+	</TMPL_LOOP>
+</table>
+</TMPL_LOOP>
+</body>
+</html>

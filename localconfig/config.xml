@@ -1,0 +1,28 @@
+<?xml version='1.0'?>
+<Config>
+	<OLDProject>
+		<crossrefCSV>allFunctions.backup.csv</crossrefCSV>
+		<filterCrossRef>filt_allFunctions.backup.csv</filterCrossRef>
+		<analyseCrossRef>filt_allFunctions.backup.csv</analyseCrossRef>
+	</OLDProject>
+	<NEWProject>
+		<crossrefCSV>postMigration.csv</crossrefCSV>
+		<filterCrossRef>filt_postMigration.csv</filterCrossRef>
+		<analyseCrossRef>filt_postMigration.csv</analyseCrossRef>
+	</NEWProject>
+	<CsvFilterOptions>
+		<deleteIdenticalLines />
+		<setValue column="Offset">-1</setValue>
+	</CsvFilterOptions>
+	<CsvAnalyseOptions>
+		<keys>
+		<column>Nom</column>
+		<column>Producteur</column>
+		</keys>
+	</CsvAnalyseOptions>
+
+		<deleteNonProducers variable="Nom" producer="Producteur" />
+
+		
+		<delete column="Instance">^control/EX_</delete>
+</Config>
