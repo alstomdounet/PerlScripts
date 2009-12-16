@@ -56,7 +56,7 @@ sub readCSVFile {
 	
 	my $session = CQSession::Build(); 
 	
-	#eval( '$session->UserLogon ($Config{clearquest}->{login}, $Config{clearquest}->{password}, "atvcm", "")' );
+	eval( '$session->UserLogon ($Config{clearquest}->{login}, $Config{clearquest}->{password}, "atvcm", "")' );
 	if($@) {
 		my $error_msg = $@;
 		DEBUG "Error message is : $error_msg";
