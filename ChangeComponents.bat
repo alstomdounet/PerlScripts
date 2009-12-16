@@ -14,8 +14,6 @@ use strict;
 use warnings;
 use Common;
 use Data::Dumper;
-use Crypt::Rijndael_PP qw(rijndael_encrypt rijndael_decrypt MODE_CBC);
-use Storable qw(store retrieve thaw freeze);
 
 my $PROGRAM_VERSION = "0.1";
 
@@ -77,7 +75,7 @@ sub readCSVFile {
 		$rec->EditEntity('modify');
 		
 		my $extracted_name = 'EXPL-TEST';
-		#my $extracted_name = $rec->GetFieldValue('name');
+		$extracted_name = $rec->GetFieldValue('name');
 
 		
 		ERROR "Component has not expected property 'name', with value '$extracted_name'" and next if($extracted_name ne $ref->{name});
