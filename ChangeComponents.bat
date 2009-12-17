@@ -74,8 +74,7 @@ sub readCSVFile {
 		
 		$rec->EditEntity('modify');
 		
-		my $extracted_name = 'EXPL-TEST';
-		$extracted_name = $rec->GetFieldValue('name');
+		$extracted_name = $rec->GetFieldValue('name')->GetValue();
 
 		
 		ERROR "Component has not expected property 'name', with value '$extracted_name'" and next if($extracted_name ne $ref->{name});
