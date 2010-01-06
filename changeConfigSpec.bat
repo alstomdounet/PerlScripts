@@ -26,10 +26,7 @@ INFO "Starting program (V ".PROGRAM_VERSION.")";
 
 my @list = createStructure("./config-specs");
 my %configSpec;
-my $description;
-$configSpec{header} = "";
-$configSpec{content} = "";
-$configSpec{fileName} = "";
+my ($description, $header, $title);
 
 ##########################################
 # Building graphical interface
@@ -95,7 +92,7 @@ foreach my $node (@list) {
 $jobstree->autosetmode();
 
 my $configSpecPanel = $mainPanel->Frame(-padx => 10, -pady => 10)->pack(-side => 'right', -fill => 'both', -expand => 1);
-$configSpecPanel->Label(-textvariable => \$configSpec{header})->pack( -side => 'top', -fill => 'both', -expand => 1 );
+$header = $configSpecPanel->Label(-text => '<=== Il est nécessaire de sélectionner l\'un des config-specs recherchés.')->pack( -side => 'top', -fill => 'both', -expand => 1 );
 $description = $configSpecPanel->Scrolled("Text", -scrollbars => 'osoe', -state => 'disabled') -> pack( -side => 'top', -fill => 'both', -expand => 1);
 
 my $cancelButton = $buttonsPanel->Button(-text => 'Quitter', -command => [\&cancel, $mw]) -> pack(-side => 'left', -fill => 'both', -expand => 1);
@@ -104,17 +101,29 @@ my $validateButton = $buttonsPanel->Button(-text => 'Valider' , -command => sub 
 sub  processSelectedFile {
 	my $selection = shift;
 	DEBUG "Here is selected item ($selection)";
-	fillConfigSpecInterface($selection, $selection, $selection);
+	my $configSpec = parseFile($selection);
+	fillConfigSpecInterface($configSpec);
 }   
 
-sub fillConfigSpecInterface {
-	my $title = shift;
-	my $header = shift;
-	my $content = shift;
+sub parseFile {
+	my $file = shift;
+	ERROR "This is not completely implemented";
 	
-	$configSpec{header} = $header;
+	my %configSpec;
+	$configSpec{header} = $file;
+	$configSpec{body} = $file;
+	$configSpec{fileName} = $file;
+	$configSpec{content} = $file;
+	return \%configSpec;
+}
+
+sub fillConfigSpecInterface {
+	my $configSpec = shift;
+	
+	$title->configure(-text => $configSpec->{title}) if $title;
+	$header->configure(-text => $configSpec->{header});
 	$description->configure(-state => 'normal');
-	$description->Contents($content);
+	$description->Contents($configSpec->{body});
 	$description->configure(-state => 'disabled');
 }
 
