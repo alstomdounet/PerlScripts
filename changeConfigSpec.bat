@@ -25,6 +25,11 @@ use constant PROGRAM_VERSION => '0.1';
 INFO "Starting program (V ".PROGRAM_VERSION.")";
 
 my @list = createStructure("./config-specs");
+my %configSpec;
+my $description;
+$configSpec{header} = "";
+$configSpec{content} = "";
+$configSpec{fileName} = "";
 
 ##########################################
 # Building graphical interface
@@ -48,15 +53,10 @@ $mw->minsize(640,480);
 $mw->maxsize(640,480);
 
 my $titlePanel = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
-my $mainPanel = $mw->Frame() -> pack(-side => 'top', -fill => 'both', -expand => 1);
-my $configSpecPanel = $mainPanel->Frame()->pack(-side => 'right', -fill => 'both', -expand => 1);
-my $buttonsPanel = $mw->Frame(-height => '30') -> pack(-side => 'bottom', -fill => 'both');
-
 $titlePanel->Label(-text => "Cette interface permet de modifier le fichier\nde configuration(config-spec) de Clearcase, afin de\nmodifier les élements affichés")->pack( -side => 'top', -fill => 'both', -expand => 1 );
 
-my $cancelButton = $buttonsPanel->Button(-text => 'Quitter', -command => sub { exit(-1)}) -> pack(-side => 'left', -fill => 'both', -expand => 1);
-$buttonsPanel->Button(-text => 'Valider' , -command => sub { confirm()}) -> pack(-side => 'right', -fill => 'both', -expand => 1);
-
+my $buttonsPanel = $mw->Frame(-height => '30') -> pack(-side => 'bottom', -fill => 'both');
+my $mainPanel = $mw->Frame() -> pack(-side => 'top', -fill => 'both', -expand => 1);
 
 #--------------------------------------------------------------------------
 # Tk::Tree Widget
@@ -94,10 +94,29 @@ foreach my $node (@list) {
 }
 $jobstree->autosetmode();
 
+my $configSpecPanel = $mainPanel->Frame(-padx => 10, -pady => 10)->pack(-side => 'right', -fill => 'both', -expand => 1);
+$configSpecPanel->Label(-textvariable => \$configSpec{header})->pack( -side => 'top', -fill => 'both', -expand => 1 );
+$description = $configSpecPanel->Scrolled("Text", -scrollbars => 'osoe', -state => 'disabled') -> pack( -side => 'top', -fill => 'both', -expand => 1);
+
+my $cancelButton = $buttonsPanel->Button(-text => 'Quitter', -command => [\&cancel, $mw]) -> pack(-side => 'left', -fill => 'both', -expand => 1);
+my $validateButton = $buttonsPanel->Button(-text => 'Valider' , -command => sub { confirm()}, -state => 'disabled') -> pack(-side => 'right', -fill => 'both', -expand => 1);
+
 sub  processSelectedFile {
 	my $selection = shift;
 	DEBUG "Here is selected item ($selection)";
+	fillConfigSpecInterface($selection, $selection, $selection);
 }   
+
+sub fillConfigSpecInterface {
+	my $title = shift;
+	my $header = shift;
+	my $content = shift;
+	
+	$configSpec{header} = $header;
+	$description->configure(-state => 'normal');
+	$description->Contents($content);
+	$description->configure(-state => 'disabled');
+}
 
 INFO "displaying graphical interface";
 center($mw);
@@ -138,8 +157,14 @@ sub createStructure {
 
 sub changeConfigSpec {
 	my $text = shift;
-}
+	ERROR "This function is not currently implemented";
+	return 1;
+}	
 
+sub isActiveConfigSpec {
+	ERROR "This function is not currently implemented";
+	return 0;
+}
 
 sub cancel {
 	my $mw = shift;
