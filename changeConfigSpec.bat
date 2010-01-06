@@ -8,7 +8,6 @@ use lib qw(lib);
 use strict;
 use warnings;
 use Common;
-use File::Find;
 use Data::Dumper;
 
 
@@ -65,15 +64,14 @@ $buttonsPanel->Button(-text => 'Valider' , -command => sub { confirm()}) -> pack
   my $jobstree = $mainPanel->Scrolled(
       'Tree',
       -background         => 'white',
-      -selectmode         => 'extended',
       -selectbackground   => 'LightGoldenrodYellow',
       -selectforeground   => 'RoyalBlue3',
       -highlightthickness => 0,
       -font               => 'verdana 10',
       -relief             => 'flat',
       -scrollbars         => 'osoe',
-      -borderwidth        => 1,
-      -browsecmd         => \&processSelectedFile,
+      -borderwidth        => 0,
+      -command         => \&processSelectedFile,
    )->pack(-side => 'left', -fill => 'y',-anchor => 'w');
 
 #--------------------------------------------------------------------------
@@ -84,7 +82,6 @@ $buttonsPanel->Button(-text => 'Valider' , -command => sub { confirm()}) -> pack
       -drawbranch => 'true',
       -indicator  => 'true',
       -selectborderwidth => '0',
-      -selectmode        => 'extended',
       -highlightcolor => 'red');
    $jobstree->focus();
 
