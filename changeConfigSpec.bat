@@ -21,10 +21,11 @@ use Tk::DirTree;
 use Tk::Balloon;
 
 use constant PROGRAM_VERSION => '0.1';
+use constant PARSED_PATH => './config-specs';
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
 
-my @list = createStructure("./config-specs");
+my @list = createStructure(PARSED_PATH);
 my %configSpec;
 my ($description, $header, $title);
 
@@ -100,20 +101,40 @@ my $validateButton = $buttonsPanel->Button(-text => 'Valider' , -command => sub 
 
 sub  processSelectedFile {
 	my $selection = shift;
-	DEBUG "Here is selected item ($selection)";
+	DEBUG "Selected item is \"$selection\"";
+	return if -d PARSED_PATH."/$selection";
 	my $configSpec = parseFile($selection);
 	fillConfigSpecInterface($configSpec);
 }   
 
 sub parseFile {
 	my $file = shift;
-	ERROR "This is not completely implemented";
 	
 	my %configSpec;
-	$configSpec{header} = $file;
-	$configSpec{body} = $file;
+	
 	$configSpec{fileName} = $file;
-	$configSpec{content} = $file;
+	$file = PARSED_PATH."/$file";
+	DEBUG "Parsing $file";
+	ERROR "Config spec \"$file\" is not readable" unless -r $file;
+	
+	open FILE, $file or LOGDIE "It was not possible to open \"$file\"";
+	local $/; # enable localized slurp mode
+    $configSpec{content} = <FILE>;
+
+	close FILE;
+	
+	# dfsfdfdsfsd
+	
+	if($configSpec{content} =~ m/^(.*?)#{15,}(.*)$/s) {
+		$configSpec{header} = $1;
+		$configSpec{header} =~ s/^\s*#+\s*(.*?)\s*$/$1/mg;
+		$configSpec{body} = $2;
+	}
+	else {
+		$configSpec{header} = "Ce fichier ne contient pas d'entêtes";
+		$configSpec{body} = $configSpec{content};	
+	}
+
 	return \%configSpec;
 }
 
