@@ -20,8 +20,11 @@ use Tk;
 use Tk::DirTree;
 use Tk::Balloon;
 
-use constant PROGRAM_VERSION => '0.1';
-use constant PARSED_PATH => './config-specs';
+use constant {
+	PROGRAM_VERSION => '0.1',
+	CONFIG_SPEC_HEADER_NOT_PRESENT => 'Ce fichier ne contient pas d\'entêtes',
+	PARSED_PATH => './config-specs',
+};
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
 
@@ -83,8 +86,6 @@ my $mainPanel = $mw->Frame() -> pack(-side => 'top', -fill => 'both', -expand =>
       -highlightcolor => 'red');
    $jobstree->focus();
 
-
-
 foreach my $node (@list) {
    my $node_name = (split('/', $node))[-1];
   $node_name = $node if ($node_name eq '');
@@ -93,11 +94,19 @@ foreach my $node (@list) {
 $jobstree->autosetmode();
 
 my $configSpecPanel = $mainPanel->Frame(-padx => 10, -pady => 10)->pack(-side => 'right', -fill => 'both', -expand => 1);
-$header = $configSpecPanel->Label(-text => '<=== Il est nécessaire de sélectionner l\'un des config-specs recherchés.')->pack( -side => 'top', -fill => 'both', -expand => 1 );
+
+my $configSpecTitlePanel = $configSpecPanel->Frame( -borderwidth => 1, -relief => 'solid', -padx => 20)->pack();
+$configSpecTitlePanel->Label(-text => 'Config-spec sélectionné : ', -pady => 3, -font => 'verdana 9')->pack( -side => 'left' );
+$title = $configSpecTitlePanel->Label(-text => '<<aucun>>', -pady => 3,  -font => 'verdana 9 bold')->pack( -side => 'right');
+
+$header = $configSpecPanel->Label(-text => '<=== Il est nécessaire de sélectionner l\'un des config-specs recherchés.', -pady => 5)->pack( -side => 'top', -fill => 'both', -expand => 1 );
 $description = $configSpecPanel->Scrolled("Text", -scrollbars => 'osoe', -state => 'disabled') -> pack( -side => 'top', -fill => 'both', -expand => 1);
 
-my $cancelButton = $buttonsPanel->Button(-text => 'Quitter', -command => [\&cancel, $mw]) -> pack(-side => 'left', -fill => 'both', -expand => 1);
-my $validateButton = $buttonsPanel->Button(-text => 'Valider' , -command => sub { confirm()}, -state => 'disabled') -> pack(-side => 'right', -fill => 'both', -expand => 1);
+
+
+
+my $cancelButton = $buttonsPanel->Button(-text => 'Quitter', -command => [\&cancel, $mw], -pady => 5) -> pack(-side => 'left', -fill => 'both', -expand => 1);
+my $validateButton = $buttonsPanel->Button(-text => "Sélectionner un config-spec\npour activer ce bouton..." , -command => sub { confirm()}, -state => 'disabled', -pady => 5) -> pack(-side => 'right', -fill => 'both', -expand => 1);
 
 sub  processSelectedFile {
 	my $selection = shift;
@@ -112,7 +121,7 @@ sub parseFile {
 	
 	my %configSpec;
 	
-	$configSpec{fileName} = $file;
+	$configSpec{filename} = $file;
 	$file = PARSED_PATH."/$file";
 	DEBUG "Parsing $file";
 	ERROR "Config spec \"$file\" is not readable" unless -r $file;
@@ -120,6 +129,7 @@ sub parseFile {
 	open FILE, $file or LOGDIE "It was not possible to open \"$file\"";
 	local $/; # enable localized slurp mode
     $configSpec{content} = <FILE>;
+
 
 	close FILE;
 	
@@ -131,7 +141,7 @@ sub parseFile {
 		$configSpec{body} = $2;
 	}
 	else {
-		$configSpec{header} = "Ce fichier ne contient pas d'entêtes";
+		$configSpec{header} = CONFIG_SPEC_HEADER_NOT_PRESENT;
 		$configSpec{body} = $configSpec{content};	
 	}
 
@@ -141,11 +151,12 @@ sub parseFile {
 sub fillConfigSpecInterface {
 	my $configSpec = shift;
 	
-	$title->configure(-text => $configSpec->{title}) if $title;
+	$title->configure(-text => $configSpec->{filename}) if $title;
 	$header->configure(-text => $configSpec->{header});
 	$description->configure(-state => 'normal');
 	$description->Contents($configSpec->{body});
 	$description->configure(-state => 'disabled');
+	$validateButton->configure(-text => "Appliquer le config-spec suivant:\n$configSpec->{filename}",-state => 'normal');
 }
 
 INFO "displaying graphical interface";
