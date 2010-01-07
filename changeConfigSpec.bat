@@ -199,7 +199,7 @@ sub isActiveConfigSpec {
 sub cancel {
 	my $mw = shift;
 	
-	my $answer = $mw->messageBox(-title => "Confirmation requested", -message => "Do you really want to quit this application?", -type => 'yesno', -icon => 'question');
+	my $answer = $mw->messageBox(-title => "Demande de confirmation", -message => "Voulez-vous quitter cette application?", -type => 'yesno', -icon => 'question');
 	
 	DEBUG "User has answered \"$answer\" to cancellation question";
 	return unless $answer eq "Yes";
