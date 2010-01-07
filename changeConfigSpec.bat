@@ -8,7 +8,7 @@ use lib qw(lib);
 use strict;
 use warnings;
 use Common;
-use ClearcaseMgt qw(getConfigSpec setConfigSpec);
+use ClearcaseMgt qw(getConfigSpec setConfigSpec getViewNameByElement isSnapshotView);
 use Data::Dumper;
 
 #my %Config = loadConfig("config.xml", ForceArray => qr/^filter$/); # Loading / preprocessing of the configuration file
@@ -20,6 +20,7 @@ use Tk;
 use Tk::DirTree;
 use Tk::Balloon;
 use Tk::ItemStyle;
+use Cwd;
 
 use constant {
 	PROGRAM_VERSION => '0.1',
@@ -32,12 +33,15 @@ INFO "Starting program (V ".PROGRAM_VERSION.")";
 my @list = createStructure(PARSED_PATH);
 my %configSpec;
 my ($description, $header, $title);
-my $PATH_TO_VIEW = 'D:\\clearcase_storage\\gmanciet_view\\PRIMA2';
+my $ACTIVE_VIEW_FILENAME = 'D:\\clearcase_storage\\gmanciet_view\\PRIMA2';
+my $ACTIVE_VIEW = getViewNameByElement($ACTIVE_VIEW_FILENAME);
+my $ISSNAPSHOTVIEW = isSnapshotView($ACTIVE_VIEW);
 
-my $configSpec = getConfigSpec($PATH_TO_VIEW);
+DEBUG "Found view \"$ACTIVE_VIEW\"";
+
+my $configSpec = getConfigSpec($ACTIVE_VIEW);
 my $activeConfigSpecFilename;
-
-print $configSpec;
+my $selectedConfigSpec;
 
 ##########################################
 # Building graphical interface
@@ -123,14 +127,14 @@ $header = $configSpecPanel->Label(-text => '<=== Il est nécessaire de sélectionn
 $description = $configSpecPanel->Scrolled("Text", -scrollbars => 'osoe', -state => 'disabled') -> pack( -side => 'top', -fill => 'both', -expand => 1);
 
 my $cancelButton = $buttonsPanel->Button(-text => 'Quitter', -command => [\&cancel, $mw], -pady => 5) -> pack(-side => 'left', -fill => 'both', -expand => 1);
-my $validateButton = $buttonsPanel->Button(-text => "Sélectionner un config-spec\npour activer ce bouton..." , -command => sub { confirm()}, -state => 'disabled', -pady => 5) -> pack(-side => 'right', -fill => 'both', -expand => 1);
+my $validateButton = $buttonsPanel->Button(-text => "Sélectionner un config-spec\npour activer ce bouton..." , -command => sub { validate($selectedConfigSpec, $configSpec)}, -state => 'disabled', -pady => 5) -> pack(-side => 'right', -fill => 'both', -expand => 1);
 
 sub  processSelectedFile {
 	my $selection = shift;
 	DEBUG "Selected item is \"$selection\"";
 	return if -d PARSED_PATH."/$selection";
-	my $configSpec = parseFile($selection);
-	fillConfigSpecInterface($configSpec);
+	$selectedConfigSpec = parseFile($selection);
+	fillConfigSpecInterface($selectedConfigSpec);
 }   
 
 sub parseFile {
@@ -140,6 +144,9 @@ sub parseFile {
 	
 	$configSpec{filename} = $file;
 	$file = PARSED_PATH."/$file";
+	$configSpec{wholeFilename} = $file;
+	$configSpec{wholeFilename} =~ s/\//\\/g;
+	
 	DEBUG "Parsing $file";
 	$configSpec{content} = readFile($file);
 	
@@ -175,7 +182,12 @@ sub fillConfigSpecInterface {
 	$description->configure(-state => 'normal');
 	$description->Contents($configSpec->{body});
 	$description->configure(-state => 'disabled');
-	$validateButton->configure(-text => "Appliquer le config-spec suivant:\n$configSpec->{filename}",-state => 'normal');
+	if($activeConfigSpecFilename ne $configSpec->{filename}) {
+		$validateButton->configure(-text => "Appliquer le config-spec suivant:\n$configSpec->{filename}",-state => 'normal');
+	}
+	else {
+		$validateButton->configure(-text => "Le config-spec sélectionné est déjà appliqué.\nSélectionnez-en un autre.",-state => 'disabled');
+	}
 }
 
 INFO "displaying graphical interface";
@@ -213,12 +225,43 @@ sub createStructure {
 	return sort @list;
 }
 
+sub validate {
+	my $configSpec = shift;
+	my $currentConfigSpec = shift;
+	
+	DEBUG "Trying to validate command";
+	
+	my $answer = $mw->messageBox(-title => "Demande de confirmation", -message => "Voulez-vous appliquer le config-spec appelé \"$configSpec->{filename}\" ?", -type => 'yesno', -icon => 'question');
+	
+	DEBUG "User has answered \"$answer\" to question";
+	return unless $answer eq "Yes";
+	INFO "User has requested to continue";
+	
+	my $result = changeConfigSpec($configSpec, $currentConfigSpec);
+	my $newConfigSpec = getConfigSpec($ACTIVE_VIEW);
+	$result = $newConfigSpec eq $configSpec->{content};
+	
+	INFO "Requested action was done correctly" and $mw->messageBox(-title => "Confirmation", -message => "L'opération s'est déroulée correctement.", -type => 'ok', -icon => 'info') and exit(1001) if($result);
+	ERROR "Requested action was not performed correctly" and $mw->messageBox(-title => "Erreur durant l'opération", -message => "L'opération n'a pas eu lieu correctement.\nConsulter et conserver le fichier log pour analyser le problème rencontré.", -type => 'ok', -icon => 'error');
+	exit(-1);
+}
+
 sub changeConfigSpec {
 	my $configSpec = shift;
 	my $currentConfigSpec = shift;
 	
-	ERROR "This function is not currently implemented";
-	return 1;
+	DEBUG "Applying config-spec \"$configSpec->{wholeFilename}\"";
+	my $BACKUP;
+	open $BACKUP, ">config-spec.backup" or ERROR "Unable to do a backup of current config-spec : $!";
+	print $BACKUP $currentConfigSpec and close $BACKUP if $BACKUP;
+
+	$mw->messageBox(-title => "Avertissement", -message => "La mise à jour d'une vue snapshop requiert une mise à jour de tous les fichiers.\nIl s'agit d'une opération longue (plus de 10 minutes), qui fige l'interface durant ce temps.", -type => 'ok', -icon => 'warning') if $ISSNAPSHOTVIEW;
+
+	INFO "Applying config-spec for a snapshot view. It can take some time, it is necessary to wait." if $ISSNAPSHOTVIEW;
+	INFO "Applying config-spec for a dynamic view. It can take some time, it is necessary to wait." unless $ISSNAPSHOTVIEW;
+	my $result = setConfigSpec($configSpec->{wholeFilename}, $ACTIVE_VIEW_FILENAME);
+	DEBUG "Operation has finished with return code \"$result\"";
+	return $result;
 }
 
 sub cancel {
