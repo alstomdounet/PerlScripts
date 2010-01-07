@@ -8,8 +8,8 @@ use lib qw(lib);
 use strict;
 use warnings;
 use Common;
+use ClearcaseMgt qw(getConfigSpec setConfigSpec);
 use Data::Dumper;
-
 
 #my %Config = loadConfig("config.xml", ForceArray => qr/^filter$/); # Loading / preprocessing of the configuration file
 
@@ -19,6 +19,7 @@ use Data::Dumper;
 use Tk;
 use Tk::DirTree;
 use Tk::Balloon;
+use Tk::ItemStyle;
 
 use constant {
 	PROGRAM_VERSION => '0.1',
@@ -31,6 +32,12 @@ INFO "Starting program (V ".PROGRAM_VERSION.")";
 my @list = createStructure(PARSED_PATH);
 my %configSpec;
 my ($description, $header, $title);
+my $PATH_TO_VIEW = 'D:\\clearcase_storage\\gmanciet_view\\PRIMA2';
+
+my $configSpec = getConfigSpec($PATH_TO_VIEW);
+my $activeConfigSpecFilename;
+
+print $configSpec;
 
 ##########################################
 # Building graphical interface
@@ -49,9 +56,10 @@ DEBUG "Building graphical interface";
 
 my $mw = MainWindow->new(-title => "Interface change config-spec");
 my $balloon = $mw->Balloon();
-$mw->withdraw; # disable immediate display
 $mw->minsize(640,480);
 $mw->maxsize(640,480);
+center($mw);
+center($mw);
 
 my $titlePanel = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
 $titlePanel->Label(-text => "Cette interface permet de modifier le fichier\nde configuration(config-spec) de Clearcase, afin de\nmodifier les élements affichés")->pack( -side => 'top', -fill => 'both', -expand => 1 );
@@ -86,10 +94,22 @@ my $mainPanel = $mw->Frame() -> pack(-side => 'top', -fill => 'both', -expand =>
       -highlightcolor => 'red');
    $jobstree->focus();
 
+my $activeConfigSpecStyle  = $jobstree->ItemStyle('text', -font => 'verdana 10 bold', -background => 'white');
 foreach my $node (@list) {
    my $node_name = (split('/', $node))[-1];
   $node_name = $node if ($node_name eq '');
-   $jobstree->add($node, -text, $node_name, -itemtype, 'text');
+  
+  my @otherOptions;
+  my $file = PARSED_PATH."/$node";
+   if (-f $file) {
+	my $content = readFile($file);
+	my $found = $configSpec eq $content;
+	$activeConfigSpecFilename = $node if $found;
+	DEBUG "Found filename of current config-spec (\"$activeConfigSpecFilename\")" if $found;
+	@otherOptions = (-style => $activeConfigSpecStyle) if $found;
+   }
+
+   $jobstree->add($node, -text, $node_name, -itemtype, 'text', @otherOptions);
 }
 $jobstree->autosetmode();
 
@@ -101,9 +121,6 @@ $title = $configSpecTitlePanel->Label(-text => '<<aucun>>', -pady => 3,  -font =
 
 $header = $configSpecPanel->Label(-text => '<=== Il est nécessaire de sélectionner l\'un des config-specs recherchés.', -pady => 5)->pack( -side => 'top', -fill => 'both', -expand => 1 );
 $description = $configSpecPanel->Scrolled("Text", -scrollbars => 'osoe', -state => 'disabled') -> pack( -side => 'top', -fill => 'both', -expand => 1);
-
-
-
 
 my $cancelButton = $buttonsPanel->Button(-text => 'Quitter', -command => [\&cancel, $mw], -pady => 5) -> pack(-side => 'left', -fill => 'both', -expand => 1);
 my $validateButton = $buttonsPanel->Button(-text => "Sélectionner un config-spec\npour activer ce bouton..." , -command => sub { confirm()}, -state => 'disabled', -pady => 5) -> pack(-side => 'right', -fill => 'both', -expand => 1);
@@ -124,21 +141,12 @@ sub parseFile {
 	$configSpec{filename} = $file;
 	$file = PARSED_PATH."/$file";
 	DEBUG "Parsing $file";
-	ERROR "Config spec \"$file\" is not readable" unless -r $file;
-	
-	open FILE, $file or LOGDIE "It was not possible to open \"$file\"";
-	local $/; # enable localized slurp mode
-    $configSpec{content} = <FILE>;
-
-
-	close FILE;
-	
-	# dfsfdfdsfsd
+	$configSpec{content} = readFile($file);
 	
 	if($configSpec{content} =~ m/^(.*?)#{15,}(.*)$/s) {
 		$configSpec{header} = $1;
-		$configSpec{header} =~ s/^\s*#+\s*(.*?)\s*$/$1/mg;
 		$configSpec{body} = $2;
+		$configSpec{header} =~ s/^\s*#+\s*(.*?)\s*$/$1/mg;
 	}
 	else {
 		$configSpec{header} = CONFIG_SPEC_HEADER_NOT_PRESENT;
@@ -146,6 +154,17 @@ sub parseFile {
 	}
 
 	return \%configSpec;
+}
+
+sub readFile {
+	my $file = shift;
+	ERROR "File \"$file\" is not readable" unless -r $file;
+	
+	open FILE, $file or LOGDIE "It was not possible to open \"$file\"";
+	local $/; # enable localized slurp mode
+    my $content = <FILE>;
+	close FILE;
+	return $content;
 }
 
 sub fillConfigSpecInterface {
@@ -160,7 +179,6 @@ sub fillConfigSpecInterface {
 }
 
 INFO "displaying graphical interface";
-center($mw);
 MainLoop();
 
 sub center {
@@ -176,7 +194,6 @@ sub center {
 
   $win->deiconify;  # Show the window again
 }
-
 
 sub createStructure {
 	my $directory  = shift;
@@ -197,14 +214,11 @@ sub createStructure {
 }
 
 sub changeConfigSpec {
-	my $text = shift;
+	my $configSpec = shift;
+	my $currentConfigSpec = shift;
+	
 	ERROR "This function is not currently implemented";
 	return 1;
-}	
-
-sub isActiveConfigSpec {
-	ERROR "This function is not currently implemented";
-	return 0;
 }
 
 sub cancel {
