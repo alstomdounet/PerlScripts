@@ -11,7 +11,7 @@ use Common;
 use ClearcaseMgt qw(getConfigSpec setConfigSpec getViewNameByElement isSnapshotView);
 use Data::Dumper;
 
-#my %Config = loadConfig("config.xml", ForceArray => qr/^filter$/); # Loading / preprocessing of the configuration file
+my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configuration file
 
 ############################################################################################
 # 
@@ -25,23 +25,33 @@ use Cwd;
 use constant {
 	PROGRAM_VERSION => '0.1',
 	CONFIG_SPEC_HEADER_NOT_PRESENT => 'Ce fichier ne contient pas d\'entêtes',
-	PARSED_PATH => './config-specs',
+	CFGSPEC_SNP_PATH => './ConfigSpecs-snapshot',
+	CFGSPEC_DYN_PATH => './ConfigSpecs-dynamic',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
 
-my @list = createStructure(PARSED_PATH);
 my %configSpec;
-my ($description, $header, $title);
-my $ACTIVE_VIEW_FILENAME = 'D:\\clearcase_storage\\gmanciet_view\\PRIMA2';
-my $ACTIVE_VIEW = getViewNameByElement($ACTIVE_VIEW_FILENAME);
-my $ISSNAPSHOTVIEW = isSnapshotView($ACTIVE_VIEW);
-
-DEBUG "Found view \"$ACTIVE_VIEW\"";
-
-my $configSpec = getConfigSpec($ACTIVE_VIEW);
+my ($description, $header, $title, $ACTIVE_VIEW_FILENAME, $ACTIVE_VIEW, $ISSNAPSHOTVIEW, $PATH_TO_CFGSPEC);
+my $OFFLINE_MODE = $Config{offlineMode}{isActive};
+my $configSpec = "";
+if($OFFLINE_MODE) {
+	WARN "PROGRAM IS RUNNING IN OFFLINE MODE";
+	$ISSNAPSHOTVIEW = $Config{offlineMode}{isSnapshotView};
+}
+else {
+	$ACTIVE_VIEW_FILENAME = 'D:\\clearcase_storage\\gmanciet_view\\PRIMA2';
+	$ACTIVE_VIEW = getViewNameByElement($ACTIVE_VIEW_FILENAME);
+	DEBUG "Found view \"$ACTIVE_VIEW\"" if $ACTIVE_VIEW;
+	$ISSNAPSHOTVIEW = isSnapshotView($ACTIVE_VIEW) if $ACTIVE_VIEW;
+	$configSpec = getConfigSpec($ACTIVE_VIEW) if $ACTIVE_VIEW;
+}
 my $activeConfigSpecFilename;
 my $selectedConfigSpec;
+
+if($ISSNAPSHOTVIEW) { $PATH_TO_CFGSPEC = CFGSPEC_SNP_PATH; }
+else { $PATH_TO_CFGSPEC = CFGSPEC_DYN_PATH; }
+my @list = createStructure($PATH_TO_CFGSPEC);
 
 ##########################################
 # Building graphical interface
@@ -104,7 +114,7 @@ foreach my $node (@list) {
   $node_name = $node if ($node_name eq '');
   
   my @otherOptions;
-  my $file = PARSED_PATH."/$node";
+  my $file = $PATH_TO_CFGSPEC."/$node";
    if (-f $file) {
 	my $content = readFile($file);
 	my $found = $configSpec eq $content;
@@ -132,7 +142,7 @@ my $validateButton = $buttonsPanel->Button(-text => "Sélectionner un config-spec
 sub  processSelectedFile {
 	my $selection = shift;
 	DEBUG "Selected item is \"$selection\"";
-	return if -d PARSED_PATH."/$selection";
+	return if -d $PATH_TO_CFGSPEC."/$selection";
 	$selectedConfigSpec = parseFile($selection);
 	fillConfigSpecInterface($selectedConfigSpec);
 }   
@@ -143,7 +153,7 @@ sub parseFile {
 	my %configSpec;
 	
 	$configSpec{filename} = $file;
-	$file = PARSED_PATH."/$file";
+	$file = $PATH_TO_CFGSPEC."/$file";
 	$configSpec{wholeFilename} = $file;
 	$configSpec{wholeFilename} =~ s/\//\\/g;
 	
