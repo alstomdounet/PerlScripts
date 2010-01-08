@@ -32,7 +32,7 @@ use constant {
 INFO "Starting program (V ".PROGRAM_VERSION.")";
 
 my %configSpec;
-my ($description, $header, $title, $ACTIVE_VIEW_FILENAME, $ACTIVE_VIEW, $ISSNAPSHOTVIEW, $PATH_TO_CFGSPEC, %pathToFiles);
+my ($description, $header, $title, $PATH_TO_ACTIVE_VIEW, $ACTIVE_VIEW, $ISSNAPSHOTVIEW, $PATH_TO_CFGSPEC, %pathToFiles);
 my $OFFLINE_MODE = $Config{offlineMode}{isActive};
 my $configSpec = "";
 if($OFFLINE_MODE) {
@@ -40,8 +40,10 @@ if($OFFLINE_MODE) {
 	$ISSNAPSHOTVIEW = $Config{offlineMode}{isSnapshotView};
 }
 else {
-	$ACTIVE_VIEW_FILENAME = 'D:\\clearcase_storage\\gmanciet_view\\PRIMA2';
-	$ACTIVE_VIEW = getViewNameByElement($ACTIVE_VIEW_FILENAME);
+	$PATH_TO_ACTIVE_VIEW = $ARGV[0];
+	LOGDIE "Program needs an argument." unless $PATH_TO_ACTIVE_VIEW;
+	LOGDIE "Program takes one directory in argument. Argument is actually \"$ARGV[0]\"" unless -d $PATH_TO_ACTIVE_VIEW;
+	$ACTIVE_VIEW = getViewNameByElement($PATH_TO_ACTIVE_VIEW);
 	DEBUG "Found view \"$ACTIVE_VIEW\"" if $ACTIVE_VIEW;
 	$ISSNAPSHOTVIEW = isSnapshotView($ACTIVE_VIEW) if $ACTIVE_VIEW;
 	$configSpec = getConfigSpec($ACTIVE_VIEW) if $ACTIVE_VIEW;
@@ -269,7 +271,7 @@ sub changeConfigSpec {
 
 	if ($ISSNAPSHOTVIEW) { INFO "Applying config-spec for a snapshot view. It can take some time, it is necessary to wait."; }
 	else { INFO "Applying config-spec for a dynamic view. It can take some time, it is necessary to wait."; }
-	my $result = setConfigSpec($configSpec->{wholeFilename}, $ACTIVE_VIEW_FILENAME);
+	my $result = setConfigSpec($configSpec->{wholeFilename}, $PATH_TO_ACTIVE_VIEW);
 	DEBUG "Operation has finished with return code \"$result\"";
 	return $result;
 }
