@@ -24,7 +24,7 @@ use Cwd;
 
 use constant {
 	PROGRAM_VERSION => '0.1',
-	CONFIG_SPEC_HEADER_NOT_PRESENT => 'Ce fichier ne contient pas d\'entêtes',
+	CFGSPEC_HEADER_NOT_PRESENT => 'Ce fichier ne contient pas d\'entêtes',
 	CFGSPEC_SNP_PATH => './ConfigSpecs-snapshot',
 	CFGSPEC_DYN_PATH => './ConfigSpecs-dynamic',
 };
@@ -32,7 +32,7 @@ use constant {
 INFO "Starting program (V ".PROGRAM_VERSION.")";
 
 my %configSpec;
-my ($description, $header, $title, $ACTIVE_VIEW_FILENAME, $ACTIVE_VIEW, $ISSNAPSHOTVIEW, $PATH_TO_CFGSPEC);
+my ($description, $header, $title, $ACTIVE_VIEW_FILENAME, $ACTIVE_VIEW, $ISSNAPSHOTVIEW, $PATH_TO_CFGSPEC, %pathToFiles);
 my $OFFLINE_MODE = $Config{offlineMode}{isActive};
 my $configSpec = "";
 if($OFFLINE_MODE) {
@@ -115,12 +115,14 @@ foreach my $node (@list) {
   
   my @otherOptions;
   my $file = $PATH_TO_CFGSPEC."/$node";
+	$file =~ s/\//\\/g;
    if (-f $file) {
 	my $content = readFile($file);
 	my $found = $configSpec eq $content;
 	$activeConfigSpecFilename = $node if $found;
 	DEBUG "Found filename of current config-spec (\"$activeConfigSpecFilename\")" if $found;
 	@otherOptions = (-style => $activeConfigSpecStyle) if $found;
+   	$pathToFiles{$node} = $file;
    }
 
    $jobstree->add($node, -text, $node_name, -itemtype, 'text', @otherOptions);
@@ -153,12 +155,10 @@ sub parseFile {
 	my %configSpec;
 	
 	$configSpec{filename} = $file;
-	$file = $PATH_TO_CFGSPEC."/$file";
-	$configSpec{wholeFilename} = $file;
-	$configSpec{wholeFilename} =~ s/\//\\/g;
-	
-	DEBUG "Parsing $file";
-	$configSpec{content} = readFile($file);
+	$configSpec{wholeFilename} = $pathToFiles{$file};
+
+	DEBUG "Parsing \"$configSpec{wholeFilename}\"";
+	$configSpec{content} = readFile($configSpec{wholeFilename});
 	
 	if($configSpec{content} =~ m/^(.*?)#{15,}(.*)$/s) {
 		$configSpec{header} = $1;
@@ -166,7 +166,7 @@ sub parseFile {
 		$configSpec{header} =~ s/^\s*#+\s*(.*?)\s*$/$1/mg;
 	}
 	else {
-		$configSpec{header} = CONFIG_SPEC_HEADER_NOT_PRESENT;
+		$configSpec{header} = CFGSPEC_HEADER_NOT_PRESENT;
 		$configSpec{body} = $configSpec{content};	
 	}
 
@@ -224,8 +224,8 @@ sub createStructure {
 	my @list = ();
 	find(
 		sub { 
-			$File::Find::prune = 1 if $_ eq ".svn";
-			return if $_ eq ".svn";
+			$File::Find::prune = 1 if $_ eq '.svn';
+			return if $_ eq '.svn';
 			my $name =  $File::Find::name;
 			return if $directory eq $name;
 			$name = substr($name, (length ($directory)+1));
@@ -267,8 +267,8 @@ sub changeConfigSpec {
 
 	$mw->messageBox(-title => "Avertissement", -message => "La mise à jour d'une vue snapshop requiert une mise à jour de tous les fichiers.\nIl s'agit d'une opération longue (plus de 10 minutes), qui fige l'interface durant ce temps.", -type => 'ok', -icon => 'warning') if $ISSNAPSHOTVIEW;
 
-	INFO "Applying config-spec for a snapshot view. It can take some time, it is necessary to wait." if $ISSNAPSHOTVIEW;
-	INFO "Applying config-spec for a dynamic view. It can take some time, it is necessary to wait." unless $ISSNAPSHOTVIEW;
+	if ($ISSNAPSHOTVIEW) { INFO "Applying config-spec for a snapshot view. It can take some time, it is necessary to wait."; }
+	else { INFO "Applying config-spec for a dynamic view. It can take some time, it is necessary to wait."; }
 	my $result = setConfigSpec($configSpec->{wholeFilename}, $ACTIVE_VIEW_FILENAME);
 	DEBUG "Operation has finished with return code \"$result\"";
 	return $result;
