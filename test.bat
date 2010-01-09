@@ -53,19 +53,17 @@ my %completeList = (
 
    
 my %item;
-my @selectedList;
+my @list = sort keys %completeList;
+
 $item{searchActivated} = 0;
-
-
-
+$item{selectedList} = \@list;
 $item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
 $item{mainFrame}->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
 $item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
-$item{listbox} = $item{mainFrame}->JComboBox(-choices => \@selectedList, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
+$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
 $item{searchFrame} = $item{mainFrame}->Frame();
 $item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
 $item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
-@selectedList = sort keys %completeList;
 
 INFO "displaying graphical interface";
 $mw->Popup; # window appears screen-centered
@@ -97,6 +95,7 @@ sub search {
 	my $search = shift;
 	DEBUG "Search request is : \"$search\"";
 	my @tmpList = ();
+	my @selectedList = @{$item{selectedList}};
 	my @resultsText = ("Hereafter are results remainings:");
 	my $old_selection = $item{selection};
 	foreach my $item (keys %completeList) {
