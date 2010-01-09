@@ -59,8 +59,9 @@ my $title = $TitlePanel->Entry(-validate => 'all', -validatecommand => [\&search
 
 my $itemBox = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
 $itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
+$itemBox->Button(-text => 'Search')->pack( -side => 'right' );
+my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$selection)->pack(-fill => 'x', -side => 'left', -expand => 1);
 @selectedList = @completeList;
-my $listbox = $mw->JComboBox(-label => 'Ma liste', -labelWidth => 15, -labelPack=>[-side=>'left'], -choices => \@selectedList, -textvariable => \$selection)->pack(-fill => 'x', -side => 'top');
 
 my $description = $mw->Scrolled("Text", -scrollbars => 'osoe') -> pack( -side => 'top', -fill => 'both');
 
@@ -81,12 +82,15 @@ sub search {
 	my $search = shift;
 	INFO "Call Search function with search : \"$search\"";
 	my @tmpList = ();
+	my $old_selection = $selection;
+	
 	foreach my $item (@completeList) {
 		next unless ($item->{-name} =~ /$search/i or $item->{-value} =~ /$search/i);
-		print Dumper $item;
 		push (@tmpList, $item);
 	}
-	@selectedList = @tmpList;
+	#@selectedList = @tmpList;
+	DEBUG "Selection is \"$old_selection\"";
+	$selection = $old_selection if $old_selection;
 	$description->Contents(scalar(@selectedList)." Results\n\n".Dumper \@selectedList);
 	return 1;
 }
