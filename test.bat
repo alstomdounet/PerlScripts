@@ -50,9 +50,12 @@ my %completeList2 = (
       'Red' => { comment => '#ff0000' },
       'Yellow' => { comment => '#ffff00' }
    );
-
+my %bugDescription;
+my @mandatoryFields;
    
-my %item2 = addListBox(\%completeList2);
+my $listComponents = addListBox($mw, 'Component', 'component', 'Optional', "Select the component affected.\nIf more components are affected, please make on CR per affected component.", \%completeList2);
+my $listAnalyser = addListBox($mw, 'Analyst', 'analyst', 'Mandatory', "Determine who will analyse the issue.", \%completeList2);
+
 
 INFO "displaying graphical interface";
 $mw->Popup; # window appears screen-centered
@@ -63,7 +66,13 @@ MainLoop();
 ##############################################
 
 sub addListBox {
+	my $parentElement = shift;
+	my $labelName = shift;
+	my $CQ_Field = shift;
+	my $necessityText = shift;
+	my $labelDescription = shift;
 	my $completeList = shift;
+
 	my @list = sort keys %$completeList;
 	my %item;
 
