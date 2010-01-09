@@ -54,7 +54,6 @@ my %completeList = (
    
 
 my @selectedList;
-my ($search);
 my $searchActivated = 0;
 
 my %item;
@@ -65,7 +64,7 @@ my $searchButton = $itemBox->Button(-text => 'Search', -command => [\&manageSear
 my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
 my $searchFrame = $itemBox->Frame();
 $searchFrame->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
-$searchFrame->Entry(-validate => 'all', -textvariable => \$search, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
+$searchFrame->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
 @selectedList = sort keys %completeList;
 
 INFO "displaying graphical interface";
@@ -87,7 +86,7 @@ sub manageSearchBox {
 	}
 	else {
 		DEBUG "Search deactivated";
-		$search = '';
+		$item{search} = '';
 		$searchButton->configure(-text => 'Search');
 		$searchFrame->packForget();
 		$balloon->attach($searchButton, -msg => 'Perform a search on left list');
