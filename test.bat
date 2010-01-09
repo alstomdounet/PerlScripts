@@ -42,14 +42,15 @@ $mw->withdraw; # disable immediate display
 $mw->minsize(640,480);
 my $balloon = $mw->Balloon();
 
-my @completeList = (
-      { -name => 'Black',  -value => '#00az00', -data => 'test' },
-      { -name => 'Blue',   -value => '#0000ff' },
-      { -name => 'Green',  -value => '#008000' },
-      { -name => 'Purple', -value => '#8000ff' },
-      { -name => 'Red',    -value => '#ff0000' },
-      { -name => 'Yellow', -value => '#ffff00' }
+my %completeList = (
+      'Black' => { comment => '#00az00', -data => 'test' },
+      'Blue' => { comment => '#0000ff' },
+      'Green' => { comment => '#008000' },
+      'Purple' => { comment => '#8000ff' },
+      'Red' => { comment => '#ff0000' },
+      'Yellow' => { comment => '#ffff00' }
    );
+
 my @selectedList;
 my $selection;
 
@@ -61,7 +62,7 @@ my $itemBox = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
 $itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
 $itemBox->Button(-text => 'Search')->pack( -side => 'right' );
 my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$selection)->pack(-fill => 'x', -side => 'left', -expand => 1);
-@selectedList = @completeList;
+@selectedList = sort keys %completeList;
 
 my $description = $mw->Scrolled("Text", -scrollbars => 'osoe') -> pack( -side => 'top', -fill => 'both');
 
@@ -84,11 +85,11 @@ sub search {
 	my @tmpList = ();
 	my $old_selection = $selection;
 	
-	foreach my $item (@completeList) {
-		next unless ($item->{-name} =~ /$search/i or $item->{-value} =~ /$search/i);
+	foreach my $item (keys %completeList) {
+		next unless ($item =~ /$search/i or $completeList{$item}{comment} =~ /$search/i);
 		push (@tmpList, $item);
 	}
-	#@selectedList = @tmpList;
+	@selectedList = @tmpList;
 	DEBUG "Selection is \"$old_selection\"";
 	$selection = $old_selection if $old_selection;
 	$description->Contents(scalar(@selectedList)." Results\n\n".Dumper \@selectedList);
