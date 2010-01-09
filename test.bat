@@ -52,11 +52,11 @@ my %completeList = (
    );
 
    
-
-my @selectedList;
-my $searchActivated = 0;
-
 my %item;
+my @selectedList;
+$item{searchActivated} = 0;
+
+
 
 $item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
 $item{mainFrame}->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
@@ -77,8 +77,8 @@ MainLoop();
 
 sub manageSearchBox {
 	my $searchListbox = shift;
-	$searchActivated = ($searchActivated+1)%2;
-	if($searchActivated) {
+	$item{searchActivated} = ($item{searchActivated}+1)%2;
+	if($item{searchActivated}) {
 		DEBUG "Search activated";
 		$item{searchButton}->configure(-text => 'X');
 		$item{searchFrame}->pack(-fill => 'x', -side => 'right', -anchor => 'center');
