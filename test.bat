@@ -61,7 +61,7 @@ my %item;
 my $itemBox = $mw->Frame()->pack(-side => 'top', -fill => 'x');
 $itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
 my $searchButton = $itemBox->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
-my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
+$item{listbox} = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
 my $searchFrame = $itemBox->Frame();
 $searchFrame->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
 $searchFrame->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
@@ -110,7 +110,7 @@ sub search {
 	$item{selection} = $selectedList[0] if scalar(@selectedList) == 1;
 
 	$balloon->attach($searchFrame, -msg => join("\n", @resultsText));
-	$listbox->configure(-state => scalar(@selectedList) ? 'normal' : 'disabled');
+	$item{listbox}->configure(-state => scalar(@selectedList) ? 'normal' : 'disabled');
 	$item{searchText} = (scalar(@selectedList) ? (scalar(@selectedList) == 1 ? "1 result" : scalar(@selectedList).' results' ) : 'No results');
 	return 1;
 }
