@@ -43,7 +43,7 @@ $mw->minsize(640,480);
 my $balloon = $mw->Balloon();
 
 my %completeList = (
-      'Black' => { comment => '#00az00', -data => 'test' },
+      'Black' => { comment => '#00az00', data => 'test' },
       'Blue' => { comment => '#0000ff' },
       'Green' => { comment => '#008000' },
       'Purple' => { comment => '#8000ff' },
@@ -51,17 +51,21 @@ my %completeList = (
       'Yellow' => { comment => '#ffff00' }
    );
 
+   
+
 my @selectedList;
-my ($selection, $search, $searchResult);
+my ($search);
 my $searchActivated = 0;
 
-my $itemBox = $mw->Frame()-> pack(-side => 'top', -fill => 'x');
+my %item;
+
+my $itemBox = $mw->Frame()->pack(-side => 'top', -fill => 'x');
 $itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
 my $searchButton = $itemBox->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
-my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$selection)->pack(-fill => 'x', -side => 'left', -expand => 1);
+my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
 my $searchFrame = $itemBox->Frame();
-my $searchLabel = $searchFrame->Label(-textvariable => \$searchResult)->pack(-side => 'left');
-my $title = $searchFrame->Entry(-validate => 'all', -textvariable => \$search, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
+$searchFrame->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
+$searchFrame->Entry(-validate => 'all', -textvariable => \$search, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
 @selectedList = sort keys %completeList;
 
 INFO "displaying graphical interface";
@@ -95,20 +99,20 @@ sub search {
 	DEBUG "Search request is : \"$search\"";
 	my @tmpList = ();
 	my @resultsText = ("Hereafter are results remainings:");
-	my $old_selection = $selection;
+	my $old_selection = $item{selection};
 	foreach my $item (keys %completeList) {
 		next unless ($item =~ /$search/i or $completeList{$item}{comment} =~ /$search/i);
 		push (@tmpList, $item);
 		push (@resultsText, " => $item --- $completeList{$item}{comment}");
 	}
 	
-	@selectedList = @tmpList;
-	$selection = $old_selection if $old_selection;
-	$selection = $selectedList[0] if scalar(@selectedList) == 1;
+	@selectedList = sort @tmpList;
+	$item{selection} = $old_selection if $old_selection;
+	$item{selection} = $selectedList[0] if scalar(@selectedList) == 1;
 
 	$balloon->attach($searchFrame, -msg => join("\n", @resultsText));
 	$listbox->configure(-state => scalar(@selectedList) ? 'normal' : 'disabled');
-	$searchResult = (scalar(@selectedList) ? (scalar(@selectedList) == 1 ? "1 result" : scalar(@selectedList).' results' ) : 'No results');
+	$item{searchText} = (scalar(@selectedList) ? (scalar(@selectedList) == 1 ? "1 result" : scalar(@selectedList).' results' ) : 'No results');
 	return 1;
 }
 
