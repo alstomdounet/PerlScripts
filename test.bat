@@ -42,7 +42,7 @@ $mw->withdraw; # disable immediate display
 $mw->minsize(640,480);
 my $balloon = $mw->Balloon();
 
-my %completeList = (
+my %completeList2 = (
       'Black' => { comment => '#00az00', data => 'test' },
       'Blue' => { comment => '#0000ff' },
       'Green' => { comment => '#008000' },
@@ -52,9 +52,7 @@ my %completeList = (
    );
 
    
-my @list = sort keys %completeList;
-
-my %item2 = addListBox(\@list);
+my %item2 = addListBox(\%completeList2);
 
 INFO "displaying graphical interface";
 $mw->Popup; # window appears screen-centered
@@ -65,12 +63,13 @@ MainLoop();
 ##############################################
 
 sub addListBox {
-	my $list = shift;
-	
+	my $completeList = shift;
+	my @list = sort keys %$completeList;
 	my %item;
 
 	$item{searchActivated} = 0;
-	$item{selectedList} = $list;
+	$item{selectedList} = \@list;
+	$item{completeList} = $completeList;
 	$item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
 	$item{mainFrame}->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
 	$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) })->pack( -side => 'right' );
@@ -106,6 +105,7 @@ sub search {
 	
 	DEBUG "Search request is : \"$search\"";
 	my @tmpList;
+	my %completeList = %{$searchListbox->{completeList}};
 	my @resultsText = ("Hereafter are results remainings:");
 	my $old_selection = $searchListbox->{selection};
 	foreach my $item (keys %completeList) {
@@ -113,9 +113,8 @@ sub search {
 		push (@tmpList, $item);
 		push (@resultsText, " => $item --- $completeList{$item}{comment}");
 	}
-	@tmpList = sort @tmpList;
 	my $nbrOfResults = scalar(@tmpList);
-	@{$searchListbox->{selectedList}} = @tmpList;
+	@{$searchListbox->{selectedList}} = sort @tmpList;
 	$searchListbox->{selection} = $old_selection if $old_selection;
 	$searchListbox->{selection} = $tmpList[0] if $nbrOfResults == 1;
 
