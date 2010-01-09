@@ -58,11 +58,11 @@ my $searchActivated = 0;
 
 my %item;
 
-my $itemBox = $mw->Frame()->pack(-side => 'top', -fill => 'x');
-$itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
-$item{searchButton} = $itemBox->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
-$item{listbox} = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
-$item{searchFrame} = $itemBox->Frame();
+$item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
+$item{mainFrame}->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
+$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
+$item{listbox} = $item{mainFrame}->JComboBox(-choices => \@selectedList, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
+$item{searchFrame} = $item{mainFrame}->Frame();
 $item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
 $item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
 @selectedList = sort keys %completeList;
