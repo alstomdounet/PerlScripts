@@ -81,12 +81,14 @@ sub manageSearchBox {
 		DEBUG "Search activated";
 		$searchButton->configure(-text => 'X');
 		$searchFrame->pack(-fill => 'x', -side => 'right', -anchor => 'center');
+		$balloon->attach($searchButton, -msg => 'Cancel search');
 	}
 	else {
 		DEBUG "Search deactivated";
 		$search = '';
 		$searchButton->configure(-text => 'Search');
 		$searchFrame->packForget();
+		$balloon->attach($searchButton, -msg => 'Perform a search on left list');
 	}
 }
 
