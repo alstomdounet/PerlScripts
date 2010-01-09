@@ -52,19 +52,17 @@ my %completeList = (
    );
 
 my @selectedList;
-my $selection;
+my ($selection, $search);
+my $searchActivated = 0;
 
 my $TitlePanel = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
-$TitlePanel->Button(-text => 'Search', -width => 15 )->pack( -side => 'left' );
-my $title = $TitlePanel->Entry(-validate => 'all', -validatecommand => [\&search])->pack(-fill => 'x', -side => 'top', -anchor => 'center');
 
 my $itemBox = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
 $itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
-$itemBox->Button(-text => 'Search')->pack( -side => 'right' );
+my $searchButton = $itemBox->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
 my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$selection)->pack(-fill => 'x', -side => 'left', -expand => 1);
+my $title = $itemBox->Entry(-validate => 'all', -textvariable => \$search, -width => 15, -validatecommand => [\&search]);
 @selectedList = sort keys %completeList;
-
-my $description = $mw->Scrolled("Text", -scrollbars => 'osoe') -> pack( -side => 'top', -fill => 'both');
 
 INFO "displaying graphical interface";
 $mw->Popup; # window appears screen-centered
@@ -76,10 +74,21 @@ MainLoop();
 
 sub manageSearchBox {
 	my $searchListbox = shift;
+	$searchActivated = ($searchActivated+1)%2;
+	if($searchActivated) {
+		DEBUG "Search activated";
+		$searchButton->configure(-text => 'X');
+		$title->pack(-fill => 'x', -side => 'right', -anchor => 'center');
+	}
+	else {
+		DEBUG "Search deactivated";
+		$search = '';
+		$searchButton->configure(-text => 'Search');
+		$title->packForget();
+	}
 }
 
 sub search {	
-	$description->Contents(Dumper \@_);
 	my $search = shift;
 	INFO "Call Search function with search : \"$search\"";
 	my @tmpList = ();
@@ -93,7 +102,6 @@ sub search {
 	DEBUG "Selection is \"$old_selection\"";
 	$selection = $old_selection if $old_selection;
 	$selection = $selectedList[0] if scalar(@selectedList) == 1;
-	$description->Contents(scalar(@selectedList)." Results\n\n".Dumper \@selectedList);
 	return 1;
 }
 
