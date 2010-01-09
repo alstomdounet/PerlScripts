@@ -52,18 +52,9 @@ my %completeList = (
    );
 
    
-my %item;
 my @list = sort keys %completeList;
 
-$item{searchActivated} = 0;
-$item{selectedList} = \@list;
-$item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
-$item{mainFrame}->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
-$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
-$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
-$item{searchFrame} = $item{mainFrame}->Frame();
-$item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
-$item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
+my %item2 = addListBox(\@list);
 
 INFO "displaying graphical interface";
 $mw->Popup; # window appears screen-centered
@@ -73,44 +64,64 @@ MainLoop();
 # Graphical oriented functions
 ##############################################
 
+sub addListBox {
+	my $list = shift;
+	
+	my %item;
+
+	$item{searchActivated} = 0;
+	$item{selectedList} = $list;
+	$item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
+	$item{mainFrame}->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
+	$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) })->pack( -side => 'right' );
+	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
+	$item{searchFrame} = $item{mainFrame}->Frame();
+	$item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
+	$item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
+	return %item;
+}
+
 sub manageSearchBox {
 	my $searchListbox = shift;
-	$item{searchActivated} = ($item{searchActivated}+1)%2;
-	if($item{searchActivated}) {
+	
+	$searchListbox->{searchActivated} = ($searchListbox->{searchActivated}+1)%2;
+	if($searchListbox->{searchActivated}) {
 		DEBUG "Search activated";
-		$item{searchButton}->configure(-text => 'X');
-		$item{searchFrame}->pack(-fill => 'x', -side => 'right', -anchor => 'center');
-		$balloon->attach($item{searchButton}, -msg => 'Cancel search');
+		$searchListbox->{searchButton}->configure(-text => 'X');
+		$searchListbox->{searchFrame}->pack(-fill => 'x', -side => 'right', -anchor => 'center');
+		$balloon->attach($searchListbox->{searchButton}, -msg => 'Cancel search');
 	}
 	else {
 		DEBUG "Search deactivated";
-		$item{search} = '';
-		$item{searchButton}->configure(-text => 'Search');
-		$item{searchFrame}->packForget();
-		$balloon->attach($item{searchButton}, -msg => 'Perform a search on left list');
+		$searchListbox->{search} = '';
+		$searchListbox->{searchButton}->configure(-text => 'Search');
+		$searchListbox->{searchFrame}->packForget();
+		$balloon->attach($searchListbox->{searchButton}, -msg => 'Perform a search on left list');
 	}
 }
 
 sub search {	
+	my $searchListbox = shift;
 	my $search = shift;
+	
 	DEBUG "Search request is : \"$search\"";
-	my @tmpList = ();
-	my @selectedList = @{$item{selectedList}};
+	my @tmpList;
 	my @resultsText = ("Hereafter are results remainings:");
-	my $old_selection = $item{selection};
+	my $old_selection = $searchListbox->{selection};
 	foreach my $item (keys %completeList) {
 		next unless ($item =~ /$search/i or $completeList{$item}{comment} =~ /$search/i);
 		push (@tmpList, $item);
 		push (@resultsText, " => $item --- $completeList{$item}{comment}");
 	}
-	
-	@selectedList = sort @tmpList;
-	$item{selection} = $old_selection if $old_selection;
-	$item{selection} = $selectedList[0] if scalar(@selectedList) == 1;
+	@tmpList = sort @tmpList;
+	my $nbrOfResults = scalar(@tmpList);
+	@{$searchListbox->{selectedList}} = @tmpList;
+	$searchListbox->{selection} = $old_selection if $old_selection;
+	$searchListbox->{selection} = $tmpList[0] if $nbrOfResults == 1;
 
-	$balloon->attach($item{searchFrame}, -msg => join("\n", @resultsText));
-	$item{listbox}->configure(-state => scalar(@selectedList) ? 'normal' : 'disabled');
-	$item{searchText} = (scalar(@selectedList) ? (scalar(@selectedList) == 1 ? "1 result" : scalar(@selectedList).' results' ) : 'No results');
+	$balloon->attach($searchListbox->{searchFrame}, -msg => join("\n", @resultsText));
+	$searchListbox->{listbox}->configure(-state => $nbrOfResults ? 'normal' : 'disabled');
+	$searchListbox->{searchText} = ($nbrOfResults ? ($nbrOfResults == 1 ? "1 result" : $nbrOfResults.' results' ) : 'No results');
 	return 1;
 }
 
