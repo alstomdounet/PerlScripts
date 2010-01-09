@@ -62,7 +62,7 @@ $itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
 my $searchButton = $itemBox->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
 my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$selection)->pack(-fill => 'x', -side => 'left', -expand => 1);
 my $searchFrame = $itemBox->Frame();
-$searchFrame->Label(-textvariable => \$searchResult)->pack(-side => 'left');
+my $searchLabel = $searchFrame->Label(-textvariable => \$searchResult)->pack(-side => 'left');
 my $title = $searchFrame->Entry(-validate => 'all', -textvariable => \$search, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
 @selectedList = sort keys %completeList;
 
@@ -94,15 +94,19 @@ sub search {
 	my $search = shift;
 	DEBUG "Search request is : \"$search\"";
 	my @tmpList = ();
+	my @resultsText = ("Hereafter are results remainings:");
 	my $old_selection = $selection;
 	foreach my $item (keys %completeList) {
 		next unless ($item =~ /$search/i or $completeList{$item}{comment} =~ /$search/i);
 		push (@tmpList, $item);
+		push (@resultsText, " => $item --- $completeList{$item}{comment}");
 	}
+	
 	@selectedList = @tmpList;
 	$selection = $old_selection if $old_selection;
 	$selection = $selectedList[0] if scalar(@selectedList) == 1;
 
+	$balloon->attach($searchFrame, -msg => join("\n", @resultsText));
 	$listbox->configure(-state => scalar(@selectedList) ? 'normal' : 'disabled');
 	$searchResult = (scalar(@selectedList) ? (scalar(@selectedList) == 1 ? "1 result" : scalar(@selectedList).' results' ) : 'No results');
 	return 1;
