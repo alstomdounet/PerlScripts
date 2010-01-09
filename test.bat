@@ -64,6 +64,8 @@ my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \
 my $title = $itemBox->Entry(-validate => 'all', -textvariable => \$search, -width => 15, -validatecommand => [\&search]);
 @selectedList = sort keys %completeList;
 
+my $description = $mw->Scrolled("Text", -scrollbars => 'osoe') -> pack( -side => 'top', -fill => 'both');
+
 INFO "displaying graphical interface";
 $mw->Popup; # window appears screen-centered
 MainLoop();
@@ -90,18 +92,18 @@ sub manageSearchBox {
 
 sub search {	
 	my $search = shift;
-	INFO "Call Search function with search : \"$search\"";
+	DEBUG "Search request is : \"$search\"";
 	my @tmpList = ();
 	my $old_selection = $selection;
-	
 	foreach my $item (keys %completeList) {
 		next unless ($item =~ /$search/i or $completeList{$item}{comment} =~ /$search/i);
 		push (@tmpList, $item);
 	}
 	@selectedList = @tmpList;
-	DEBUG "Selection is \"$old_selection\"";
 	$selection = $old_selection if $old_selection;
 	$selection = $selectedList[0] if scalar(@selectedList) == 1;
+
+	$listbox->configure(-state => scalar(@selectedList) ? 'normal' : 'disabled');
 	return 1;
 }
 
