@@ -60,7 +60,7 @@ my %item;
 
 my $itemBox = $mw->Frame()->pack(-side => 'top', -fill => 'x');
 $itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
-my $searchButton = $itemBox->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
+$item{searchButton} = $itemBox->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
 $item{listbox} = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
 $item{searchFrame} = $itemBox->Frame();
 $item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
@@ -80,16 +80,16 @@ sub manageSearchBox {
 	$searchActivated = ($searchActivated+1)%2;
 	if($searchActivated) {
 		DEBUG "Search activated";
-		$searchButton->configure(-text => 'X');
+		$item{searchButton}->configure(-text => 'X');
 		$item{searchFrame}->pack(-fill => 'x', -side => 'right', -anchor => 'center');
-		$balloon->attach($searchButton, -msg => 'Cancel search');
+		$balloon->attach($item{searchButton}, -msg => 'Cancel search');
 	}
 	else {
 		DEBUG "Search deactivated";
 		$item{search} = '';
-		$searchButton->configure(-text => 'Search');
+		$item{searchButton}->configure(-text => 'Search');
 		$item{searchFrame}->packForget();
-		$balloon->attach($searchButton, -msg => 'Perform a search on left list');
+		$balloon->attach($item{searchButton}, -msg => 'Perform a search on left list');
 	}
 }
 
