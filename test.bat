@@ -55,9 +55,7 @@ my @selectedList;
 my ($selection, $search, $searchResult);
 my $searchActivated = 0;
 
-my $TitlePanel = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
-
-my $itemBox = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
+my $itemBox = $mw->Frame()-> pack(-side => 'top', -fill => 'x');
 $itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
 my $searchButton = $itemBox->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
 my $listbox = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$selection)->pack(-fill => 'x', -side => 'left', -expand => 1);
