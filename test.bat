@@ -92,6 +92,7 @@ sub search {
 	@selectedList = @tmpList;
 	DEBUG "Selection is \"$old_selection\"";
 	$selection = $old_selection if $old_selection;
+	$selection = $selectedList[0] if scalar(@selectedList) == 1;
 	$description->Contents(scalar(@selectedList)." Results\n\n".Dumper \@selectedList);
 	return 1;
 }
