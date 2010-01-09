@@ -62,9 +62,9 @@ my $itemBox = $mw->Frame()->pack(-side => 'top', -fill => 'x');
 $itemBox->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
 my $searchButton = $itemBox->Button(-text => 'Search', -command => [\&manageSearchBox])->pack( -side => 'right' );
 $item{listbox} = $itemBox->JComboBox(-choices => \@selectedList, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
-my $searchFrame = $itemBox->Frame();
-$searchFrame->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
-$searchFrame->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
+$item{searchFrame} = $itemBox->Frame();
+$item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
+$item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => [\&search])->pack(-side => 'right');
 @selectedList = sort keys %completeList;
 
 INFO "displaying graphical interface";
@@ -81,14 +81,14 @@ sub manageSearchBox {
 	if($searchActivated) {
 		DEBUG "Search activated";
 		$searchButton->configure(-text => 'X');
-		$searchFrame->pack(-fill => 'x', -side => 'right', -anchor => 'center');
+		$item{searchFrame}->pack(-fill => 'x', -side => 'right', -anchor => 'center');
 		$balloon->attach($searchButton, -msg => 'Cancel search');
 	}
 	else {
 		DEBUG "Search deactivated";
 		$item{search} = '';
 		$searchButton->configure(-text => 'Search');
-		$searchFrame->packForget();
+		$item{searchFrame}->packForget();
 		$balloon->attach($searchButton, -msg => 'Perform a search on left list');
 	}
 }
@@ -109,7 +109,7 @@ sub search {
 	$item{selection} = $old_selection if $old_selection;
 	$item{selection} = $selectedList[0] if scalar(@selectedList) == 1;
 
-	$balloon->attach($searchFrame, -msg => join("\n", @resultsText));
+	$balloon->attach($item{searchFrame}, -msg => join("\n", @resultsText));
 	$item{listbox}->configure(-state => scalar(@selectedList) ? 'normal' : 'disabled');
 	$item{searchText} = (scalar(@selectedList) ? (scalar(@selectedList) == 1 ? "1 result" : scalar(@selectedList).' results' ) : 'No results');
 	return 1;
