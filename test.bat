@@ -80,12 +80,17 @@ sub addListBox {
 	$item{selectedList} = \@list;
 	$item{completeList} = $completeList;
 	$item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
-	$item{mainFrame}->Label(-text => 'Ma liste', -width => 15 )->pack(-side => 'left');
+	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack(-side => 'left');
 	$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) })->pack( -side => 'right' );
 	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => \$item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
 	$item{searchFrame} = $item{mainFrame}->Frame();
 	$item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
 	$item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
+
+	#$item{listbox}->setSelected($CQ_Field) if $CQ_Field;
+	$balloon->attach($item{listbox}, -msg => "<$necessityText> $labelDescription");
+	push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field});
+
 	return %item;
 }
 
