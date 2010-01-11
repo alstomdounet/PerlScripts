@@ -73,12 +73,12 @@ sub addListBox {
 	my $labelDescription = shift;
 	my $completeList = shift;
 
-	my @list = sort keys %$completeList;
 	my %item;
+	my @list;
 
+	my $oldValue = $bugDescription{$CQ_Field};
 	$item{searchActivated} = 0;
 	$item{selectedList} = \@list;
-	$item{completeList} = $completeList;
 	$item{selection} = \$bugDescription{$CQ_Field};
 	$item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
 	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack(-side => 'left');
@@ -88,11 +88,24 @@ sub addListBox {
 	$item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
 	$item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
 
-	$item{listbox}->setSelected($bugDescription{$CQ_Field}) if $bugDescription{$CQ_Field};
+	changeList(\%item, $completeList, $oldValue);
 	$balloon->attach($item{listbox}, -msg => "<$necessityText> $labelDescription");
 	push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field});
 
 	return %item;
+}
+
+sub changeList {
+	my $item = shift;
+	my $completeList = shift;
+	my $selection = shift;
+	
+	$item->{completeList} = $completeList;
+
+	my @list = sort keys %$completeList;
+	@{$item->{selectedList}} = @list;
+	
+	DEBUG "Trying to set default value \"$selection\"" and $item->{listbox}->setSelected($selection) if $selection;
 }
 
 sub manageSearchBox {
