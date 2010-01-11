@@ -1,7 +1,8 @@
 @rem = ' PERL for Windows NT - ccperl must be in search path
 @echo off
 ccperl %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
-goto endofperl
+if ERRORLEVEL 1001 goto finishedCorrectly
+goto waitDueToErrors
 @rem ';
 
 BEGIN {
@@ -17,7 +18,7 @@ use Data::Dumper;
 use Crypt::Rijndael_PP qw(rijndael_encrypt rijndael_decrypt MODE_CBC);
 use Storable qw(store retrieve thaw freeze);
 
-my $PROGRAM_VERSION = "1.3";
+my $PROGRAM_VERSION = "2.0";
 
 INFO "Starting program (V $PROGRAM_VERSION)";
 my %Config = loadConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
@@ -44,7 +45,7 @@ if(-r "$bugsDatabase.edb") {
 		$nbrOfBugsToInsert--;
 	}
 	INFO "If not errors has occured, you can safely delete \"$bugsDatabase.edb\" (to avoid duplicate inserts)";
-	exit;
+	exit(1001);
 }
 
 #################################
@@ -170,6 +171,11 @@ $frozenCQFields = freeze(\%CqFieldsDesc);
 sub syncFieldsWithClearQuest {
 	my $data = shift;
 	INFO "Synchronization of Clearquest fields is required.";
+	
+	WARN "Using statically defined list of components";
+	my @results = @{retrieve('complementaryFields.db')};
+	
+	LOGDIE "Exit here at the moment";
 	
 	my $session = CQSession::Build(); 
 	
@@ -595,7 +601,7 @@ sub cancel {
 	$killThread = 1; # Ask thread to kill itself
 	$Thread->detach(); 
 	while($killThread == 1) { sleep 1; } # Wait that thread finishes.
-	exit(-1);
+	exit(1001);
 }
 
 sub switchActions {
@@ -695,7 +701,7 @@ sub addListBox {
 	my $listToInsert = shift;
 	
 	my $newElement = $parentElement->JComboBox(-label => $labelName, -labelWidth => 15, -labelPack=>[-side=>'left'], -textvariable => \$bugDescription{$CQ_Field}, -choices => $listToInsert, -browsecmd => [\&analyseListboxes])->pack(-fill => 'x', -side => 'top', -anchor => 'center'); # -> pack(-fill => 'both', -expand => 1)
-	$newElement->setSelected($CQ_Field) if $CQ_Field;
+	$newElement->setSelected($bugDescription{$CQ_Field}) if $bugDescription{$CQ_Field};
 	$balloon->attach($newElement, -msg => "<$necessityText> $labelDescription");
 	push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field});
 	
@@ -817,5 +823,6 @@ sub createPaddedData {
 }
 
 __END__
-:endofperl
+:waitDueToErrors
 pause
+:finishedCorrectly
