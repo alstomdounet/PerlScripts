@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC -//W3C//DTD HTML 4.01 Transitional//EN>
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1 http-equiv=content-type">
+  <title><TMPL_VAR name=TABLE_NAME></title>
+ <style type="text/css">
+  body { margin: 1em;
+    font-family: Arial,Helvetica,sans-serif;
+    color: rgb(255, 255, 255);
+    text-align: left;
+    background-color: rgb(0, 0, 0);
+    }
+
+  table { border: 0.2em solid rgb(255, 255, 255);
+    font-size: 0.8em;
+    background-color: rgb(204, 204, 255);
+    color: rgb(0, 0, 0);
+    width: 90%;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-bottom: 10px;
+    border-collapse: collapse;
+    }
+
+  td { border: 1px dotted rgb(255, 255, 255);
+    padding: 0.2em 1em;
+    }
+
+  td.head { padding: 0.2em 1em;
+    text-align: right;
+    font-weight: bold;
+    }
+
+  tr { border: 0.1em solid rgb(255, 255, 255);
+    }
+
+  th.subheader { padding: 0.4em 1.5em;
+    text-align: left;
+    opacity: 1;
+    background-color: rgb(175, 175, 255);
+    }
+
+  th { border: 0.1em solid rgb(255, 255, 255);
+    padding: 0.5em;
+    font-size: 1.2em;
+    background-color: rgb(255, 204, 153);
+    }
+
+  caption { margin: 1em;
+    font-size: 2em;
+    font-weight: bold;
+    font-style: italic;
+    text-align: left;
+    color: rgb(255, 255, 255);
+    }
+
+
+  </style>
+</head>
+<body>
+<h3>Fichier généré le <TMPL_VAR name=DATE></h3>
+<table summary="<TMPL_VAR name=TABLE_NAME>">
+    <caption><TMPL_VAR name=TABLE_NAME></caption>
+    <tr class="header1">
+    <TMPL_LOOP name=HEADER>
+      <th><TMPL_VAR name=FIELD></th>
+    </TMPL_LOOP>
+    </tr>
+	<TMPL_LOOP name=RESULTS>
+	<tr>
+		<td><TMPL_VAR name=NUMBER></td>
+		<td><a target="_blank" href="http://iww.cquest.villeurbanne.transport.alstom.com/cqweb/main?command=GenerateMainFrame&service=CQ&schema=CQatv&contextid=atvcm&entityID=<TMPL_VAR name=DBID>&entityDefName=ChangeRequest"><TMPL_VAR name=ID></a></td><TMPL_LOOP name=RESULT>
+		<td><TMPL_VAR name=CONTENT></td>
+		</TMPL_LOOP>
+	</tr>
+	</TMPL_LOOP>
+</table>
+
+</body>
+</html>
