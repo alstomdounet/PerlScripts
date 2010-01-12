@@ -17,10 +17,13 @@ use Common;
 use Data::Dumper;
 use Crypt::Rijndael_PP qw(rijndael_encrypt rijndael_decrypt MODE_CBC);
 use Storable qw(store retrieve thaw freeze);
+use ClearquestMgt qw(makeQuery);
 
-my $PROGRAM_VERSION = "2.0";
+use constant {
+	PROGRAM_VERSION => '2.0',
+};
 
-INFO "Starting program (V $PROGRAM_VERSION)";
+INFO "Starting program (V ".PROGRAM_VERSION.")";
 my %Config = loadConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
 
 #################################
@@ -155,6 +158,7 @@ if (-r $CqDatabase) {
 	my $storedData = retrieve($CqDatabase);
 	%CqFieldsDesc = %$storedData;
 	$syncNeeded = (time() - $CqFieldsDesc{lastUpdate} - $Config{clearquest}->{refreshPeriod}->{subSystems}) > 0;
+	$syncNeeded = (PROGRAM_VERSION ne $CqFieldsDesc{scriptVersion});
 }
 else { $syncNeeded = 1; }
 
@@ -172,14 +176,9 @@ sub syncFieldsWithClearQuest {
 	my $data = shift;
 	INFO "Synchronization of Clearquest fields is required.";
 	
-	WARN "Using statically defined list of components";
-	my @results = @{retrieve('complementaryFields.db')};
-	
-	LOGDIE "Exit here at the moment";
-	
 	my $session = CQSession::Build(); 
-	
-	eval( '$session->UserLogon ($Config{clearquest}->{login}, $Config{clearquest}->{password}, "atvcm", "")' );
+	INFO "Connecting to Clearquest database";
+	eval( '$session->UserLogon ($Config{clearquest}->{login}, $Config{clearquest}->{password}, $Config{clearquest}->{database}, "")' );
 	if($@) {
 		my $error_msg = $@;
 		DEBUG "Error message is : $error_msg";
@@ -187,7 +186,34 @@ sub syncFieldsWithClearQuest {
 		LOGDIE "An unknown error has happened during Clearquest connection. Please report this issue.";
 	}
 	
-	my @fields = qw(sub_system submitter_CR_origin submitter_CR_type submitter_priority submitter_severity frequency product_version site defect_detection_phase zone analyst CR_category);
+	my @fieldList = ('sub_system', 'sub_system.component', 'sub_system.component.comment');
+	my @results = makeQuery($session, 'Product', $Config{clearquest}->{product}, \@fieldList);
+	
+	my %results;
+	foreach my $item (@results) {
+		$results{$item->{'sub_system'}}{$item->{'sub_system.component'}} = $item->{'sub_system.component.comment'};
+	}
+	
+	my @listS;
+	foreach my $sub_system (sort keys %results) {
+		my %sub_system  = %{$results{$sub_system}};
+		my ($sub_system, $simple_sub_system)  = extractComplexField($sub_system);
+		$data->{sub_system}{equivTable}{$simple_sub_system} = $sub_system;
+		my @listC;
+		foreach my $component (sort keys %sub_system) {
+			my ($component, $simple_component)  = extractComplexField($component);
+			$data->{component}{equivTable}{$simple_sub_system}{$simple_component} = $component;
+			$data->{component}{commentTable}{$simple_sub_system}{$simple_component} = $sub_system{$component};
+			push(@listC, $simple_component);
+		}
+		$data->{component}{shortDesc}{$simple_sub_system} = \@listC;
+		push(@listS, $simple_sub_system);
+	}
+	$data->{sub_system}{shortDesc} = \@listS;
+	
+
+	
+	my @fields = qw(submitter_CR_origin submitter_CR_type submitter_priority submitter_severity frequency product_version site defect_detection_phase zone analyst CR_category);
 	
 	my $rec = $session->BuildEntity("ChangeRequest");
 
@@ -208,28 +234,9 @@ sub syncFieldsWithClearQuest {
 		
 		$data->{$key}{shortDesc} = \@shortDesc;
 	}
-	
-	
-	my @list = @{$data->{sub_system}{shortDesc}};
-	foreach my $subsystem (@list) {
-		DEBUG "Extracting components for subsystem '$subsystem' (Long name : '$data->{sub_system}{equivTable}{$subsystem}')";
-		$rec->SetFieldValue('sub_system', $data->{sub_system}{equivTable}{$subsystem});
-		
-		$data->{component}{equivTable}{$subsystem} = ();
-		$data->{component}{shortDesc}{$subsystem} = ();
-		my @shortlist;
-		
-		foreach my $item (@{$rec->GetFieldChoiceList('component')}) {
-			my ($text, $simpleText)  = extractComplexField($item);
-			push(@shortlist, $simpleText);
-			$data->{component}{equivTable}{$subsystem}{$simpleText} = $text;
-		}
-		
-		$data->{component}{shortDesc}{$subsystem} = \@shortlist;
-	}
 
 	$data->{lastUpdate} = time();
-	$data->{scriptVersion} = $PROGRAM_VERSION;
+	$data->{scriptVersion} = PROGRAM_VERSION;
 
 	store ($data, $CqDatabase);
 }
