@@ -17,7 +17,7 @@ use Common;
 use Data::Dumper;
 use Crypt::Rijndael_PP qw(rijndael_encrypt rijndael_decrypt MODE_CBC);
 use Storable qw(store retrieve thaw freeze);
-use ClearquestMgt qw(makeQuery);
+use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
 	PROGRAM_VERSION => '2.0',
@@ -176,18 +176,13 @@ sub syncFieldsWithClearQuest {
 	my $data = shift;
 	INFO "Synchronization of Clearquest fields is required.";
 	
-	my $session = CQSession::Build(); 
 	INFO "Connecting to Clearquest database";
-	eval( '$session->UserLogon ($Config{clearquest}->{login}, $Config{clearquest}->{password}, $Config{clearquest}->{database}, "")' );
-	if($@) {
-		my $error_msg = $@;
-		DEBUG "Error message is : $error_msg";
-		ERROR "Clearquest database is not reachable actually. Check network settings. It can be considered as normal if you are not currently connected to the Alstom intranet" and return if($error_msg =~ /Unable to logon to the ORACLE database "cqueste"/);
-		LOGDIE "An unknown error has happened during Clearquest connection. Please report this issue.";
-	}
+	my $session = connectCQ($Config{clearquest}->{login}, $Config{clearquest}->{password}, $Config{clearquest}->{database});
 	
 	my @fieldList = ('sub_system', 'sub_system.component', 'sub_system.component.comment');
-	my @results = makeQuery($session, 'Product', $Config{clearquest}->{product}, \@fieldList);
+	
+	my %filters = ('name' => $Config{clearquest}->{product});
+	my @results = makeQuery('Product', \@fieldList , \%filters);
 	
 	my %results;
 	foreach my $item (@results) {
@@ -199,14 +194,11 @@ sub syncFieldsWithClearQuest {
 		my %sub_system  = %{$results{$sub_system}};
 		my ($sub_system, $simple_sub_system)  = extractComplexField($sub_system);
 		$data->{sub_system}{equivTable}{$simple_sub_system} = $sub_system;
-		my @listC;
 		foreach my $component (sort keys %sub_system) {
 			my ($component, $simple_component)  = extractComplexField($component);
 			$data->{component}{equivTable}{$simple_sub_system}{$simple_component} = $component;
 			$data->{component}{commentTable}{$simple_sub_system}{$simple_component} = $sub_system{$component};
-			push(@listC, $simple_component);
 		}
-		$data->{component}{shortDesc}{$simple_sub_system} = \@listC;
 		push(@listS, $simple_sub_system);
 	}
 	$data->{sub_system}{shortDesc} = \@listS;
