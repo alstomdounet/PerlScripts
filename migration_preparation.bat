@@ -17,38 +17,44 @@ use ClearcaseMgt qw(checkoutElement isLatest setAttribute isPrivateElement check
 
 my %Config = loadConfig("config.xml", ForceArray => qr/_list$/); # Loading / preprocessing of the configuration file
 
+
 my $srcDir = "./docs";
-my $path = 'D:\\clearcase_storage\\gmanciet_view\\PRIMA2\\ProjectSpecificDocs\\02_Requirements\\SyFRSCC\\TFE\\TRF';
-my $destFile = 'BAD0002243278 SyFRScc';
-my $initialVersion = 'A0';
-my $initialState = '10';
+
 my $ONLINE_MODE = 0;
 
 my $result;
+my $finalDir = $Config{REP_FINAL};
+my $destFile = $Config{SPEC_FINAL};
+my $initialVersion = $Config{VERSION_INITIALE};
+my $initialState = $Config{ETAT_INITIAL};
+
 find(sub { 
 INFO "Found match" and $result = $_ if /^$destFile.*\.doc$/; 
- }, $path);
+ }, $finalDir);
 $destFile = $result if $result;
 
-LOGDIE "Path $path doesn't exists" unless -d $path;
-LOGDIE "Destination file $destFile doesn't exists" unless -f $path."\\".$destFile;
-#LOGDIE "File is not configuration management" if isPrivateElement($path."\\".$destFile);
-#LOGDIE "File is not latest revision." unless isLatest($path."\\".$destFile);
+LOGDIE "Path ".$finalDir." doesn't exists" unless -d $finalDir;
+my $locDstFile = $finalDir."\\".$destFile;
+LOGDIE "Destination file $destFile doesn't exists" unless -f $locDstFile;
+#LOGDIE "File is not configuration management" if isPrivateElement($locDstFile);
+#LOGDIE "File is not latest revision." unless isLatest($locDstFile);
 
 my @list = extract_list($srcDir);
 
-setCCAttributes($path."\\".$destFile, $initialVersion, $initialState) if $ONLINE_MODE;
+setCCAttributes($locDstFile, $initialVersion, $initialState);
 
 foreach my $version (@list) {
 	my $file = $version;
 	$version =~ s/^(.*)\.doc$/$1/i;
 	INFO "Processing Version $version";
-	checkout($path."\\".$destFile) or LOGDIE 'Checkout was not performed correctly';
-	unlink($path."\\".$destFile) or LOGDIE 'Removal was not performed correctly';
-	copy($srcDir.''.$file, $path."\\".$destFile) or LOGDIE 'Copy was not performed correctly';
-	checkin($path."\\".$destFile) or LOGDIE 'Checkin was not performed correctly';
-	setCCAttributes($path."\\".$destFile, $version, 10) or LOGDIE 'Attributes were not set correctly';
-}
+	my $srcFile = $srcDir.'\\'.$file;
+	
+	DEBUG "Checkout \"$locDstFile\"" and checkoutElement($locDstFile) or LOGDIE 'Checkout was not performed correctly';
+	DEBUG "Delete \"$locDstFile\"" and unlink($locDstFile) or LOGDIE 'Removal was not performed correctly';
+	DEBUG "Copy \"$srcFile\" in \"$locDstFile\"" and copy($srcFile, $locDstFile) or LOGDIE 'Copy was not performed correctly';
+	DEBUG "Checkin \"$locDstFile\"" and checkinElement($locDstFile, "Mise en gestion de conf de la version $version.") or LOGDIE 'Checkin was not performed correctly';
+	DEBUG "Checkout \"$locDstFile\" with attributes $version and 10" and setCCAttributes($locDstFile, $version, '10') or LOGDIE 'Attributes were not set correctly';
+} 
 
 # Extract list
 sub extract_list {
@@ -72,8 +78,9 @@ sub setCCAttributes {
 	my $version = shift;
 	my $state = shift;
 	
-	my $result = setAttribute($document, 'Version',  $version);
-	return $result and setAttribute($document, 'State', $state);
+	my $result = setAttribute($document, 'Version',  "$version");
+	my $result2 = setAttribute($document, 'State', "$state");
+	return $result and $result2;
 }
 
 
