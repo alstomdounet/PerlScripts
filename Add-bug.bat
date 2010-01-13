@@ -297,7 +297,7 @@ my @mandatoryFields;
 
 my $listZones = addListBox($mw, 'Project', 'zone', 'Mandatory', 'Select hereafter if anomaly will be project specific or affects the whole product line', $CqFieldsDesc{zone}{shortDesc});
 my $listSubsystems = addListBox($mw, 'Subsystem', 'sub_system', 'Mandatory', 'Enter hereafter the subsystem',\@listSubSystems);
-my $listComponents = addListBox($mw, 'Component', 'component', 'Optional', "Select the component affected.\nIf more components are affected, please make on CR per affected component.", \@listComponents);
+my $listComponents = addSearchableListBox($mw, 'Component', 'component', 'Optional', "Select the component affected.\nIf more components are affected, please make on CR per affected component.");
 my $listVersions = addListBox($mw, 'Product version', 'product_version', 'Mandatory', "Select the version affected bu the CR.",  $CqFieldsDesc{product_version}{shortDesc});
 my $listCriticities = addListBox($mw, 'Severity', 'submitter_severity', 'Mandatory', "Select Severity level, from \"bypassing\" (problems with no impact on functional)\nto \"blocking\" (issues which doesn't allow a step to complete).", $CqFieldsDesc{submitter_severity}{shortDesc});
 my $listPriorities = addListBox($mw, 'Priority', 'submitter_priority', 'Mandatory', "Select Priority level, from Low to High", $CqFieldsDesc{submitter_priority}{shortDesc});
@@ -306,7 +306,7 @@ my $listOrigins = addListBox($mw, 'Origin', 'submitter_CR_origin', 'Mandatory', 
 my $listSites = addListBox($mw, 'Site', 'site', 'Mandatory', "Determine who will process the issue.", $CqFieldsDesc{site}{shortDesc});
 my $listDetPhasis = addListBox($mw, 'Detection phase', 'defect_detection_phase', 'Mandatory', "Determine when was the problem detected.", $CqFieldsDesc{defect_detection_phase}{shortDesc});
 my $listTypes = addListBox($mw, 'Type', 'submitter_CR_type', 'Mandatory', "Type of modification:\n - defect for non-compliance of a requirement (specification, etc.)\n - enhancement is for various improvements (functionality, reliability, speed, etc.)", $CqFieldsDesc{submitter_CR_type}{shortDesc});
-my $listAnalyser = addListBox($mw, 'Analyst', 'analyst', 'Mandatory', "Determine who will analyse the issue.", $CqFieldsDesc{analyst}{shortDesc});
+my $listAnalyser = addSearchableListBox($mw, 'Analyst', 'analyst', 'Mandatory', "Determine who will analyse the issue.", $CqFieldsDesc{analyst}{shortDesc});
 my $listCROrigin = addListBox($mw, 'Category', 'CR_category', 'Mandatory', "TBD", $CqFieldsDesc{CR_category}{shortDesc});
 
 
@@ -468,8 +468,6 @@ sub sendCrToCQ {
 		
 	if($result > 0) {
 		INFO "Issue was inserted with identifier : $identifier";
-		#$rec = $session->EditEntity($identifier, "Submit") if($result);
-		#$result = makeCQCommit($rec) if($result);
 	}
 	else {
 		ERROR("Insertion of bug has failed");
@@ -717,11 +715,12 @@ sub addListBox {
 
 sub analyseListboxes {	
 	if($bugDescription{sub_system} and $bugDescription{sub_system} ne $lastSelectedSubsystem) {
-		if($CqFieldsDesc{component}{shortDesc}{$bugDescription{sub_system}}) {
-			@listComponents = @{$CqFieldsDesc{component}{shortDesc}{$bugDescription{sub_system}}};
+		if($CqFieldsDesc{component}{commentTable}{$bugDescription{sub_system}}) {
+			changeList($listComponents, $CqFieldsDesc{component}{commentTable}{$bugDescription{sub_system}}, undef);
 		}
 		else {
-			@listComponents = ();
+			my %tmp;
+			changeList($listComponents, \%tmp, undef);
 		}
 		$lastSelectedSubsystem = $bugDescription{sub_system};
 	}
@@ -753,6 +752,14 @@ sub addSearchableListBox {
 	my $labelDescription = shift;
 	my $completeList = shift;
 
+	my %completeList;
+	if (ref $completeList eq "ARRAY") {
+		foreach my $item (@$completeList) {
+			$completeList{$item} = $item;
+		}
+	}
+	elsif(ref $completeList eq "HASH") { %completeList = %$completeList; }
+	
 	my %item;
 	my @list;
 
@@ -762,17 +769,17 @@ sub addSearchableListBox {
 	$item{selection} = \$bugDescription{$CQ_Field};
 	$item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
 	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack(-side => 'left');
-	$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) })->pack( -side => 'right' );
-	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
+	$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) }, -state => 'disabled')->pack( -side => 'right' );
+	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -state => 'disabled')->pack(-fill => 'x', -side => 'left', -expand => 1);
 	$item{searchFrame} = $item{mainFrame}->Frame();
 	$item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
 	$item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
 
-	changeList(\%item, $completeList, $oldValue);
+	changeList(\%item, \%completeList, $oldValue) if %completeList;
 	$balloon->attach($item{listbox}, -msg => "<$necessityText> $labelDescription");
 	push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field});
 
-	return %item;
+	return \%item;
 }
 
 sub changeList {
@@ -784,6 +791,9 @@ sub changeList {
 
 	my @list = sort keys %$completeList;
 	@{$item->{selectedList}} = @list;
+	$item->{searchButton}->configure(-state => (scalar(@list))?'normal':'disabled');
+	$item->{listbox}->configure(-state => (scalar(@list))?'normal':'disabled');
+
 	
 	DEBUG "Trying to set default value \"$selection\"" and $item->{listbox}->setSelected($selection) if $selection;
 }
@@ -817,9 +827,9 @@ sub search {
 	my @resultsText = ("Hereafter are results remainings:");
 	my $old_selection = ${$searchListbox->{selection}};
 	foreach my $item (keys %completeList) {
-		next unless ($item =~ /$search/i or $completeList{$item}{comment} =~ /$search/i);
+		next unless (not $search or $search eq '' or $item =~ /$search/i or $completeList{$item} =~ /$search/i);
 		push (@tmpList, $item);
-		push (@resultsText, " => $item --- $completeList{$item}{comment}");
+		push (@resultsText, " => $item --- $completeList{$item}");
 	}
 	my $nbrOfResults = scalar(@tmpList);
 	@{$searchListbox->{selectedList}} = sort @tmpList;
