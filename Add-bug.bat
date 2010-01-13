@@ -271,8 +271,6 @@ $mw->minsize($windowSizeX,$windowSizeY);
 # Variables declaration
 ######################################################################
 my @listSubSystems = @{$CqFieldsDesc{sub_system}{shortDesc}};
-#my @listSubSystems = ();
-my @listComponents = ();
 my %bugDescription;
 my %backupDescription;
 my $lastSelectedSubsystem = '';
@@ -289,7 +287,7 @@ my @mandatoryFields;
 
 my $listZones = addListBox($mw, 'Project', 'zone', 'Mandatory', 'Select hereafter if anomaly will be project specific or affects the whole product line', $CqFieldsDesc{zone}{shortDesc});
 my $listSubsystems = addListBox($mw, 'Subsystem', 'sub_system', 'Mandatory', 'Enter hereafter the subsystem',\@listSubSystems);
-my $listComponents = addSearchableListBox($mw, 'Component', 'component', 'Optional', "Select the component affected.\nIf more components are affected, please make on CR per affected component.");
+my $listComponents = addSearchableListBox($mw, 'Component', 'component', 'Mandatory', "Select the component affected.\nIf more components are affected, please make on CR per affected component.");
 my $listVersions = addListBox($mw, 'Product version', 'product_version', 'Mandatory', "Select the version affected bu the CR.",  $CqFieldsDesc{product_version}{shortDesc});
 my $listCriticities = addListBox($mw, 'Severity', 'submitter_severity', 'Mandatory', "Select Severity level, from \"bypassing\" (problems with no impact on functional)\nto \"blocking\" (issues which doesn't allow a step to complete).", $CqFieldsDesc{submitter_severity}{shortDesc});
 my $listPriorities = addListBox($mw, 'Priority', 'submitter_priority', 'Mandatory', "Select Priority level, from Low to High", $CqFieldsDesc{submitter_priority}{shortDesc});
@@ -706,13 +704,14 @@ sub addListBox {
 }
 
 sub analyseListboxes {	
+	my $backup = $bugDescription{component};
 	if($bugDescription{sub_system} and $bugDescription{sub_system} ne $lastSelectedSubsystem) {
 		if($CqFieldsDesc{component}{commentTable}{$bugDescription{sub_system}}) {
-			changeList($listComponents, $CqFieldsDesc{component}{commentTable}{$bugDescription{sub_system}}, undef);
+			changeList($listComponents, $CqFieldsDesc{component}{commentTable}{$bugDescription{sub_system}}, $backup);
 		}
 		else {
 			my %tmp;
-			changeList($listComponents, \%tmp, undef);
+			changeList($listComponents, \%tmp, $backup);
 		}
 		$lastSelectedSubsystem = $bugDescription{sub_system};
 	}
@@ -764,7 +763,7 @@ sub addSearchableListBox {
 	$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) }, -state => 'disabled')->pack( -side => 'right' );
 	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -state => 'disabled')->pack(-fill => 'x', -side => 'left', -expand => 1);
 	$item{searchFrame} = $item{mainFrame}->Frame();
-	$item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
+	$item{searchDescription} = $item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
 	$item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
 
 	changeList(\%item, \%completeList, $oldValue) if %completeList;
@@ -828,7 +827,7 @@ sub search {
 	${$searchListbox->{selection}} = $old_selection if $old_selection;
 	${$searchListbox->{selection}} = $tmpList[0] if $nbrOfResults == 1;
 
-	$balloon->attach($searchListbox->{searchFrame}, -msg => join("\n", @resultsText));
+	$balloon->attach($searchListbox->{searchDescription}, -msg => join("\n", @resultsText));
 	$searchListbox->{listbox}->configure(-state => $nbrOfResults ? 'normal' : 'disabled');
 	$searchListbox->{searchText} = ($nbrOfResults ? ($nbrOfResults == 1 ? "1 result" : $nbrOfResults.' results' ) : 'No results');
 	return 1;
