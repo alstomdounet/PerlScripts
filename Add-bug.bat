@@ -166,6 +166,8 @@ else { $syncNeeded = 1; }
 if($syncNeeded) {
 	syncFieldsWithClearQuest(\%CqFieldsDesc);
 } else { DEBUG "Using all Clearquest data stored in database."; }
+LOGDIE "You have a database at V.$CqFieldsDesc{scriptVersion}. You have to upgrade it because program is now at V.".PROGRAM_VERSION if (PROGRAM_VERSION ne $CqFieldsDesc{scriptVersion});
+
 
 $frozenCQFields = freeze(\%CqFieldsDesc);
 
