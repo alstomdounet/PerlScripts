@@ -46,15 +46,18 @@ sub addDescriptionField {
 	my $container = shift;
 	my $text = shift;
 	my $CQ_Field = shift;
-	my $necessityText = shift;
-	my $description = shift;
 	
 	my %item;
-	$item{selection} = \$CQ_Field;
+	$item{selection} = $CQ_Field;
 	$item{mainFrame} = $container->Frame() -> pack(-side => 'top', -fill => 'both', -expand => 1);
 	$item{mainFrame}->Label(-text => $text, -width => 15 )->pack( -side => 'left' );
 	$item{Text} = $item{mainFrame}->Scrolled("Text", -scrollbars => 'osoe') -> pack( -side => 'top', -fill => 'both');
-	$item{Text}->bind( '<FocusOut>' => sub { $item{selection} = $item{Text}->Contents(); } );
+	
+	$item{Text}->Contents($$CQ_Field);
+	
+	
+	$item{Text}->bind( '<FocusOut>' => sub { ${$item{selection}} = $item{Text}->Contents(); } );
+	return %item;
 }
 
 sub manageSearchBox {
