@@ -12,33 +12,32 @@ sub addListBox {
 	
 	$item{selection} = $selectedField;
 	$item{selectedList} = $listToInsert;
-	$item{mainFrame} = $parentElement->Frame()-> pack(-side => 'top', -fill => 'x', -expand => 1);
+	$item{mainFrame} = $parentElement->Frame()-> pack( -fill => 'x', -expand => 1);
 	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack( -side => 'left' );
-	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -browsecmd => [\&analyseListboxes])->pack(-fill => 'x', -side => 'left', -expand => 1);
-
 	if($item{searchActivated}) {
-		my %completeList;
-		if (ref $completeList eq "ARRAY") {
-			foreach my $item (@$completeList) {
-				$completeList{$item} = $item;
-			}
-		}
-		elsif(ref $completeList eq "HASH") { %completeList = %$completeList; }
+		# my %completeList;
+		# if (ref $completeList eq "ARRAY") {
+			# foreach my $item (@$completeList) {
+				# $completeList{$item} = $item;
+			# }
+		# }
+		# elsif(ref $completeList eq "HASH") { %completeList = %$completeList; }
 		
-		$item{searchFrame} = $item{mainFrame}->pack( -side => 'right' );
+		$item{searchFrame} = $item{mainFrame}->pack();
 		$item{searchButton} = $item{searchFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) }, -state => 'disabled')->pack( -side => 'right' );
+
 		$item{subsearchFrame} = $item{searchFrame}->Frame();
 		$item{searchDescription} = $item{subsearchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
 		$item{subsearchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
+	}
+	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -browsecmd => [\&analyseListboxes])->pack(-fill => 'x', -side => 'left', -expand => 1);
+
+
+	DEBUG "Preselecting field with name \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'name') if $$selectedField;
+	DEBUG "Preselecting field with value \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'value') if $$selectedField;
+
+	#changeList(\%item, \%completeList, $oldValue) if %completeList;
 	
-		changeList(\%item, \%completeList, $oldValue) if %completeList;
-
-	}
-	else {
-		DEBUG "Preselecting field with name \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'name') if $$selectedField;
-		DEBUG "Preselecting field with value \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'value') if $$selectedField;
-	}
-
 	return %item;
 }
 
@@ -55,29 +54,6 @@ sub addDescriptionField {
 	$item{mainFrame}->Label(-text => $text, -width => 15 )->pack( -side => 'left' );
 	$item{Text} = $item{mainFrame}->Scrolled("Text", -scrollbars => 'osoe') -> pack( -side => 'top', -fill => 'both');
 	$item{Text}->bind( '<FocusOut>' => sub { $item{selection} = $item{Text}->Contents(); } );
-}
-
-sub addSearchableListBox {
-	my ($parentElement, $labelName, $CQ_Field, $necessityText, $labelDescription, $completeList) = @_;
-	
-	my %item;
-	my @list;
-
-	my $oldValue = $CQ_Field;
-	$item{searchActivated} = 0;
-	$item{selectedList} = \@list;
-	$item{selection} = \$CQ_Field;
-	$item{mainFrame} = $parentElement->Frame()->pack(-side => 'top', -fill => 'x');
-	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack(-side => 'left');
-	$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) }, -state => 'disabled')->pack( -side => 'right' );
-	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -state => 'disabled')->pack(-fill => 'x', -side => 'left', -expand => 1);
-	$item{searchFrame} = $item{mainFrame}->Frame();
-	$item{searchDescription} = $item{searchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
-	$item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
-
-	changeList(\%item, \%completeList, $oldValue) if %completeList;
-
-	return \%item;
 }
 
 sub manageSearchBox {
