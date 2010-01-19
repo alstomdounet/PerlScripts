@@ -11,18 +11,19 @@ sub addListBox {
 	}
 	
 	$item{selection} = $selectedField;
-	$item{selectedList} = $listToInsert;
 	$item{mainFrame} = $parentElement->Frame()-> pack( -fill => 'x', -expand => 1);
 	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack( -side => 'left' );
 	if($item{searchEnabled}) {
-		# my %completeList;
-		# if (ref $completeList eq "ARRAY") {
-			# foreach my $item (@$completeList) {
-				# $completeList{$item} = $item;
-			# }
-		# }
-		# elsif(ref $completeList eq "HASH") { %completeList = %$completeList; }
+		my %completeList;
+		if (ref $listToInsert eq "ARRAY") {
+			foreach my $item (@$listToInsert) {
+				$completeList{$item} = $item;
+			}
+		}
+		elsif(ref $listToInsert eq "HASH") { %completeList = %$listToInsert; }
 		
+		my @list;
+		$item{selectedList} = \@list;
 		$item{searchActivated} = 0;
 		$item{searchFrame} = $item{mainFrame}->pack();
 		$item{searchButton} = $item{searchFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) })->pack( -side => 'right' );
@@ -31,12 +32,12 @@ sub addListBox {
 		$item{searchDescription} = $item{subsearchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
 		$item{subsearchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
 	}
+	else {
+		$item{selectedList} = $listToInsert;
+	}
 	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -browsecmd => [\&analyseListboxes])->pack(-fill => 'x', -side => 'left', -expand => 1);
 
-	DEBUG "Preselecting field with name \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'name') if $$selectedField;
-	DEBUG "Preselecting field with value \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'value') if $$selectedField;
-
-	changeList(\%item, \%completeList, $oldValue) if %completeList;
+	#changeList(\%item, \%completeList, $$selectedField) if %completeList;
 	
 	return %item;
 }
