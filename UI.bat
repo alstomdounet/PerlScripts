@@ -65,7 +65,7 @@ $mw->minsize(640,480);
 
 # SyFRSCC, Component, Type, ?headline?, CCB comment, Description / context, Proposed changes, Analysis cost+System+Hardware+Software+Validation+ Inmpacted items + Analyst + Work in progress
 #addSearchableListBox($mw, 'Selected CR', 'parent_id', undef, undef,\@listOfBugs);
-my $CrToProcess = 'Entrer ici le numéro de CR';
+my $CrToProcess = '';
 my $searchFrame = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
 $searchFrame->Label(-text => "ID à traiter", -width => 15 )->pack( -side => 'left' );
 $searchFrame->Button(-text => "Ouvrir", -width => 15, -command => sub { loadCR($CrToProcess); } )->pack( -side => 'right' );
@@ -87,6 +87,7 @@ sub loadCR {
 	use Tk::ROText;
 	
 	$processedCR = undef;
+	retrieveBug($id);
 	
 	use Fields;
 	
@@ -145,6 +146,38 @@ sub analyseListboxes {
 		# }
 		# $lastSelectedSubsystem = $bugDescription{sub_system};
 	# }
+}
+
+sub retrieveBug {
+	my $bugID = shift;
+	my %bug;
+	use ClearquestMgt qw(connectCQ disconnectCQ getChangeRequestFields getEntity editEntity getEntityFields getChilds getAvailableActions getFieldsRequiredness cancelAction); 
+
+	INFO "Connecting to Clearquest";
+	connectCQ ('gmanciet', 'jsne1983aS!', 'atvcm');
+	INFO "Retrieving needed informations";
+	my $entity = getEntity('ChangeRequest',$bugID);
+	my %fields = getEntityFields($entity);
+	$bug{fields} = \%fields;
+	foreach my $childID (getChilds($entity)) {
+		DEBUG "Getting child properties ($childID)";
+		my %child;
+		my $childEntity = getEntity('ChangeRequest',$childID);
+		my %childFields = getEntityFields($childEntity);
+		$child{fields} = \%childFields;
+		
+		foreach my $action (getAvailableActions($entity)) {
+			DEBUG "Skipped action $action" and next if $action eq 'Import' or $action eq 'Clone';
+			DEBUG "Getting required fields for action \"$action\"";
+			editEntity($entity, $action);
+			my %fieldsRequired = getFieldsRequiredness($entity);
+			$child{availableActions}{$action} = \%fieldsRequired;
+			cancelAction($entity);
+		}
+		$bug{childs}{$childID} = \%child;
+	}
+	store(\%bug, $bugID.'.db');
+	return %bug;
 }
 
 exit;
