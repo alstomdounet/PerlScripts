@@ -7,14 +7,14 @@ sub addListBox {
 	
 	my %item;
 	if($args{'-searchable'}) {
-		$item{searchActivated} = 1;
+		$item{searchEnabled} = 1;
 	}
 	
 	$item{selection} = $selectedField;
 	$item{selectedList} = $listToInsert;
 	$item{mainFrame} = $parentElement->Frame()-> pack( -fill => 'x', -expand => 1);
 	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack( -side => 'left' );
-	if($item{searchActivated}) {
+	if($item{searchEnabled}) {
 		# my %completeList;
 		# if (ref $completeList eq "ARRAY") {
 			# foreach my $item (@$completeList) {
@@ -23,8 +23,9 @@ sub addListBox {
 		# }
 		# elsif(ref $completeList eq "HASH") { %completeList = %$completeList; }
 		
+		$item{searchActivated} = 0;
 		$item{searchFrame} = $item{mainFrame}->pack();
-		$item{searchButton} = $item{searchFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) }, -state => 'disabled')->pack( -side => 'right' );
+		$item{searchButton} = $item{searchFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) })->pack( -side => 'right' );
 
 		$item{subsearchFrame} = $item{searchFrame}->Frame();
 		$item{searchDescription} = $item{subsearchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
@@ -32,11 +33,10 @@ sub addListBox {
 	}
 	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -browsecmd => [\&analyseListboxes])->pack(-fill => 'x', -side => 'left', -expand => 1);
 
-
 	DEBUG "Preselecting field with name \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'name') if $$selectedField;
 	DEBUG "Preselecting field with value \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'value') if $$selectedField;
 
-	#changeList(\%item, \%completeList, $oldValue) if %completeList;
+	changeList(\%item, \%completeList, $oldValue) if %completeList;
 	
 	return %item;
 }
@@ -63,14 +63,14 @@ sub manageSearchBox {
 	if($searchListbox->{searchActivated}) {
 		DEBUG "Search activated";
 		$searchListbox->{searchButton}->configure(-text => 'X');
-		$searchListbox->{searchFrame}->pack(-fill => 'x', -side => 'right', -anchor => 'center');
+		$searchListbox->{subsearchFrame}->pack(-fill => 'x', -side => 'right', -anchor => 'center');
 		#$balloon->attach($searchListbox->{searchButton}, -msg => 'Cancel search');
 	}
 	else {
 		DEBUG "Search deactivated";
 		$searchListbox->{search} = '';
 		$searchListbox->{searchButton}->configure(-text => 'Search');
-		$searchListbox->{searchFrame}->packForget();
+		$searchListbox->{subsearchFrame}->packForget();
 		#$balloon->attach($searchListbox->{searchButton}, -msg => 'Perform a search on left list');
 	}
 }
