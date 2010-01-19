@@ -3,19 +3,43 @@
 #my $balloon = $mw->Balloon();
 
 sub addListBox {
-	my $parentElement = shift;
-	my $labelName = shift;
-	my $CQ_Field = shift;
-	my $necessityText = shift;
-	my $labelDescription = shift;
-	my $listToInsert = shift;
+	my ($parentElement, $labelName, $listToInsert, $selectedField, %args) = @_;
 	
-	my $newElement = $parentElement->JComboBox(-label => $labelName, -labelWidth => 15, -labelPack=>[-side=>'left'], -textvariable => \$bugDescription{$CQ_Field}, -choices => $listToInsert, -browsecmd => [\&analyseListboxes])->pack(-fill => 'x', -side => 'top', -anchor => 'center'); # -> pack(-fill => 'both', -expand => 1)
-	$newElement->setSelected($bugDescription{$CQ_Field}) if $bugDescription{$CQ_Field};
-	#$balloon->attach($newElement, -msg => "<$necessityText> $labelDescription");
-	push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field}) if $necessityText eq 'Mandatory';
+	my %item;
+	if($args{'-searchable'}) {
+		$item{searchActivated} = 1;
+	}
 	
-	return $newElement;
+	$item{selection} = $selectedField;
+	$item{selectedList} = $listToInsert;
+	$item{mainFrame} = $parentElement->Frame()-> pack(-side => 'top', -fill => 'x', -expand => 1);
+	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack( -side => 'left' );
+	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -browsecmd => [\&analyseListboxes])->pack(-fill => 'x', -side => 'left', -expand => 1);
+
+	if($item{searchActivated}) {
+		my %completeList;
+		if (ref $completeList eq "ARRAY") {
+			foreach my $item (@$completeList) {
+				$completeList{$item} = $item;
+			}
+		}
+		elsif(ref $completeList eq "HASH") { %completeList = %$completeList; }
+		
+		$item{searchFrame} = $item{mainFrame}->pack( -side => 'right' );
+		$item{searchButton} = $item{searchFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) }, -state => 'disabled')->pack( -side => 'right' );
+		$item{subsearchFrame} = $item{searchFrame}->Frame();
+		$item{searchDescription} = $item{subsearchFrame}->Label(-textvariable => \$item{searchText})->pack(-side => 'left');
+		$item{subsearchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
+	
+		changeList(\%item, \%completeList, $oldValue) if %completeList;
+
+	}
+	else {
+		DEBUG "Preselecting field with name \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'name') if $$selectedField;
+		DEBUG "Preselecting field with value \"$$selectedField\"" and $item{listbox}->setSelected($$selectedField, -type => 'value') if $$selectedField;
+	}
+
+	return %item;
 }
 
 sub addDescriptionField {
@@ -26,36 +50,23 @@ sub addDescriptionField {
 	my $description = shift;
 	
 	my %item;
-	$item{selection} = \$bugDescription{$CQ_Field};
-	$item{DescriptionPanel} = $container->Frame() -> pack(-side => 'top', -fill => 'both', -expand => 1);
-	$item{DescriptionPanel}->Label(-text => $text, -width => 15 )->pack( -side => 'left' );
-	$item{Text} = $item{DescriptionPanel}->Scrolled("Text", -scrollbars => 'osoe') -> pack( -side => 'top', -fill => 'both');
+	$item{selection} = \$CQ_Field;
+	$item{mainFrame} = $container->Frame() -> pack(-side => 'top', -fill => 'both', -expand => 1);
+	$item{mainFrame}->Label(-text => $text, -width => 15 )->pack( -side => 'left' );
+	$item{Text} = $item{mainFrame}->Scrolled("Text", -scrollbars => 'osoe') -> pack( -side => 'top', -fill => 'both');
 	$item{Text}->bind( '<FocusOut>' => sub { $item{selection} = $item{Text}->Contents(); } );
 }
 
 sub addSearchableListBox {
-	my $parentElement = shift;
-	my $labelName = shift;
-	my $CQ_Field = shift;
-	my $necessityText = shift;
-	my $labelDescription = shift;
-	my $completeList = shift;
-
-	my %completeList;
-	if (ref $completeList eq "ARRAY") {
-		foreach my $item (@$completeList) {
-			$completeList{$item} = $item;
-		}
-	}
-	elsif(ref $completeList eq "HASH") { %completeList = %$completeList; }
+	my ($parentElement, $labelName, $CQ_Field, $necessityText, $labelDescription, $completeList) = @_;
 	
 	my %item;
 	my @list;
 
-	my $oldValue = $bugDescription{$CQ_Field};
+	my $oldValue = $CQ_Field;
 	$item{searchActivated} = 0;
 	$item{selectedList} = \@list;
-	$item{selection} = \$bugDescription{$CQ_Field};
+	$item{selection} = \$CQ_Field;
 	$item{mainFrame} = $parentElement->Frame()->pack(-side => 'top', -fill => 'x');
 	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack(-side => 'left');
 	$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) }, -state => 'disabled')->pack( -side => 'right' );
@@ -65,8 +76,6 @@ sub addSearchableListBox {
 	$item{searchFrame}->Entry(-validate => 'all', -textvariable => \$item{search}, -width => 15, -validatecommand => sub { my $search = shift; search(\%item, $search); return 1; } )->pack(-side => 'right');
 
 	changeList(\%item, \%completeList, $oldValue) if %completeList;
-	#$balloon->attach($item{listbox}, -msg => "<$necessityText> $labelDescription");
-	#push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field});
 
 	return \%item;
 }
@@ -128,6 +137,19 @@ sub search {
 	$searchListbox->{listbox}->configure(-state => $nbrOfResults ? 'normal' : 'disabled');
 	$searchListbox->{searchText} = ($nbrOfResults ? ($nbrOfResults == 1 ? "1 result" : $nbrOfResults.' results' ) : 'No results');
 	return 1;
+}
+
+
+
+sub cancel {
+	my $mw = shift;
+	
+	my $response = $mw->messageBox(-title => "Confirmation requested", -message => "Do you really want to quit this application?", -type => 'yesno', -icon => 'question');
+	
+	DEBUG "User has answered \"$response\" to cancellation question";
+	return unless $response eq "Yes";
+	INFO "User has requested a cancellation";
+	exit(1001);
 }
 
 1;
