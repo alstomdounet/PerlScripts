@@ -51,6 +51,7 @@ use Tk::Pane;
 Tk::CmdLine::SetResources(  # set multiple resources
 	[ 	'*Button*relief: groove',
 		'*Text*relief: groove',
+		'*ROText*relief: groove',
 		'*Entry*relief: groove',
 		'*Button*background : grey'
 	]
@@ -63,14 +64,17 @@ $mw->withdraw; # disable immediate display
 $mw->minsize(640,480);
 
 # SyFRSCC, Component, Type, ?headline?, CCB comment, Description / context, Proposed changes, Analysis cost+System+Hardware+Software+Validation+ Inmpacted items + Analyst + Work in progress
-addSearchableListBox($mw, 'Selected CR', 'parent_id', undef, undef,\@listOfBugs);
+#addSearchableListBox($mw, 'Selected CR', 'parent_id', undef, undef,\@listOfBugs);
+my $CrToProcess = 'Entrer ici le numéro de CR';
+my $searchFrame = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
+$searchFrame->Label(-text => "ID à traiter", -width => 15 )->pack( -side => 'left' );
+$searchFrame->Button(-text => "Ouvrir", -width => 15, -command => sub { loadCR($CrToProcess); } )->pack( -side => 'right' );
+$searchFrame->Entry(-textvariable => \$CrToProcess, -width => 15 )->pack( -side => 'left', -fill => 'x', -expand => 1 );
 
 # Building buttons
 my $bottomPanel = $mw->Frame()->pack(-side => 'bottom', -fill => 'x');
 $bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => 10) -> pack(-side => 'left');
 my $buttonSwitch = $bottomPanel->Button(-text => "Validate",-font => 'arial 9', -command => [ \&switchActions], -height => 2, -width => 10) -> pack(-side => 'right');
-
-loadCR('testID');
 
 $mw->Popup; # window appears screen-centered
 MainLoop();
@@ -106,7 +110,6 @@ sub loadCR {
 	my @subCR = qw(atvcm00087450 atvcm00087451 atvcm00087452);
 	
 	foreach my $subID (@subCR) {
-		$processedCR->{subCR}->{$subID};
 		buildTab($notebook,$subID,$processedCR->{subCR}->{$subID});
 	}
 }
@@ -123,11 +126,25 @@ sub buildTab {
 	my (@mandatoryFields, @listSubSystems);
 	$content->{tab} = $tab1;
 	$content->{CRFields} = undef;
-	$content->{listSubsystems} = addListBox($tab1, 'Subsystem', $content->{CRFields}->{'sub_system'}, 'Mandatory', 'Enter hereafter the subsystem',$CqFieldsDesc{sub_system}{shortDesc});
-	$content->{listComponents} = addSearchableListBox($tab1, 'Component', $content->{CRFields}->{'component'}, 'Mandatory', "Select the component affected.\nIf more components are affected, please make on CR per affected component.");
-	$content->{listAnalyser} = addSearchableListBox($tab1, 'Analyst', $content->{CRFields}->{'analyst'}, 'Mandatory', "Determine who will analyse the issue.", $CqFieldsDesc{analyst}{shortDesc});
-	$content->{listTypes} = addListBox($tab1, 'Type', $content->{CRFields}->{'submitter_CR_type'}, 'Mandatory', "Type of modification:\n - defect for non-compliance of a requirement (specification, etc.)\n - enhancement is for various improvements (functionality, reliability, speed, etc.)", $CqFieldsDesc{submitter_CR_type}{shortDesc});
-	$content->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', $content->{CRFields}->{'proposed_change'},'Mandatory');
+	$content->{listSubsystems} = addListBox($tab1, 'Subsystem', $content->{CRFields}->{sub_system}, 'Mandatory', 'Enter hereafter the subsystem',$CqFieldsDesc{sub_system}{shortDesc});
+	$content->{listComponents} = addSearchableListBox($tab1, 'Component', $content->{CRFields}->{component}, 'Mandatory', "Select the component affected.\nIf more components are affected, please make on CR per affected component.");
+	$content->{listAnalyser} = addSearchableListBox($tab1, 'Analyst', $content->{CRFields}->{analyst}, 'Mandatory', "Determine who will analyse the issue.", $CqFieldsDesc{analyst}{shortDesc});
+	$content->{listTypes} = addListBox($tab1, 'Type', $content->{CRFields}->{submitter_CR_type}, 'Mandatory', "Type of modification:\n - defect for non-compliance of a requirement (specification, etc.)\n - enhancement is for various improvements (functionality, reliability, speed, etc.)", $CqFieldsDesc{submitter_CR_type}{shortDesc});
+	$content->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', $content->{CRFields}->{proposed_change},'Mandatory');
+}
+
+sub analyseListboxes {	
+	# my $backup = $bugDescription{component};
+	# if($bugDescription{sub_system} and $bugDescription{sub_system} ne $lastSelectedSubsystem) {
+		# if($CqFieldsDesc{component}{commentTable}{$bugDescription{sub_system}}) {
+			# changeList($listComponents, $CqFieldsDesc{component}{commentTable}{$bugDescription{sub_system}}, $backup);
+		# }
+		# else {
+			# my %tmp;
+			# changeList($listComponents, \%tmp, $backup);
+		# }
+		# $lastSelectedSubsystem = $bugDescription{sub_system};
+	# }
 }
 
 exit;
