@@ -74,7 +74,7 @@ $searchFrame->Entry(-textvariable => \$CrToProcess, -width => 15 )->pack( -side 
 # Building buttons
 my $bottomPanel = $mw->Frame()->pack(-side => 'bottom', -fill => 'x');
 $bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => 10) -> pack(-side => 'left');
-my $buttonSwitch = $bottomPanel->Button(-text => "Validate",-font => 'arial 9', -command => [ \&switchActions], -height => 2, -width => 10) -> pack(-side => 'right');
+my $buttonValidate = $bottomPanel->Button(-text => "Validate",-font => 'arial 9', -command => [ \&switchActions], -height => 2, -width => 10, -state => 'disabled') -> pack(-side => 'right');
 
 	center($mw);
 	center($mw);
@@ -85,23 +85,18 @@ MainLoop();
 ############################################################################################
 sub loadCR {
 	my $id = shift;
-	use Tk::ROText;
-	
-	my %fields = retrieveBug($id);
-	$processedCR = \%fields;
-	
-	open FILE,">$id.txt";
-	print FILE Dumper $processedCR;
-	close FILE;
-	
+	$buttonValidate->configure(-state => 'disabled');
 	DEBUG "Destroying content frame" and $contentFrame->destroy() if $contentFrame;
+	my %fields = retrieveBug($id);
+	$mw->messageBox(-title => "CR not found", -message => "$id was not found in Clearquest database. \nPlease check CR number, or eventually look into logfile.", -type => 'ok', -icon => 'error') and return unless %fields;
+	$processedCR = \%fields;
 	
 	$contentFrame = $mw->Frame()->pack( -fill=>'both', -expand => 1);
 
 	my $parentFrame = $contentFrame->Frame()->pack( -fill=>'x');
 	my $titleFrame = $parentFrame->Frame() -> pack(-side => 'top', -fill => 'x');
 	$titleFrame->Label(-text => "Titre", -width => 15 )->pack( -side => 'left' );
-	$titleFrame->Label(-text => $processedCR->{fields}{headline})->pack( -side => 'left', -fill => 'x', -expand => 1 );
+	$titleFrame->Label(-text => $processedCR->{fields}{headline}, -font => 'arial 9 bold')->pack( -side => 'left', -fill => 'x', -expand => 1 );
 	
 	addDescriptionField($parentFrame, 'Description', \$processedCR->{fields}{description}, -readonly => 1, -height => 3);
 	addDescriptionField($parentFrame, 'Impacted items', \$processedCR->{fields}{impacted_items}, -readonly => 1, -height => 1);
@@ -114,6 +109,7 @@ sub loadCR {
 		buildTab($notebook,$subID,$processedCR->{childs}{$subID});
 	}
 	$mw->geometry("640x480");
+	$buttonValidate->configure(-state => 'normal');
 }
 
 sub buildTab {
