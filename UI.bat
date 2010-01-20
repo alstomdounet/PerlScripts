@@ -219,7 +219,7 @@ sub retrieveBug {
 		}
 		$bug{childs}{$childID} = \%child;
 	}
-	store(\%bug, $idDatabase);
+	store(\%bug, $idDatabase) unless -r $idDatabase;
 	return %bug;
 }
 

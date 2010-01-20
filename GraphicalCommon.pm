@@ -43,21 +43,38 @@ sub addListBox {
 }
 
 sub addDescriptionField {
-	my $container = shift;
-	my $text = shift;
-	my $CQ_Field = shift;
+	my ($container, $text, $CQ_Field, %args) = @_;
 	
 	my %item;
 	$item{selection} = $CQ_Field;
 	$item{mainFrame} = $container->Frame() -> pack(-side => 'top', -fill => 'both', -expand => 1);
 	$item{mainFrame}->Label(-text => $text, -width => 15 )->pack( -side => 'left' );
-	$item{Text} = $item{mainFrame}->Scrolled("Text", -scrollbars => 'osoe') -> pack( -side => 'top', -fill => 'both');
-	
+	DEBUG "Instantiate description field.";
+	if($args{'-readonly'}) {
+		$item{Text} = $item{mainFrame}->Scrolled("ROText", -scrollbars => 'osoe', ($args{'-height'}) ? (-height => $args{'-height'}) : () ) -> pack(-fill => 'both');
+		DEBUG "Using readonly Text field";
+	}
+	else {
+		$item{Text} = $item{mainFrame}->Scrolled("Text", -scrollbars => 'osoe', ($args{'-height'}) ? (-height => $args{'-height'}) : ()) -> pack(-fill => 'both');
+		$item{Text}->bind( '<FocusOut>' => sub { ${$item{selection}} = $item{Text}->Contents(); } );
+	}
 	$item{Text}->Contents($$CQ_Field);
-	
-	
-	$item{Text}->bind( '<FocusOut>' => sub { ${$item{selection}} = $item{Text}->Contents(); } );
+
 	return \%item;
+}
+
+sub center {
+  my $win = shift;
+
+  $win->withdraw;   # Hide the window while we move it about
+  $win->update;     # Make sure width and height are current
+
+  # Center window
+  my $xpos = int(($win->screenwidth  - $win->width ) / 2);
+  my $ypos = int(($win->screenheight - $win->height) / 2);
+  $win->geometry("+$xpos+$ypos");
+
+  $win->deiconify;  # Show the window again
 }
 
 sub manageSearchBox {
