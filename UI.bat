@@ -133,26 +133,52 @@ sub buildTab {
 	}
 	$content->{listSubsystems} = addListBox($tab1, 'Subsystem', \@test, \$content->{fields}{sub_system});
 	my @list;
-	#$content->{listComponents} = addListBox($tab1, 'Component', \@list, \$content->{fields}{component});
-	$content->{listAnalyser} = addListBox($tab1, 'Analyst', $CqFieldsDesc{analyst}{shortDesc}, \$content->{fields}{analyst}, -searchable => 1);
+	$content->{dynamicComponentList} = \@list;
+
+	my $backup = $content->{fields}{component};
+	$content->{listComponents} = addListBox($tab1, 'Component', $content->{dynamicComponentList}, \$content->{fields}{component});
+
+	if ($content->{fields}{sub_system}) {
+		updateComponents($content->{fields}{sub_system}, $content->{listComponents}, $content->{dynamicComponentList});
+		${$content->{listComponents}->{selection}} = $backup;
+	}
+	$content->{listAnalyser} = addListBox($tab1, 'Analyst', $CqFieldsDesc{analyst}{shortDesc}, \$content->{fields}{analyst}, -searchable => 0);
 	$content->{listTypes} = addListBox($tab1, 'Type', $CqFieldsDesc{submitter_CR_type}{shortDesc}, \$content->{fields}{submitter_CR_type});
-	$content->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', $content->{fields}{proposed_change});
+	$content->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change});
+	
+	$content->{listSubsystems}->{listbox}->configure(-browsecmd => sub {updateComponents($content->{fields}{sub_system}, $content->{listComponents}, $content->{dynamicComponentList});});
 }
 
-sub analyseListboxes {	
-	#my ($value_subsystem, $item) = @_;
+sub updateComponents {	
+	DEBUG "Request to update listboxes";
+	my ($value_subsystem, $listbox, $listRef) = @_;
 	
-	#my $backup = $bugDescription{component};
-	# if($bugDescription{sub_system} and $bugDescription{sub_system} ne $lastSelectedSubsystem) {
-		# if($CqFieldsDesc{component}{commentTable}{$bugDescription{sub_system}}) {
-			# changeList($listComponents, $CqFieldsDesc{component}{commentTable}{$bugDescription{sub_system}}, $backup);
-		# }
-		# else {
-			# my %tmp;
-			# changeList($listComponents, \%tmp, $backup);
-		# }
-		# $lastSelectedSubsystem = $bugDescription{sub_system};
-	# }
+	
+	if($value_subsystem) {
+		my %rhash = reverse %{$CqFieldsDesc{sub_system}{equivTable}};
+		my $key = $rhash{$value_subsystem};
+
+		if($CqFieldsDesc{component}{equivTable}{$key}) {
+			my $oldValue = $listbox->{listbox}->getItemNameAt($listbox->{listbox}->getSelectedIndex());
+			DEBUG "Equivalence table found with key eq \"$key\"";
+			my @keys = sort keys %{$CqFieldsDesc{component}{equivTable}{$key}};
+			my @list = genTableByEquivTable(\@keys, $CqFieldsDesc{component}{equivTable}{$key});
+			@$listRef = @list;
+			
+			$listbox->{listbox}->setSelected($oldValue, -type => 'name');
+			return;
+		}
+	}
+	@$listRef = ();
+}
+
+sub genTableByEquivTable {
+	my ($quickList, $equivTable) = @_;
+	my @list;
+	foreach my $item (@$quickList) {
+		push (@list, { -name => $item, -value => $equivTable->{$item} });
+	}
+	return @list;
 }
 
 sub retrieveBug {
