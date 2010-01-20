@@ -13,11 +13,14 @@ use Tk::NoteBook;
 use Data::Dumper;
 use GraphicalCommon;
 
+use constant {
+	VERSION => '0.1'
+};
+
 ############################################################################################
 # 
 ############################################################################################
-WARN "Missing dynamic retrieval of bugs";
-my @listOfBugs = qw(atvcm000125654 atvcm000125644 atvcm000125694);
+INFO "Running program version V.".VERSION;
 my %CqFieldsDesc;
 my $CqDatabase = 'ClearquestImage.db';
 my $bugsDatabase = 'bugsDatabase.db';
@@ -41,7 +44,6 @@ use Tk::Pane;
 ############################################################################################
 # 
 ############################################################################################
-#my %bugDescription;
 
 
 ##########################################
@@ -74,10 +76,10 @@ $searchFrame->Entry(-textvariable => \$CrToProcess, -width => 15 )->pack( -side 
 # Building buttons
 my $bottomPanel = $mw->Frame()->pack(-side => 'bottom', -fill => 'x');
 $bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => 10) -> pack(-side => 'left');
-my $buttonValidate = $bottomPanel->Button(-text => "Validate",-font => 'arial 9', -command => [ \&switchActions], -height => 2, -width => 10, -state => 'disabled') -> pack(-side => 'right');
+my $buttonValidate = $bottomPanel->Button(-text => "Validate",-font => 'arial 9', -command => sub { validateChanges($processedCR); }, -height => 2, -width => 10, -state => 'disabled') -> pack(-side => 'right');
 
-	center($mw);
-	center($mw);
+center($mw);
+center($mw);
 MainLoop();
 
 ############################################################################################
@@ -99,7 +101,6 @@ sub loadCR {
 	$titleFrame->Label(-text => $processedCR->{fields}{headline}, -font => 'arial 9 bold')->pack( -side => 'left', -fill => 'x', -expand => 1 );
 	
 	addDescriptionField($parentFrame, 'Description', \$processedCR->{fields}{description}, -readonly => 1, -height => 3);
-	addDescriptionField($parentFrame, 'Impacted items', \$processedCR->{fields}{impacted_items}, -readonly => 1, -height => 1);
 	addDescriptionField($parentFrame, 'CCB comment', \$processedCR->{fields}{CCB_comment}, -readonly => 1, -height => 1);
 	
 	my $notebook = $contentFrame->NoteBook()->pack( -fill=>'both', -expand=>1 );
@@ -141,6 +142,7 @@ sub buildTab {
 	}
 	$content->{listAnalyser} = addListBox($tab1, 'Analyst', $CqFieldsDesc{analyst}{shortDesc}, \$content->{fields}{analyst}, -searchable => 0);
 	$content->{listTypes} = addListBox($tab1, 'Type', $CqFieldsDesc{submitter_CR_type}{shortDesc}, \$content->{fields}{submitter_CR_type});
+	$content->{TextImpactedItems} = addDescriptionField($tab1, 'Impacted items', \$content->{fields}{impacted_items}, -height => 1);
 	$content->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change});
 	
 	$content->{listSubsystems}->{listbox}->configure(-browsecmd => sub {updateComponents($content->{fields}{sub_system}, $content->{listComponents}, $content->{dynamicComponentList});});
@@ -217,6 +219,30 @@ sub retrieveBug {
 	}
 	store(\%bug, $idDatabase) unless -r $idDatabase;
 	return %bug;
+}
+
+sub validateChanges {
+	my ($processedCR) = @_;
+	
+	my $response = $mw->messageBox(-title => "Confirmation requested", -message => "Do you really want perform all these modifications?", -type => 'yesno', -icon => 'question');
+	
+	DEBUG "User has answered \"$response\" to cancellation question";
+	return unless $response eq "Yes";
+	
+	my @selectedFields = qw(sub_system component impacted_items analyst submitter_CR_type proposed_change);
+	foreach my $id (sort keys %{$processedCR->{childs}}) {
+		my $CR = $processedCR->{childs}->{$id}->{fields};
+		
+		my %selectedFields;
+		foreach my $field (@selectedFields) {
+			$selectedFields{$field} = $CR->{$field};
+		}
+		
+		open FILE, ">$id-out.txt";
+		print FILE Dumper \%selectedFields;
+		close FILE;
+	}
+
 }
 
 exit;
