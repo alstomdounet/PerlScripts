@@ -76,7 +76,8 @@ my $bottomPanel = $mw->Frame()->pack(-side => 'bottom', -fill => 'x');
 $bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => 10) -> pack(-side => 'left');
 my $buttonSwitch = $bottomPanel->Button(-text => "Validate",-font => 'arial 9', -command => [ \&switchActions], -height => 2, -width => 10) -> pack(-side => 'right');
 
-$mw->Popup; # window appears screen-centered
+	center($mw);
+	center($mw);
 MainLoop();
 
 ############################################################################################
@@ -102,10 +103,9 @@ sub loadCR {
 	$titleFrame->Label(-text => "Titre", -width => 15 )->pack( -side => 'left' );
 	$titleFrame->Label(-text => $processedCR->{fields}{headline})->pack( -side => 'left', -fill => 'x', -expand => 1 );
 	
-	my $description = $parentFrame->Frame() -> pack(-side => 'top', -fill => 'x', -expand => 1);
-	$description->Label(-text => "Description", -width => 15 )->pack( -side => 'left' );
-	my $text = $description->Scrolled("ROText", -scrollbars => 'osoe', -height => 5 ) -> pack( -side => 'top', -fill => 'x');
-	$text->Contents($processedCR->{fields}{description});
+	addDescriptionField($parentFrame, 'Description', \$processedCR->{fields}{description}, -readonly => 1, -height => 3);
+	addDescriptionField($parentFrame, 'Impacted items', \$processedCR->{fields}{impacted_items}, -readonly => 1, -height => 1);
+	addDescriptionField($parentFrame, 'CCB comment', \$processedCR->{fields}{CCB_comment}, -readonly => 1, -height => 1);
 	
 	my $notebook = $contentFrame->NoteBook()->pack( -fill=>'both', -expand=>1 );
 	
@@ -113,6 +113,7 @@ sub loadCR {
 		DEBUG "Processing child $subID";
 		buildTab($notebook,$subID,$processedCR->{childs}{$subID});
 	}
+	$mw->geometry("640x480");
 }
 
 sub buildTab {
@@ -169,6 +170,8 @@ sub updateComponents {
 			return;
 		}
 	}
+	
+	ERROR "No equivalence was found for subsystem \"$value_subsystem\"";
 	@$listRef = ();
 }
 
