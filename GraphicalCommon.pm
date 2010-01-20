@@ -35,11 +35,11 @@ sub addListBox {
 	else {
 		$item{selectedList} = $listToInsert;
 	}
-	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -browsecmd => [\&analyseListboxes])->pack(-fill => 'x', -side => 'left', -expand => 1);
+	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection})->pack(-fill => 'x', -side => 'left', -expand => 1);
 
 	#changeList(\%item, \%completeList, $$selectedField) if %completeList;
 	
-	return %item;
+	return \%item;
 }
 
 sub addDescriptionField {
@@ -57,7 +57,7 @@ sub addDescriptionField {
 	
 	
 	$item{Text}->bind( '<FocusOut>' => sub { ${$item{selection}} = $item{Text}->Contents(); } );
-	return %item;
+	return \%item;
 }
 
 sub manageSearchBox {
