@@ -158,7 +158,7 @@ if (-r $CqDatabase) {
 	my $storedData = retrieve($CqDatabase);
 	%CqFieldsDesc = %$storedData;
 	$syncNeeded = (time() - $CqFieldsDesc{lastUpdate} - $Config{clearquest}->{refreshPeriod}->{subSystems}) > 0;
-	$syncNeeded = (PROGRAM_VERSION ne $CqFieldsDesc{scriptVersion});
+	$syncNeeded = (PROGRAM_VERSION ne $CqFieldsDesc{scriptVersion}) unless $syncNeeded;
 }
 else { $syncNeeded = 1; }
 
@@ -180,6 +180,7 @@ sub syncFieldsWithClearQuest {
 	
 	INFO "Connecting to Clearquest database";
 	my $session = connectCQ($Config{clearquest}->{login}, $Config{clearquest}->{password}, $Config{clearquest}->{database});
+	return unless $session;
 	
 	my @fieldList = ('sub_system', 'sub_system.component', 'sub_system.component.comment');
 	
@@ -760,7 +761,7 @@ sub addSearchableListBox {
 	$item{searchActivated} = 0;
 	$item{selectedList} = \@list;
 	$item{selection} = \$bugDescription{$CQ_Field};
-	$item{mainFrame} = $mw->Frame()->pack(-side => 'top', -fill => 'x');
+	$item{mainFrame} = $parentElement->Frame()->pack(-side => 'top', -fill => 'x');
 	$item{mainFrame}->Label(-text => $labelName, -width => 15 )->pack(-side => 'left');
 	$item{searchButton} = $item{mainFrame}->Button(-text => 'Search', -command => sub { manageSearchBox(\%item) }, -state => 'disabled')->pack( -side => 'right' );
 	$item{listbox} = $item{mainFrame}->JComboBox(-choices => $item{selectedList}, -textvariable => $item{selection}, -state => 'disabled')->pack(-fill => 'x', -side => 'left', -expand => 1);
