@@ -1,8 +1,8 @@
 <?xml version='1.0'?>
 <Config>
 	<clearquest><!-- This section describes Clearquest parameters -->
-		<login>TO_BE_DEFINED</login><!-- Login you have to use in order to connect to Clearquest -->
-		<password></password><!-- Password you have to use in order to connect to Clearquest -->
+		<login>gmanciet</login><!-- Login you have to use in order to connect to Clearquest -->
+		<password>jsne1983aS!</password><!-- Password you have to use in order to connect to Clearquest -->
 		<database>atvcm</database><!-- Clearquest Database where are stored bugs -->
 		<product>PRIMA EL II</product>
 		<fieldsToRetrieve>ID, Headline, State, Product, project_name, owner.login_name, submit_date</fieldsToRetrieve>
