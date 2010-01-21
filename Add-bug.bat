@@ -20,7 +20,7 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.0',
+	PROGRAM_VERSION => '2.1',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
