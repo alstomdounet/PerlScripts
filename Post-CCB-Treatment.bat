@@ -11,16 +11,18 @@ use Common;
 use Storable qw(store retrieve);
 use Tk::NoteBook;
 use Data::Dumper;
+use ClearquestMgt qw(changeFields makeChanges connectCQ disconnectCQ getChangeRequestFields getEntity editEntity getEntityFields getChilds getAvailableActions getFieldsRequiredness cancelAction); 
+
 use GraphicalCommon;
 
 use constant {
-	VERSION => '0.1'
+	PROGRAM_VERSION => '0.2'
 };
 
 ############################################################################################
 # 
 ############################################################################################
-INFO "Running program version V.".VERSION;
+INFO "Starting program (V ".PROGRAM_VERSION.")";
 my %Config = loadConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
 my $Clearquest_login = $Config{clearquest}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
 my $crypted_string = $Clearquest_login;
@@ -219,7 +221,6 @@ sub genTableByEquivTable {
 sub retrieveBug {
 	my $bugID = shift;
 	my %bug;
-	use ClearquestMgt qw(connectCQ disconnectCQ getChangeRequestFields getEntity editEntity getEntityFields getChilds getAvailableActions getFieldsRequiredness cancelAction); 
 
 	my $idDatabase = $bugID.'.db';
 	if (-r $idDatabase) {
@@ -235,20 +236,11 @@ sub retrieveBug {
 	my %fields = getEntityFields($entity);
 	$bug{fields} = \%fields;
 	foreach my $childID (getChilds($entity)) {
-		DEBUG "Getting child properties ($childID)";
+		INFO "Retrieving needed informations for child \"$childID\"";
 		my %child;
 		my $childEntity = getEntity('ChangeRequest',$childID);
 		my %childFields = getEntityFields($childEntity);
 		$child{fields} = \%childFields;
-		
-		foreach my $action (getAvailableActions($entity)) {
-			DEBUG "Skipped action $action" and next if $action eq 'Import' or $action eq 'Clone';
-			DEBUG "Getting required fields for action \"$action\"";
-			editEntity($entity, $action);
-			my %fieldsRequired = getFieldsRequiredness($entity);
-			$child{availableActions}{$action} = \%fieldsRequired;
-			cancelAction($entity);
-		}
 		$bug{childs}{$childID} = \%child;
 	}
 	store(\%bug, $idDatabase) unless -r $idDatabase;
@@ -270,22 +262,9 @@ sub validateChanges {
 	my @CR_ok = ("");
 	foreach my $bugID (sort keys %{$processedCR->{childs}}) {
 		INFO "Processing CR named \"$bugID\"";
-		my $availableActions =  $processedCR->{childs}->{$bugID}->{availableActions};
 		my $CR = $processedCR->{childs}->{$bugID}->{fields};
 		
 		my @changedFields;
-		open FILE, ">availableActions.csv";
-		my @availableActions = sort keys %$availableActions;
-		print FILE "Field;".join(';', @availableActions)."\n";
-		foreach my $field (sort keys %$CR) {
-			my @values = ($field);
-			foreach my $action (@availableActions) {
-				push(@values, $availableActions->{$action}->{$field});
-			}
-			print FILE join(';', @values)."\n";		
-		}
-		close FILE;
-		
 		foreach my $field (@selectedFields) {
 			push(@changedFields, { FieldName => $field, FieldValue => $CR->{$field}});
 		}
@@ -293,7 +272,6 @@ sub validateChanges {
 		my $entity = getEntity('ChangeRequest',$bugID);
 		editEntity($entity, 'Rectify');
 		my $result = changeFields($entity, -OrderedFields => \@changedFields);
-		my $result = 1;
 		my $message = "";
 		if($result) {
 			$result = makeChanges($entity);
@@ -309,7 +287,8 @@ sub validateChanges {
 	
 	if(scalar(@CR_ok) > 1) {
 		my $message = "Modifications were performed successfully on following CRs:".join("\n - ", @CR_ok);
-		$mw->messageBox(-title => "Operation successful", -message => $message, -type => 'ok', -icon => 'info');
+		INFO $message;
+		#$mw->messageBox(-title => "Operation successful", -message => $message, -type => 'ok', -icon => 'info');
 	}
 }
 
