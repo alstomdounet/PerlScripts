@@ -1,7 +1,7 @@
 <?xml version='1.0'?>
 <Config>
 	<clearquest><!-- This section describes Clearquest parameters -->
-		<login></login><!-- Login you have to use in order to connect to Clearquest -->
+		<login>TO_BE_DEFINED</login><!-- Login you have to use in order to connect to Clearquest -->
 		<password></password><!-- Password you have to use in order to connect to Clearquest -->
 		<database>atvcm</database><!-- Clearquest Database where are stored bugs -->
 		<product>PRIMA EL II</product>
@@ -15,10 +15,10 @@
 	<tables>
 		<table>
 			<title>Liste des demandes de modifications a analyser</title>
-			<filename>CR_NEW.html</filename>
+			<filename>Pre-CCB.html</filename>
 			<ClearquestType>ChangeRequest</ClearquestType>
-			<fieldsToRetrieve>dbid, id, component.name, sub_system.name, state, headline, description, owner, component.comment</fieldsToRetrieve>
-			<fieldsSorting>component.name, sub_system.name, state</fieldsSorting>
+			<fieldsToRetrieve>dbid, id, owner, component.name, sub_system.name, headline, description, state, substate</fieldsToRetrieve>
+			<fieldsSorting>owner, component.name, sub_system.name</fieldsSorting>
 			<filtering>
 				<product>PRIMA EL II</product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
 				<state>Submitted, Recorded</state><!-- Allows to limit bugs to one or more specific states (use "," as a separator) -->
@@ -26,13 +26,38 @@
 		</table>
 		<table>
 			<title>Liste provisoire pour le prochain CCB</title>
-			<filename>CR_CCB.html</filename>
+			<filename>CCB.html</filename>
 			<ClearquestType>ChangeRequest</ClearquestType>
-			<fieldsToRetrieve>dbid, id, component.name, sub_system.name, headline, description, proposed_change, owner, component.comment</fieldsToRetrieve>
+			<fieldsToRetrieve>dbid, id, component.name, sub_system.name, headline, description, proposed_change, analyst, component.comment</fieldsToRetrieve>
 			<fieldsSorting>component.name, sub_system.name</fieldsSorting>
 			<filtering>
 				<product>PRIMA EL II</product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
 				<state>Analysed</state><!-- Allows to limit bugs to one or more specific states (use "," as a separator) -->
+				<substate>complete</substate>
+			</filtering>
+		</table>
+		<table>
+			<title>Items qui sont a valider</title>
+			<filename>Realised_items.html</filename>
+			<ClearquestType>ChangeRequest</ClearquestType>
+			<fieldsToRetrieve>dbid, id, component.name, sub_system.name, headline, description, proposed_change, analyst, component.comment</fieldsToRetrieve>
+			<fieldsSorting>component.name, sub_system.name</fieldsSorting>
+			<filtering>
+				<product>PRIMA EL II</product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
+				<state>Realised</state><!-- Allows to limit bugs to one or more specific states (use "," as a separator) -->
+				<substate>complete</substate>
+			</filtering>
+		</table>
+		<table>
+			<title>Modifications pour une fonction</title>
+			<filename>FME-F17.html</filename>
+			<ClearquestType>ChangeRequest</ClearquestType>
+			<fieldsToRetrieve>dbid, id, sub_system.name, headline, description, proposed_change, ccb_comment</fieldsToRetrieve>
+			<fieldsSorting>sub_system.name, ccb_comment, proposed_change</fieldsSorting>
+			<filtering>
+				<product>PRIMA EL II</product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
+				<state>Submitted, Recorded, Analysed, Assigned</state><!-- Allows to limit bugs to one or more specific states (use "," as a separator) -->
+				<component.name>FME-F17</component.name>
 			</filtering>
 		</table>
 	</tables>
