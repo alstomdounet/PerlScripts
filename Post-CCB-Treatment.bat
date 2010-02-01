@@ -11,12 +11,12 @@ use Common;
 use Storable qw(store retrieve);
 use Tk::NoteBook;
 use Data::Dumper;
-use ClearquestMgt qw(changeFields makeChanges connectCQ disconnectCQ getChangeRequestFields getEntity editEntity getEntityFields getChilds getAvailableActions getFieldsRequiredness cancelAction); 
+use ClearquestMgt qw(changeFields makeQuery makeChanges connectCQ disconnectCQ getChangeRequestFields getEntity editEntity getEntityFields getChilds getAvailableActions getFieldsRequiredness cancelAction); 
 
 use GraphicalCommon;
 
 use constant {
-	PROGRAM_VERSION => '0.2'
+	PROGRAM_VERSION => '0.3'
 };
 
 ############################################################################################
@@ -28,6 +28,7 @@ my $Clearquest_login = $Config{clearquest}->{login} or LOGDIE("Clearquest login 
 my $crypted_string = $Clearquest_login;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
+
 my $Clearquest_password;
 if (ref($Config{clearquest}->{password})) {
 	DEBUG "No credential given. Asking one for current session.";
@@ -58,6 +59,7 @@ DEBUG "Using \$Clearquest_password = \"$crypted_string\"";
 
 my $Clearquest_database = $Config{clearquest}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
 DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
+
 
 my %CqFieldsDesc;
 my $CqDatabase = 'ClearquestImage.db';
@@ -103,8 +105,10 @@ my $mw = MainWindow->new(-title => "Interface to distribute bugs");
 $mw->withdraw; # disable immediate display
 $mw->minsize(640,480);
 
-my $CrToProcess = 'atvcm00087403';
+my @listOfCRToProcess = preload();
 my $searchFrame = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
+my $CrToProcess;
+addListBox($searchFrame, 'ID à traiter', \@listOfCRToProcess, \$CrToProcess);
 $searchFrame->Label(-text => "ID à traiter", -width => 15 )->pack( -side => 'left' );
 $searchFrame->Button(-text => "Ouvrir", -width => 15, -command => sub { loadCR($CrToProcess); } )->pack( -side => 'right' );
 $searchFrame->Entry(-textvariable => \$CrToProcess, -width => 15 )->pack( -side => 'left', -fill => 'x', -expand => 1 );
@@ -121,6 +125,56 @@ MainLoop();
 ############################################################################################
 # 
 ############################################################################################
+sub preload {
+	INFO "Connecting to Clearquest";
+	#connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
+	INFO "Retrieving needed informations";
+	my @fields = qw(id description headline zone child_record CCB_comment sub_system component analyst submitter_CR_type impacted_items proposed_change scheduled_version State);
+	my %filter = (State => 'Assigned', product => 'PRIMA EL II');
+	#my @parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	
+	%filter = (State => 'Analysed', substate => 'in progress', product => 'PRIMA EL II');
+	#my @subCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	
+	my $output = retrieve('bugList.db');
+	my %output = %$output;
+	#$output{parentCR} = \@parentCR;
+	#output{subCR} = \@subCR;
+	
+	my @parentCR = filterAnswers($output{parentCR}, 'child_record','^.+$'); # Finds all parent CR
+	
+	my %results;
+	foreach my $CR (@parentCR) {
+		my $child = $CR->{child_record};
+		unless ($results{$CR->{id}}) {
+			$results{$CR->{id}} = $CR;
+		}
+		my @results = filterAnswers($output{subCR}, 'id', "^$child\$");
+		next if scalar(@results == 0);
+		$results{$CR->{id}}{childs}{$child} = shift @results;
+	}
+	
+	INFO "Found ".scalar(keys %results)." parent CR";
+	
+	my @results;
+	foreach my $ParentCR (sort keys %results) {
+		push @results, { '-name' => $ParentCR, '-value' => $results{$ParentCR} };
+	}
+	return @results;
+	
+	open FILE, ">output.txt";
+	print FILE Dumper \%results;
+	close FILE;
+	#store(\%output, 'bugList.db');
+	exit;
+}
+
+sub filterAnswers {
+	my ($arrayRef, $key, $value) = @_;
+	
+	return grep { $_->{$key} =~ /$value/ } @$arrayRef;
+}
+
 sub loadCR {
 	my $id = shift;
 	$buttonValidate->configure(-state => 'disabled');
