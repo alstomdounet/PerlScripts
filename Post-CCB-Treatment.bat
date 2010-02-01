@@ -70,6 +70,7 @@ if (-r $CqDatabase) {
 }
 else { LOGDIE "Not valid database"; }
 my $processedCR;
+my $processedCRUI;
 my $contentFrame;
 
 
@@ -105,18 +106,34 @@ my $mw = MainWindow->new(-title => "Interface to distribute bugs");
 $mw->withdraw; # disable immediate display
 $mw->minsize(640,480);
 
-my @listOfCRToProcess = preload();
+my %listOfCRToProcess = preload();
+my @listOfCR = sort keys %listOfCRToProcess;
+my %selection;
+
 my $searchFrame = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
 my $CrToProcess;
-addListBox($searchFrame, 'ID à traiter', \@listOfCRToProcess, \$CrToProcess);
-$searchFrame->Label(-text => "ID à traiter", -width => 15 )->pack( -side => 'left' );
-$searchFrame->Button(-text => "Ouvrir", -width => 15, -command => sub { loadCR($CrToProcess); } )->pack( -side => 'right' );
-$searchFrame->Entry(-textvariable => \$CrToProcess, -width => 15 )->pack( -side => 'left', -fill => 'x', -expand => 1 );
+my $CRSelection = addListBox($searchFrame, 'ID à traiter', \@listOfCR, \$CrToProcess);
+$CRSelection->{listbox}->configure(-browsecmd => sub {changeCR($CrToProcess)});
+
+sub changeCR {
+	my $CrToProcess = shift;
+	
+	$listOfCRToProcess{$selection{id}} = \%selection if $selection{id};
+	
+	loadCR($CrToProcess);
+	
+	DEBUG "Saving modified CR in database";
+	open FILE, ">output.txt";
+	print FILE Dumper \%listOfCRToProcess;
+	close FILE;
+	#store(\%listOfCRToProcess, 'modifiedCRs.db');
+	DEBUG "End of saving";
+}
 
 # Building buttons
 my $bottomPanel = $mw->Frame()->pack(-side => 'bottom', -fill => 'x');
 $bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => 10) -> pack(-side => 'left');
-my $buttonValidate = $bottomPanel->Button(-text => "Validate",-font => 'arial 9', -command => sub { validateChanges($processedCR); }, -height => 2, -width => 10, -state => 'disabled') -> pack(-side => 'right');
+my $buttonValidate = $bottomPanel->Button(-text => "Send modifications",-font => 'arial 9', -command => sub { validateChanges($processedCR); }, -height => 2, -width => 10, -state => 'disabled') -> pack(-side => 'right');
 
 center($mw);
 center($mw);
@@ -129,7 +146,7 @@ sub preload {
 	INFO "Connecting to Clearquest";
 	#connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 	INFO "Retrieving needed informations";
-	my @fields = qw(id description headline zone child_record CCB_comment sub_system component analyst submitter_CR_type impacted_items proposed_change scheduled_version State);
+	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version State);
 	my %filter = (State => 'Assigned', product => 'PRIMA EL II');
 	#my @parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	
@@ -147,26 +164,16 @@ sub preload {
 	foreach my $CR (@parentCR) {
 		my $child = $CR->{child_record};
 		unless ($results{$CR->{id}}) {
-			$results{$CR->{id}} = $CR;
+			$results{$CR->{id}}{fields} = $CR;
 		}
 		my @results = filterAnswers($output{subCR}, 'id', "^$child\$");
 		next if scalar(@results == 0);
-		$results{$CR->{id}}{childs}{$child} = shift @results;
+		$results{$CR->{id}}{childs}{$child}{fields} = shift @results;
 	}
 	
 	INFO "Found ".scalar(keys %results)." parent CR";
 	
-	my @results;
-	foreach my $ParentCR (sort keys %results) {
-		push @results, { '-name' => $ParentCR, '-value' => $results{$ParentCR} };
-	}
-	return @results;
-	
-	open FILE, ">output.txt";
-	print FILE Dumper \%results;
-	close FILE;
-	#store(\%output, 'bugList.db');
-	exit;
+	return %results;
 }
 
 sub filterAnswers {
@@ -179,9 +186,8 @@ sub loadCR {
 	my $id = shift;
 	$buttonValidate->configure(-state => 'disabled');
 	DEBUG "Destroying content frame" and $contentFrame->destroy() if $contentFrame;
-	my %fields = retrieveBug($id);
-	$mw->messageBox(-title => "CR not found", -message => "$id was not found in Clearquest database. \nPlease check CR number, or eventually look into logfile.", -type => 'ok', -icon => 'error') and return unless %fields;
-	$processedCR = \%fields;
+	$processedCR = $listOfCRToProcess{$id};
+	$mw->messageBox(-title => "CR not found", -message => "$id was not found in Clearquest database. \nPlease check CR number, or eventually look into logfile.", -type => 'ok', -icon => 'error') and return unless $processedCR;
 	
 	$contentFrame = $mw->Frame()->pack( -fill=>'both', -expand => 1);
 
@@ -191,13 +197,13 @@ sub loadCR {
 	$titleFrame->Label(-text => $processedCR->{fields}{headline}, -font => 'arial 9 bold')->pack( -side => 'left', -fill => 'x', -expand => 1 );
 	
 	addDescriptionField($parentFrame, 'Description', \$processedCR->{fields}{description}, -readonly => 1, -height => 3);
-	addDescriptionField($parentFrame, 'CCB comment', \$processedCR->{fields}{CCB_comment}, -readonly => 1, -height => 1);
+	addDescriptionField($parentFrame, 'CCB comment', \$processedCR->{fields}{ccb_comment}, -readonly => 1, -height => 1);
 	
 	my $notebook = $contentFrame->NoteBook()->pack( -fill=>'both', -expand=>1 );
 	
 	foreach my $subID (sort keys %{$processedCR->{childs}}) {
 		DEBUG "Processing child $subID";
-		buildTab($notebook,$subID,$processedCR->{childs}{$subID});
+		buildTab($notebook,$subID,$processedCR->{childs}{$subID}, $processedCRUI->{childs}{$subID});
 	}
 	$mw->geometry("640x480");
 	$buttonValidate->configure(-state => 'normal');
@@ -207,35 +213,36 @@ sub buildTab {
 	my $notebook = shift;
 	my $tabName = shift;
 	my $content = shift;
+	my $receiver = shift;
 	
-	$content->{tabName} = $tabName;
+	$receiver->{tabName} = $tabName;
 	
 	my $tab1 = $notebook->add($tabName, -label => $tabName);
 
 	my (@mandatoryFields, @listSubSystems);
-	$content->{tab} = $tab1;
+	$receiver->{tab} = $tab1;
 	my @test;
 	foreach my $item (@{$CqFieldsDesc{sub_system}{shortDesc}}) {
 		push (@test, { -name => $item, -value => $CqFieldsDesc{sub_system}{equivTable}{$item} });
 		#push (@test, { -name => $item, -value => $item.$item });
 	}
-	$content->{listSubsystems} = addListBox($tab1, 'Subsystem', \@test, \$content->{fields}{sub_system});
+	$receiver->{listSubsystems} = addListBox($tab1, 'Subsystem', \@test, \$content->{fields}{sub_system});
 	my @list;
-	$content->{dynamicComponentList} = \@list;
+	$receiver->{dynamicComponentList} = \@list;
 
 	my $backup = $content->{fields}{component};
-	$content->{listComponents} = addListBox($tab1, 'Component', $content->{dynamicComponentList}, \$content->{fields}{component});
+	$receiver->{listComponents} = addListBox($tab1, 'Component', $receiver->{dynamicComponentList}, \$content->{fields}{component});
 
 	if ($content->{fields}{sub_system}) {
-		updateComponents($content->{fields}{sub_system}, $content->{listComponents}, $content->{dynamicComponentList});
-		${$content->{listComponents}->{selection}} = $backup;
+		updateComponents($content->{fields}{sub_system}, $receiver->{listComponents}, $receiver->{dynamicComponentList});
+		${$receiver->{listComponents}->{selection}} = $backup;
 	}
-	$content->{listAnalyser} = addListBox($tab1, 'Analyst', $CqFieldsDesc{analyst}{shortDesc}, \$content->{fields}{analyst}, -searchable => 0);
-	$content->{listTypes} = addListBox($tab1, 'Type', $CqFieldsDesc{submitter_CR_type}{shortDesc}, \$content->{fields}{submitter_CR_type});
-	$content->{TextImpactedItems} = addDescriptionField($tab1, 'Impacted items', \$content->{fields}{impacted_items}, -height => 1);
-	$content->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change});
+	$receiver->{listAnalyser} = addListBox($tab1, 'Analyst', $CqFieldsDesc{analyst}{shortDesc}, \$content->{fields}{analyst}, -searchable => 0);
+	$receiver->{listTypes} = addListBox($tab1, 'Type', $CqFieldsDesc{submitter_CR_type}{shortDesc}, \$content->{fields}{submitter_cr_type});
+	$receiver->{TextImpactedItems} = addDescriptionField($tab1, 'Impacted items', \$content->{fields}{impacted_items}, -height => 1);
+	$receiver->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change});
 	
-	$content->{listSubsystems}->{listbox}->configure(-browsecmd => sub {updateComponents($content->{fields}{sub_system}, $content->{listComponents}, $content->{dynamicComponentList});});
+	$receiver->{listSubsystems}->{listbox}->configure(-browsecmd => sub {updateComponents($content->{fields}{sub_system}, $receiver->{listComponents}, $receiver->{dynamicComponentList});});
 }
 
 sub updateComponents {	
@@ -309,7 +316,7 @@ sub validateChanges {
 	DEBUG "User has answered \"$response\" to cancellation question";
 	return unless $response eq "Yes";
 	
-	my @selectedFields = qw(sub_system component analyst impacted_items submitter_CR_type proposed_change);
+	my @selectedFields = qw(sub_system component analyst impacted_items submitter_cr_type proposed_change);
 	
 	INFO "Connecting to clearquest database \"$Clearquest_database\" with user \"$Clearquest_login\"";
 	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
