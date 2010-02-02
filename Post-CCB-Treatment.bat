@@ -116,7 +116,7 @@ my $CRSelection = addListBox($searchFrame, 'ID à traiter', \@listOfCR, \$CrToPro
 $CRSelection->{listbox}->configure(-browsecmd => sub {changeCR($CrToProcess)});
 
 # Building buttons
-my $bottomPanel = $mw->Frame(-background => 'blue')->pack(-side => 'bottom', -fill => 'x');
+my $bottomPanel = $mw->Frame()->pack(-side => 'bottom', -fill => 'x');
 $bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => '15') -> pack(-side => 'left', -fill => 'both');
 my $buttonValidate = $bottomPanel->Button(-text => "Send modifications",-font => 'arial 9', -command => sub { validateChanges($processedCR); }, -height => 2, -state => 'disabled') -> pack(-side => 'right', -fill => 'both', -expand => 1);
 
@@ -132,25 +132,31 @@ sub preload {
 	my @parentCR;
 	my @subCR;
 	
-
+	if(-r 'modifiedCR.db') {
+		INFO "Found database for unfinished operation";
+		my $response = $mw->messageBox(-title => "Warning : using backup copy", -message => "Program has detected a previous, unfinished operation.\nDo you want to recover this session (if not, all changes in this session will be lost)?", -type => 'yesno', -icon => 'warning');
+		if($response eq "Yes") {
+			my $output = retrieve('modifiedCR.db');
+			return %$output;
+		}
+		unlink 'modifiedCR.db';
+	}
+	
 	INFO "Connecting to Clearquest";
-	#connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
+	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 	INFO "Retrieving potential parents";
 	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version);
 	my %filter = (State => 'Assigned', product => 'PRIMA EL II');
-	#@parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	@parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	@parentCR = filterAnswers(\@parentCR, 'child_record','^.+$'); # Finds all parent CR
+	$output{parentCR} = \@parentCR;
 	
 	INFO "Retrieving potential childs";
 	%filter = (State => 'Analysed', substate => 'in progress', product => 'PRIMA EL II');
-	#@subCR = makeQuery("ChangeRequest", \@fields, \%filter);
-	
+	@subCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	$output{subCR} = \@subCR;
+
 	INFO "Analysing results";
-	my $output = retrieve('bugList.db'); %output = %$output;
-	#$output{parentCR} = \@parentCR;
-	#$output{subCR} = \@subCR;
-	
-	@parentCR = filterAnswers($output{parentCR}, 'child_record','^.+$'); # Finds all parent CR
-	
 	my %results;
 	foreach my $CR (@parentCR) {
 		my $child = $CR->{child_record};
@@ -164,7 +170,6 @@ sub preload {
 	}
 	
 	INFO "Found ".scalar(keys %results)." parent CR";
-	#store \%output, 'bugList.db';
 	
 	return %results;
 }
@@ -350,6 +355,8 @@ sub validateChanges {
 			}
 		}
 	}
+	
+	unlink 'modifiedCR.db';
 }
 
 sub _copyElement {
