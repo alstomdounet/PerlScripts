@@ -1,27 +1,6 @@
 <?xml version='1.0'?>
 <Config>
-	<clearquest><!-- This section describes Clearquest parameters -->
-		<login>gmanciet</login><!-- Login you have to use in order to connect to Clearquest -->
-		<password>jsne1983aS!</password><!-- Password you have to use in order to connect to Clearquest -->
-		<database>atvcm</database><!-- Clearquest Database where are stored bugs -->
-		<product>PRIMA EL II</product>
-		<fieldsToRetrieve>ID, Headline, State, Product, project_name, owner.login_name, submit_date</fieldsToRetrieve>
-		<sorting>ID</sorting><!-- Not used at the moment -->
-		<filtering>
-			<product></product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
-			<state>Assigned, Analysed, Updated</state><!-- Allows to limit bugs to one or more specific states (use "," as a separator) -->
-		</filtering>
-		<refreshPeriod>
-			<bugs>60</bugs>
-			<subSystems>86400</subSystems><!-- Refreshness of fields database (default is 86400 seconds - one day) -->
-		</refreshPeriod>
-	</clearquest>
-	<clearcase />
 	<scriptInfos>
-		<displayScheme>%ID% : %Headline%</displayScheme><!-- Scheme to parametrize display inside list of bugs -->
-		<windowSizeX>640</windowSizeX><!-- Size of window in X dimensions, expressed in pixels (cannot be lower than 600px) -->
-		<windowSizeY>480</windowSizeY><!-- Size of window in Y dimensions, expressed in pixels (cannot be lower than 400px) -->
-		<debugMode>1</debugMode><!-- Debug mode allows to view (a lot more) informations -->
-		<allowNoBugsCheckins>0</allowNoBugsCheckins><!-- MUST BE AUTHORIZED BEFORE USE : Allows to perform checkins with entering any bugs IDs -->
+		<refreshDatabase>86400</refreshDatabase><!-- Refreshness of fields database (default is 86400 seconds - one day) -->
 	</scriptInfos>
 </Config>

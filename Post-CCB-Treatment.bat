@@ -62,13 +62,12 @@ DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
 
 
 my %CqFieldsDesc;
-my $CqDatabase = 'ClearquestImage.db';
-my $bugsDatabase = 'bugsDatabase.db';
+my $CqDatabase = getSharedDirectory().'ClearquestFieldsImage.db';
 if (-r $CqDatabase) {
 	my $storedData = retrieve($CqDatabase);
 	%CqFieldsDesc = %$storedData;
 }
-else { LOGDIE "Not valid database"; }
+else { LOGDIE "Not valid database found in \"$CqDatabase\""; }
 my $processedCR;
 my $processedCRUI;
 my $contentFrame;

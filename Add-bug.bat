@@ -20,25 +20,27 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.1',
+	PROGRAM_VERSION => '2.2',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
-my %Config = loadConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
+my %Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
+my %localConfig = loadLocalConfig("config.xml"); # Loading / preprocessing of the configuration file
 
 #################################
 # Global variables
 #################################
 
-my $CqDatabase = 'ClearquestImage.db';
-my $bugsDatabase = 'bugsDatabase.db';
+my $CqDatabase = getSharedDirectory().'ClearquestFieldsImage.db';
+my $bugsDatabase = getScriptDirectory().'bugsDatabase.db';
+my $encryptedDatabase = getScriptDirectory().'bugsDatabase.edb';
 
 my %results;
 
-if(-r "$bugsDatabase.edb") {
+if(-r $encryptedDatabase) {
 	print "Insert hereafter keypass to decrypt database: ";
 	chomp(my $password = <>);
-	my $data = importEncryptedDb ("$bugsDatabase.edb",$password);
+	my $data = importEncryptedDb ($encryptedDatabase,$password);
 	
 	my $session = CQSession::Build(); 
 	my $nbrOfBugsToInsert  = scalar(@{$data->{bugList}});
@@ -47,7 +49,7 @@ if(-r "$bugsDatabase.edb") {
 		my $result = sendCrToCQ($session, $data);
 		$nbrOfBugsToInsert--;
 	}
-	INFO "If not errors has occured, you can safely delete \"$bugsDatabase.edb\" (to avoid duplicate inserts)";
+	INFO "If not errors has occured, you can safely delete \"$encryptedDatabase\" (to avoid duplicate inserts)";
 	exit(1001);
 }
 
@@ -102,7 +104,7 @@ use Tk::JComboBox;
 use Tk::Balloon;
 use CQPerlExt; 
 
-my $Clearquest_login = $Config{clearquest}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
+my $Clearquest_login = $Config{clearquest_shared}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
 my $crypted_string = $Clearquest_login;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
@@ -110,12 +112,12 @@ DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
 
 
 
-if (ref($Config{clearquest}->{password})) {
+if (ref($Config{clearquest_shared}->{password})) {
 	DEBUG "No credential given. Asking one for current session.";
 	
 	$| = 1;
 	
-	print "Insert hereafter password for user \'$Config{clearquest}->{login}\' : ";
+	print "Insert hereafter password for user \'$Config{clearquest_shared}->{login}\' : ";
 	use Term::ReadKey;
 	my $key;
 	$Clearquest_password = '';
@@ -127,27 +129,21 @@ if (ref($Config{clearquest}->{password})) {
 	ReadMode 'normal';
 
 	INFO("Clearquest password was defined for current session.");
-	$Config{clearquest}->{password} = $Clearquest_password;
+	$Config{clearquest_shared}->{password} = $Clearquest_password;
 }
 else {
-	$Clearquest_password = $Config{clearquest}->{password};	
+	$Clearquest_password = $Config{clearquest_shared}->{password};	
 }
 
 $crypted_string = $Clearquest_password;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_password = \"$crypted_string\"";
 
-my $Clearquest_database = $Config{clearquest}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
+my $Clearquest_database = $Config{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
 DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
 
-my $Clearquest_fields = $Config{clearquest}->{fieldsToRetrieve} or LOGDIE("Clearquest fields are not defined properly. Check your configuration file");
-DEBUG "Using \$Clearquest_fields = \"$Clearquest_fields\"";
-
-my $windowSizeX = 600;
-$windowSizeX = $Config{scriptInfos}->{windowSizeX} if($Config{scriptInfos}->{windowSizeX} and $Config{scriptInfos}->{windowSizeX} =~ /^\d+$/ and $Config{scriptInfos}->{windowSizeX} > $windowSizeX);
-
-my $windowSizeY = 400;
-$windowSizeY = $Config{scriptInfos}->{windowSizeY} if($Config{scriptInfos}->{windowSizeY} and $Config{scriptInfos}->{windowSizeY}  =~ /^\d+$/ and $Config{scriptInfos}->{windowSizeY} > $windowSizeY);
+my $windowSizeX = 640;
+my $windowSizeY = 480;
 
 ##########################################
 # Retrieving stored data for Clearquest fields
@@ -157,7 +153,7 @@ my $syncNeeded = 0;
 if (-r $CqDatabase) {
 	my $storedData = retrieve($CqDatabase);
 	%CqFieldsDesc = %$storedData;
-	$syncNeeded = (time() - $CqFieldsDesc{lastUpdate} - $Config{clearquest}->{refreshPeriod}->{subSystems}) > 0;
+	$syncNeeded = (time() - $CqFieldsDesc{lastUpdate} - $localConfig{scriptInfos}->{refreshDatabase}) > 0;
 	$syncNeeded = (PROGRAM_VERSION ne $CqFieldsDesc{scriptVersion}) unless $syncNeeded;
 }
 else { $syncNeeded = 1; }
@@ -179,12 +175,12 @@ sub syncFieldsWithClearQuest {
 	INFO "Synchronization of Clearquest fields is required.";
 	
 	INFO "Connecting to Clearquest database";
-	my $session = connectCQ($Config{clearquest}->{login}, $Config{clearquest}->{password}, $Config{clearquest}->{database});
+	my $session = connectCQ($Config{clearquest_shared}->{login}, $Config{clearquest_shared}->{password}, $Config{clearquest_shared}->{database});
 	return unless $session;
 	
 	my @fieldList = ('sub_system', 'sub_system.component', 'sub_system.component.comment');
 	
-	my %filters = ('name' => $Config{clearquest}->{product});
+	my %filters = ('name' => $Config{clearquest_shared}->{product});
 	my @results = makeQuery('Product', \@fieldList , \%filters);
 	
 	my %results;
@@ -212,7 +208,7 @@ sub syncFieldsWithClearQuest {
 	
 	my $rec = $session->BuildEntity("ChangeRequest");
 
-	$data->{product} = $Config{clearquest}->{product};
+	$data->{product} = $Config{clearquest_shared}->{product};
 	$rec->SetFieldValue('product', $data->{product});
 	$rec->SetFieldValue('write_arrival_state', 'Recorded');
 	
@@ -266,7 +262,7 @@ $alternateStatusWhenNobugsSelected = 'normal' if $Config{scriptInfos}->{allowNoB
 
 DEBUG "Building graphical interface";
 
-my $mw = MainWindow->new(-title => "Interface to add new bugs into \"".$Config{clearquest}->{product}."\"");
+my $mw = MainWindow->new(-title => "Interface to add new bugs into \"".$Config{clearquest_shared}->{product}."\"");
 $mw->withdraw; # disable immediate display
 $mw->minsize($windowSizeX,$windowSizeY);
 
@@ -442,7 +438,7 @@ sub sendCrToCQ {
 	DEBUG "Building session";
 	$session = CQSession::Build() unless $session; 
 	DEBUG "Connecting to database.";
-	$session->UserLogon ($cfg->{clearquest}->{login}, $Clearquest_password, "atvcm", "");
+	$session->UserLogon ($cfg->{clearquest_shared}->{login}, $Clearquest_password, "atvcm", "");
 	DEBUG "Building entity";	
 	my $rec = $session->BuildEntity("ChangeRequest");
 	DEBUG "Retrieving identifier.";	
@@ -863,13 +859,13 @@ sub ExportEncryptedDb {
 	my $data_padded = $data.createPaddedData($securityCode, $length); 
 	$data = rijndael_encrypt($key, MODE_CBC, $data_padded,  128, 128);
 	
-	open FILE,">$bugsDatabase - $securityCode.edb";
+	open FILE,">$encryptedDatabase - $securityCode";
 	binmode FILE;
 	print FILE sprintf("%03i", $length).$data;
 	close FILE;
 	
 	INFO "Database has been exported with security code '$securityCode'";
-	$mw->messageBox(-title => "Informations", -message => "Database has been exported as \"$bugsDatabase.edb\"\nSecurity code is \"$securityCode\" (case sensitive). You will have to provide it in order to use exported database.", -type => 'ok', -icon => 'info');
+	$mw->messageBox(-title => "Informations", -message => "Database has been exported as \"$encryptedDatabase\"\nSecurity code is \"$securityCode\" (case sensitive). You will have to provide it in order to use exported database.", -type => 'ok', -icon => 'info');
 }
 
 sub importEncryptedDb {
