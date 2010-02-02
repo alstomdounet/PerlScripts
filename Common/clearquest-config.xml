@@ -1,0 +1,9 @@
+<?xml version='1.0'?>
+<Config>
+	<clearquest_common><!-- This section describes Clearquest parameters -->
+		<login>TO_BE_DEFINED</login><!-- Login you have to use in order to connect to Clearquest -->
+		<password></password><!-- Password you have to use in order to connect to Clearquest -->
+		<database>atvcm</database><!-- Clearquest Database where are stored bugs -->
+		<product>PRIMA EL II</product><!-- Product used to retrieve / sort / manipulate bugs -->
+	<clearquest_common>
+</Config>
