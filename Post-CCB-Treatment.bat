@@ -143,35 +143,43 @@ MainLoop();
 # 
 ############################################################################################
 sub preload {
+	my %output;
+	my @parentCR;
+	my @subCR;
+	
+
 	INFO "Connecting to Clearquest";
 	#connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
-	INFO "Retrieving needed informations";
-	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version State);
+	INFO "Retrieving potential parents";
+	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version State substate);
 	my %filter = (State => 'Assigned', product => 'PRIMA EL II');
-	#my @parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	#@parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	
+	INFO "Retrieving potential childs";
 	%filter = (State => 'Analysed', substate => 'in progress', product => 'PRIMA EL II');
-	#my @subCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	#@subCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	
-	my $output = retrieve('bugList.db');
-	my %output = %$output;
+	INFO "Analysing results";
+	my $output = retrieve('bugList.db'); %output = %$output;
 	#$output{parentCR} = \@parentCR;
-	#output{subCR} = \@subCR;
+	#$output{subCR} = \@subCR;
 	
-	my @parentCR = filterAnswers($output{parentCR}, 'child_record','^.+$'); # Finds all parent CR
+	@parentCR = filterAnswers($output{parentCR}, 'child_record','^.+$'); # Finds all parent CR
 	
 	my %results;
 	foreach my $CR (@parentCR) {
 		my $child = $CR->{child_record};
+		
+		my @results = filterAnswers($output{subCR}, 'id', "^$child\$");
+		next if scalar(@results == 0);
 		unless ($results{$CR->{id}}) {
 			$results{$CR->{id}}{fields} = $CR;
 		}
-		my @results = filterAnswers($output{subCR}, 'id', "^$child\$");
-		next if scalar(@results == 0);
 		$results{$CR->{id}}{childs}{$child}{fields} = shift @results;
 	}
 	
 	INFO "Found ".scalar(keys %results)." parent CR";
+	store \%output, 'bugList.db';
 	
 	return %results;
 }
@@ -309,48 +317,62 @@ sub retrieveBug {
 }
 
 sub validateChanges {
-	my ($processedCR) = @_;
-	
 	my $response = $mw->messageBox(-title => "Confirmation requested", -message => "Do you really want perform all these modifications?", -type => 'yesno', -icon => 'question');
 	
 	DEBUG "User has answered \"$response\" to cancellation question";
 	return unless $response eq "Yes";
 	
-	my @selectedFields = qw(sub_system component analyst impacted_items submitter_cr_type proposed_change);
+	INFO "Saving modifications in case of crash";
+	my $saved_output = _copyElement(\%listOfCRToProcess);
+	store $saved_output, 'modifiedCR.db';
 	
+	my @selectedFields = qw(sub_system component analyst impacted_items submitter_cr_type proposed_change);
+
 	INFO "Connecting to clearquest database \"$Clearquest_database\" with user \"$Clearquest_login\"";
 	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
-	my @CR_ok = ("");
-	foreach my $bugID (sort keys %{$processedCR->{childs}}) {
-		INFO "Processing CR named \"$bugID\"";
-		my $CR = $processedCR->{childs}->{$bugID}->{fields};
-		
-		my @changedFields;
-		foreach my $field (@selectedFields) {
-			push(@changedFields, { FieldName => $field, FieldValue => $CR->{$field}});
-		}
+	
+	foreach my $processedCR (values %listOfCRToProcess) {
+		INFO "Processing parent CR \"$processedCR->{fields}->{id}\"";
 
-		my $entity = getEntity('ChangeRequest',$bugID);
-		editEntity($entity, 'Rectify');
-		my $result = changeFields($entity, -OrderedFields => \@changedFields);
-		my $message = "";
-		if($result) {
-			$result = makeChanges($entity);
-			$message = "Validation / commit has failed on \"$bugID\".\nPlease refer to logfile for details." unless $result;
+		foreach my $bugID (sort keys %{$processedCR->{childs}}) {
+			DEBUG "Processing child CR \"$bugID\"";
+			my $CR = $processedCR->{childs}->{$bugID}->{fields};
+			
+			my @changedFields;
+			foreach my $field (@selectedFields) {
+				push(@changedFields, { FieldName => $field, FieldValue => $CR->{$field}});
+			}
+
+			my $entity = getEntity('ChangeRequest',$bugID);
+			editEntity($entity, 'Rectify');
+			my $result = changeFields($entity, -OrderedFields => \@changedFields);
+			if($result) {
+				$result = makeChanges($entity);
+				ERROR "Validation / commit has failed on child \"$bugID\"." and next unless $result;
+				INFO "Modifications of child CR \"$bugID\" done correctly.";
+			}
+			else {
+				ERROR "Modifications of fields of child \"$bugID\" has not been performed correctly.";
+				cancelAction($entity);
+			}
 		}
-		else {
-			$message = "Modifications of fields of \"$bugID\" has not been performed correctly.\nPlease refer to logfile for details.";
-			cancelAction($entity);
+	}
+}
+
+sub _copyElement {
+	my $element = shift;
+	if(ref($element) eq 'HASH') {
+		my %hash;
+		foreach my $key (keys %$element) {
+			$hash{$key} = _copyElement($element->{$key});
 		}
-		$mw->messageBox(-title => "Problem with CR \"$bugID\"", -message => $message, -type => 'ok', -icon => 'error') and next unless $result;
-		push(@CR_ok, $bugID);
+		return \%hash;
+	}
+	else {
+		my $result = $element;
+		return $result;
 	}
 	
-	if(scalar(@CR_ok) > 1) {
-		my $message = "Modifications were performed successfully on following CRs:".join("\n - ", @CR_ok);
-		INFO $message;
-		#$mw->messageBox(-title => "Operation successful", -message => $message, -type => 'ok', -icon => 'info');
-	}
 }
 
 exit;
