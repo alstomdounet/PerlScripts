@@ -325,6 +325,7 @@ sub validateChanges {
 	store $saved_output, 'modifiedCR.db';
 	
 	my @selectedFields = qw(sub_system component analyst impacted_items submitter_cr_type proposed_change);
+	my @copiedFieldsFromParent = qw(zone scheduled_version);
 
 	INFO "Connecting to clearquest database \"$Clearquest_database\" with user \"$Clearquest_login\"";
 	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
@@ -337,8 +338,13 @@ sub validateChanges {
 			my $CR = $processedCR->{childs}->{$bugID}->{fields};
 			
 			my @changedFields;
+			
 			foreach my $field (@selectedFields) {
 				push(@changedFields, { FieldName => $field, FieldValue => $CR->{$field}});
+			}
+			
+			foreach my $field (@copiedFieldsFromParent) {
+				push(@changedFields, { FieldName => $field, FieldValue => $processedCR->{fields}->{$field}});
 			}
 
 			my $entity = getEntity('ChangeRequest',$bugID);
