@@ -382,7 +382,7 @@ sub validateChanges {
 	
 	close FILE;
 	
-	unlink $scriptDir.'modifiedCR.db';
+	INFO "All modifications done correctly. Removing backup database" and unlink $scriptDir.'modifiedCR.db';
 }
 
 sub _copyElement {
