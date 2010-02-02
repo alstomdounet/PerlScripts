@@ -115,25 +115,10 @@ my $CrToProcess;
 my $CRSelection = addListBox($searchFrame, 'ID à traiter', \@listOfCR, \$CrToProcess);
 $CRSelection->{listbox}->configure(-browsecmd => sub {changeCR($CrToProcess)});
 
-sub changeCR {
-	my $CrToProcess = shift;
-	
-	$listOfCRToProcess{$selection{id}} = \%selection if $selection{id};
-	
-	loadCR($CrToProcess);
-	
-	DEBUG "Saving modified CR in database";
-	open FILE, ">output.txt";
-	print FILE Dumper \%listOfCRToProcess;
-	close FILE;
-	#store(\%listOfCRToProcess, 'modifiedCRs.db');
-	DEBUG "End of saving";
-}
-
 # Building buttons
-my $bottomPanel = $mw->Frame()->pack(-side => 'bottom', -fill => 'x');
-$bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => 10) -> pack(-side => 'left');
-my $buttonValidate = $bottomPanel->Button(-text => "Send modifications",-font => 'arial 9', -command => sub { validateChanges($processedCR); }, -height => 2, -width => 10, -state => 'disabled') -> pack(-side => 'right');
+my $bottomPanel = $mw->Frame(-background => 'blue')->pack(-side => 'bottom', -fill => 'x');
+$bottomPanel->Button(-text => 'Cancel', ,-font => 'arial 9', -command => [ \&cancel, $mw], -height => 2, -width => '15') -> pack(-side => 'left', -fill => 'both');
+my $buttonValidate = $bottomPanel->Button(-text => "Send modifications",-font => 'arial 9', -command => sub { validateChanges($processedCR); }, -height => 2, -state => 'disabled') -> pack(-side => 'right', -fill => 'both', -expand => 1);
 
 center($mw);
 center($mw);
@@ -151,7 +136,7 @@ sub preload {
 	INFO "Connecting to Clearquest";
 	#connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 	INFO "Retrieving potential parents";
-	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version State substate);
+	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version);
 	my %filter = (State => 'Assigned', product => 'PRIMA EL II');
 	#@parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	
@@ -179,9 +164,17 @@ sub preload {
 	}
 	
 	INFO "Found ".scalar(keys %results)." parent CR";
-	store \%output, 'bugList.db';
+	#store \%output, 'bugList.db';
 	
 	return %results;
+}
+
+sub changeCR {
+	my $CrToProcess = shift;
+	
+	$listOfCRToProcess{$selection{id}} = \%selection if $selection{id};
+	
+	loadCR($CrToProcess);
 }
 
 sub filterAnswers {
