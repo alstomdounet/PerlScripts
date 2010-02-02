@@ -23,19 +23,19 @@ use constant {
 # 
 ############################################################################################
 INFO "Starting program (V ".PROGRAM_VERSION.")";
-my %Config = loadConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
-my $Clearquest_login = $Config{clearquest}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
+my %Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the common configuration file
+my $Clearquest_login = $Config{clearquest_shared}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
 my $crypted_string = $Clearquest_login;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
 
 my $Clearquest_password;
-if (ref($Config{clearquest}->{password})) {
+if (ref($Config{clearquest_shared}->{password})) {
 	DEBUG "No credential given. Asking one for current session.";
 	
 	$| = 1;
 	
-	print "Insert hereafter password for user \'$Config{clearquest}->{login}\' : ";
+	print "Insert hereafter password for user \'$Config{clearquest_shared}->{login}\' : ";
 	use Term::ReadKey;
 	my $key;
 	$Clearquest_password = '';
@@ -47,17 +47,17 @@ if (ref($Config{clearquest}->{password})) {
 	ReadMode 'normal';
 
 	INFO("Clearquest password was defined for current session.");
-	$Config{clearquest}->{password} = $Clearquest_password;
+	$Config{clearquest_shared}->{password} = $Clearquest_password;
 }
 else {
-	$Clearquest_password = $Config{clearquest}->{password};	
+	$Clearquest_password = $Config{clearquest_shared}->{password};	
 }
 
 $crypted_string = $Clearquest_password;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_password = \"$crypted_string\"";
 
-my $Clearquest_database = $Config{clearquest}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
+my $Clearquest_database = $Config{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
 DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
 
 
