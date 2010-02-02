@@ -1,0 +1,6 @@
+<?xml version='1.0'?>
+<Config>
+	<scriptInfos>
+		<refreshDatabase>86400</refreshDatabase><!-- Refreshness of fields database (default is 86400 seconds - one day) -->
+	</scriptInfos>
+</Config>

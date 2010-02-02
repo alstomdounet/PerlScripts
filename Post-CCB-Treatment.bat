@@ -26,6 +26,7 @@ INFO "Starting program (V ".PROGRAM_VERSION.")";
 my %Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the common configuration file
 my $Clearquest_login = $Config{clearquest_shared}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
 my $crypted_string = $Clearquest_login;
+my $scriptDir = getScriptDirectory();
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
 
@@ -131,14 +132,14 @@ sub preload {
 	my @parentCR;
 	my @subCR;
 	
-	if(-r 'modifiedCR.db') {
+	if(-r $scriptDir.'modifiedCR.db') {
 		INFO "Found database for unfinished operation";
 		my $response = $mw->messageBox(-title => "Warning : using backup copy", -message => "Program has detected a previous, unfinished operation.\nDo you want to recover this session (if not, all changes in this session will be lost)?", -type => 'yesno', -icon => 'warning');
 		if($response eq "Yes") {
-			my $output = retrieve('modifiedCR.db');
+			my $output = retrieve($scriptDir.'modifiedCR.db');
 			return %$output;
 		}
-		unlink 'modifiedCR.db';
+		unlink $scriptDir.'modifiedCR.db';
 	}
 	
 	INFO "Connecting to Clearquest";
@@ -192,6 +193,7 @@ sub loadCR {
 	$buttonValidate->configure(-state => 'disabled');
 	DEBUG "Destroying content frame" and $contentFrame->destroy() if $contentFrame;
 	$processedCR = $listOfCRToProcess{$id};
+	$processedCR->{isModified} = 1;
 	$mw->messageBox(-title => "CR not found", -message => "$id was not found in Clearquest database. \nPlease check CR number, or eventually look into logfile.", -type => 'ok', -icon => 'error') and return unless $processedCR;
 	
 	$contentFrame = $mw->Frame()->pack( -fill=>'both', -expand => 1);
@@ -321,7 +323,7 @@ sub validateChanges {
 	
 	INFO "Saving modifications in case of crash";
 	my $saved_output = _copyElement(\%listOfCRToProcess);
-	store $saved_output, 'modifiedCR.db';
+	store $saved_output, $scriptDir.'modifiedCR.db';
 	
 	my @selectedFields = qw(sub_system component analyst impacted_items submitter_cr_type proposed_change);
 	my @copiedFieldsFromParent = qw(zone scheduled_version);
@@ -329,9 +331,13 @@ sub validateChanges {
 	INFO "Connecting to clearquest database \"$Clearquest_database\" with user \"$Clearquest_login\"";
 	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 	
+	my @success_CR;
+	my @failed_CR;
 	foreach my $processedCR (values %listOfCRToProcess) {
+		next unless $processedCR->{isModified};
 		INFO "Processing parent CR \"$processedCR->{fields}->{id}\"";
 
+		my $errors_occured = 0;
 		foreach my $bugID (sort keys %{$processedCR->{childs}}) {
 			DEBUG "Processing child CR \"$bugID\"";
 			my $CR = $processedCR->{childs}->{$bugID}->{fields};
@@ -351,17 +357,32 @@ sub validateChanges {
 			my $result = changeFields($entity, -OrderedFields => \@changedFields);
 			if($result) {
 				$result = makeChanges($entity);
-				ERROR "Validation / commit has failed on child \"$bugID\"." and next unless $result;
+				ERROR "Validation / commit has failed on child \"$bugID\"." and $errors_occured++ and next unless $result;
 				INFO "Modifications of child CR \"$bugID\" done correctly.";
 			}
 			else {
 				ERROR "Modifications of fields of child \"$bugID\" has not been performed correctly.";
+				$errors_occured++;
 				cancelAction($entity);
 			}
 		}
+		
+		if($errors_occured) {
+			push (@failed_CR, $processedCR->{fields}->{id});
+		}
+		else {
+			push (@success_CR, $processedCR->{fields}->{id});
+		}
 	}
+
+	open FILE, ">${scriptDir}Report.txt";
 	
-	unlink 'modifiedCR.db';
+	print FILE "Hereafter are correctly modified parent CR:\n - ".join("\n - ", @success_CR)  if scalar (@success_CR) > 0;
+	print FILE "\n\nHereafter are failed parent CR:\n - ".join("\n - ", @failed_CR) if scalar (@failed_CR) > 0;
+	
+	close FILE;
+	
+	unlink $scriptDir.'modifiedCR.db';
 }
 
 sub _copyElement {
