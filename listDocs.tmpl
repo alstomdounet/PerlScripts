@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC -//W3C//DTD HTML 4.01 Transitional//EN>
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1 http-equiv=content-type">
+  <title><TMPL_VAR name=TABLE_NAME></title>
+ <style type="text/css">
+  body { margin: 1em;
+    font-family: Arial,Helvetica,sans-serif;
+    color: rgb(255, 255, 255);
+    text-align: left;
+    background-color: rgb(0, 0, 0);
+    }
+
+  table { border: 0.2em solid rgb(255, 255, 255);
+    font-size: 0.8em;
+    background-color: rgb(204, 204, 255);
+    color: rgb(0, 0, 0);
+    width: 90%;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-bottom: 10px;
+    border-collapse: collapse;
+    }
+
+  td { border: 1px dotted rgb(255, 255, 255);
+    padding: 0.2em 1em;
+    }
+
+  td.head { padding: 0.2em 1em;
+    text-align: right;
+    font-weight: bold;
+    }
+
+  tr { border: 0.1em solid rgb(255, 255, 255);
+    }
+
+  th.subheader { padding: 0.4em 1.5em;
+    text-align: left;
+    opacity: 1;
+    background-color: rgb(175, 175, 255);
+    }
+
+  th { border: 0.1em solid rgb(255, 255, 255);
+    padding: 0.5em;
+    font-size: 1.2em;
+    background-color: rgb(255, 204, 153);
+    }
+
+  caption { margin: 1em;
+    font-size: 2em;
+    font-weight: bold;
+    font-style: italic;
+    text-align: left;
+    color: rgb(255, 255, 255);
+    }
+
+  .upgraded { background-color: green; }
+  .downgraded {	background-color: red; }
+  .new { background-color: yellow;  }
+  .deleted { background-color: red; }
+
+  </style>
+</head>
+<body>
+<h3>Fichier généré le <TMPL_VAR name=DATE></h3>
+<table summary="<TMPL_VAR name=TABLE_NAME>">
+    <caption><TMPL_VAR name=TABLE_NAME></caption>
+    <tr class="header1">
+	  <th>Code</th>
+      <th>Document</th>
+	  <th>Référence<br />(<TMPL_VAR name=BEFORE_REF>)</th>
+	  <th>Actuel<br />(<TMPL_VAR name=AFTER_REF>)</th>
+    </tr>
+	<TMPL_LOOP name=RESULTS>
+	<tr<TMPL_IF name=STATUS> class="<TMPL_VAR name=STATUS>"</TMPL_IF>>
+	<TMPL_IF name=CODE_DOC>
+		<th><TMPL_VAR name=CODE_DOC></th>
+		<td><TMPL_VAR name=DOCUMENT></td>
+	<TMPL_ELSE>
+		<td colspan=2><TMPL_VAR name=DOCUMENT></td>
+	</TMPL_IF>
+		<td><TMPL_VAR name=BEFORE_TEXT></td>
+		<td><TMPL_VAR name=AFTER_TEXT></td>
+	</tr>
+	</TMPL_LOOP>
+</table>
+
+</body>
+</html>

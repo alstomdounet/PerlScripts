@@ -19,6 +19,7 @@ use Storable qw(store retrieve thaw freeze);
 use HTML::Template;
 use Time::localtime;
 use POSIX qw(strftime);
+use Text::CSV;
 use XML::Simple;
 
 use constant {
@@ -31,6 +32,8 @@ my $BEFORE_REF = 'Liv_STR3.3.0_Maroc_12012010';
 my $AFTER_REF = 'LATEST';
 
 my $results = retrieve('test.db');
+
+my $equivTable = loadCSV('SyFRSCC.csv');
 #my $latest = getDirectoryStructure(REF_DIRECTORY);
 #my $labelled = getDirectoryStructure(REF_DIRECTORY, -label => 'Liv_STR3.3.0_Maroc_12012010');
 
@@ -39,17 +42,34 @@ INFO "Processing results. It can take some time.";
 #store($results, 'test.db');
 
 my @results;
-foreach my $key (sort keys %$results) {
-	DEBUG "Processing $key";
+foreach my $key (keys %$results) {
 	my %document;
 	$document{DOCUMENT} = $key;
 
+	foreach my $testedItem (keys %$equivTable) {
+		if($key =~ /$testedItem/) {
+			$document{CODE_DOC} = $equivTable->{$testedItem}->[0];
+			$document{DOCUMENT} = $equivTable->{$testedItem}->[1];
+			delete $equivTable->{$testedItem};
+			last;
+		}
+	}
+	
 	my @fields = @{$results->{$key}};
+	my $status = selectStatus($fields[0], $fields[1]);
+	$document{STATUS} = $status if $status;
 	$document{BEFORE_TEXT} = formatVersion($fields[0]);
 	$document{AFTER_TEXT} = formatVersion($fields[1]);
 	
 	push @results, \%document;
 }
+
+@results = sort {
+		return -1 if ($a->{CODE_DOC} and not $b->{CODE_DOC});
+		return 1 if (not $a->{CODE_DOC} and $b->{CODE_DOC});
+		return ($a->{DOCUMENT} cmp $b->{DOCUMENT}) unless ($a->{CODE_DOC});
+		return $a->{CODE_DOC} cmp $b->{CODE_DOC} or $a->{DOCUMENT} cmp $b->{DOCUMENT};
+	} @results;
 
 unlink(OUT_FILENAME);
 open (FILE, ">".OUT_FILENAME);
@@ -104,6 +124,35 @@ sub compareLabels {
 	}
 	
 	return \%results;
+}
+
+sub selectStatus {
+	my ($beforeItem, $afterItem) = @_;
+	return 'new' unless $beforeItem->{revision};
+	return 'deleted' unless $afterItem->{revision};
+	
+	my $status = ($beforeItem->{Version} cmp $afterItem->{Version});
+	$status = ($beforeItem->{State} <=> $afterItem->{State}) unless $status;
+	return 'upgraded' if $status < 0;
+	return 'downgraded' if $status > 0;
+	
+	return '';
+}
+
+sub loadCSV {
+	my $file = shift;
+	my %rows;
+	my $csv = Text::CSV->new ( { binary => 1, sep_char => ';'} )  # should set binary attribute.
+                 or die "Cannot use CSV: ".Text::CSV->error_diag ();
+ 
+	open my $fh, $file or die "$file: $!";
+	while ( my $row = $csv->getline( $fh ) ) {
+		next unless $row->[0];
+		my $key = shift @$row;
+		$rows{$key} = $row;
+	}
+	close $fh;
+	return \%rows;
 }
 
 __END__
