@@ -14,25 +14,27 @@ use strict;
 use warnings;
 use Common;
 use Data::Dumper;
-use ClearquestMgt qw(connect makeQuery);
+use ClearquestMgt qw(connectCQ makeQuery);
 use Storable qw(store retrieve thaw freeze);
 use HTML::Template;
 use Time::localtime;
 use POSIX qw(strftime);
+use XML::Simple;
 
 use constant {
-	PROGRAM_VERSION => '0.1',
+	PROGRAM_VERSION => '0.2 beta',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
-my %Config = loadConfig("config.xml", ForceArray => qr/^table$/); # Loading / preprocessing of the configuration file
+
+my $ConfigTables = loadScriptConfig("config.xml", ForceArray => qr/^(table|node)$/); # Loading / preprocessing of the configuration file
 
 INFO "Connecting to Clearquest with user $Config{clearquest}->{login}";
-connect($Config{clearquest}->{login}, $Config{clearquest}->{password}, $Config{clearquest}->{database});
+connectCQ($Config{clearquest}->{login}, $Config{clearquest}->{password}, $Config{clearquest}->{database});
 
 
 
-foreach my $table (@{$Config{tables}->{table}}) {
+foreach my $table (@{$Config->{tables}->{table}}) {
 	INFO "Processing \"$table->{title}\"";
 	my @listFields = split(/,\s*/, $table->{fieldsToRetrieve});
 	my @fieldsSort = split(/,\s*/, $table->{fieldsSorting});
