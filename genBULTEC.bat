@@ -28,6 +28,9 @@ use constant {
 	REF_DIRECTORY => 'D:\\clearcase_storage\\gmanciet_view\\PRIMA2\\ProjectSpecificDocs\\02_Requirements\\SyFRSCC',
 };
 
+my $config = loadLocalConfig(getScriptName().'.config.xml', 'config.xml', ForceArray => qr/^(document|table)$/);
+#backCopy('config.xml', getScriptName().'.config.xml');
+
 my $BEFORE_REF = 'Liv_STR3.3.0_Maroc_12012010';
 my $AFTER_REF = 'LATEST';
 

@@ -13,7 +13,7 @@
 
   table { border: 0.2em solid rgb(255, 255, 255);
     font-size: 0.8em;
-    background-color: rgb(204, 204, 255);
+    background-color: slategrey;
     color: rgb(0, 0, 0);
     width: 90%;
     margin-left: 5%;
@@ -45,6 +45,12 @@
     font-size: 1.2em;
     background-color: rgb(255, 204, 153);
     }
+	
+  td.CodeDoc { 
+    padding: 0.5em;
+    font-size: 1.2em;
+	font-weight: bold;
+  }
 
   caption { margin: 1em;
     font-size: 2em;
@@ -52,13 +58,12 @@
     font-style: italic;
     text-align: left;
     color: rgb(255, 255, 255);
-    }
+  }
 
-  .upgraded { background-color: green; }
+  .upgraded { background-color: lawngreen; }
   .downgraded {	background-color: red; }
-  .new { background-color: yellow;  }
+  .new { background-color: slateblue;  }
   .deleted { background-color: red; }
-
   </style>
 </head>
 <body>
@@ -74,7 +79,7 @@
 	<TMPL_LOOP name=RESULTS>
 	<tr<TMPL_IF name=STATUS> class="<TMPL_VAR name=STATUS>"</TMPL_IF>>
 	<TMPL_IF name=CODE_DOC>
-		<th><TMPL_VAR name=CODE_DOC></th>
+		<td class='CodeDoc'><TMPL_VAR name=CODE_DOC></td>
 		<td><TMPL_VAR name=DOCUMENT></td>
 	<TMPL_ELSE>
 		<td colspan=2><TMPL_VAR name=DOCUMENT></td>
