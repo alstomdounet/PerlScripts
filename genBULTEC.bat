@@ -25,68 +25,102 @@ use XML::Simple;
 use constant {
 	PROGRAM_VERSION => '0.1 beta',
 	OUT_FILENAME => 'testOutput.html',
-	REF_DIRECTORY => 'D:\\clearcase_storage\\gmanciet_view\\PRIMA2\\ProjectSpecificDocs\\02_Requirements\\SyFRSCC',
 };
 
+INFO "Starting program (V ".PROGRAM_VERSION.")";
+
 my $config = loadLocalConfig(getScriptName().'.config.xml', 'config.xml', ForceArray => qr/^(document|table)$/);
-#backCopy('config.xml', getScriptName().'.config.xml');
+backCopy('config.xml', getScriptName().'.config.xml');
 
-my $BEFORE_REF = 'Liv_STR3.3.0_Maroc_12012010';
-my $AFTER_REF = 'LATEST';
+my $BEFORE_REF = $config->{defaultParams}->{references}->{reference};
+my $AFTER_REF = $config->{defaultParams}->{references}->{target};
+my $ANALYSED_DIRECTORY =  $config->{defaultParams}->{analysedDirectory};
+my $EQUIV_TABLE = loadCSV($config->{defaultParams}->{equivTable}) if $config->{defaultParams}->{equivTable};
 
-my $results = retrieve('test.db');
+foreach my $document (@{$config->{documents}->{document}}) {
+	INFO "Processing document \"$document->{title}\"";
+	$document->{title} = 'Titre manquant' unless $document->{title};
+	my $BEFORE_REF_DOC = localizeVariable($BEFORE_REF, $document->{defaultParams}->{references}->{reference});
+	my $AFTER_REF_DOC = localizeVariable($AFTER_REF, $document->{defaultParams}->{references}->{target});
+	my $ANALYSED_DIRECTORY_DOC = localizeVariable($ANALYSED_DIRECTORY, $document->{defaultParams}->{analysedDirectory});
+	
+	foreach my $table (@{$document->{tables}->{table}}) {
+		INFO "Procesing table \"$table->{title}\"";	
+		$table->{title} = 'Titre manquant' unless $table->{title};
+		my $BEFORE_REF_TABLE = localizeVariable($BEFORE_REF_DOC, $table->{references}->{reference});
+		my $AFTER_REF_TABLE = localizeVariable($AFTER_REF_DOC, $table->{references}->{target});
+		my $ANALYSED_DIRECTORY_TABLE = localizeVariable($ANALYSED_DIRECTORY_DOC, $table->{analysedDirectory});
 
-my $equivTable = loadCSV('SyFRSCC.csv');
-#my $latest = getDirectoryStructure(REF_DIRECTORY);
-#my $labelled = getDirectoryStructure(REF_DIRECTORY, -label => 'Liv_STR3.3.0_Maroc_12012010');
-
-INFO "Processing results. It can take some time.";
-#my $results = compareLabels(REF_DIRECTORY, $labelled, $latest);
-#store($results, 'test.db');
-
-my @results;
-foreach my $key (keys %$results) {
-	my %document;
-	$document{DOCUMENT} = $key;
-
-	foreach my $testedItem (keys %$equivTable) {
-		if($key =~ /$testedItem/) {
-			$document{CODE_DOC} = $equivTable->{$testedItem}->[0];
-			$document{DOCUMENT} = $equivTable->{$testedItem}->[1];
-			delete $equivTable->{$testedItem};
-			last;
-		}
+		
+		#my $BEFORE_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $BEFORE_REF_TABLE);
+		#my $AFTER_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $AFTER_REF_TABLE);
+		#my $results = compareLabels($ANALYSED_DIRECTORY_TABLE, $BEFORE_LIST, $AFTER_LIST);
+		
+		my $results = retrieve('test.db');
+		#store($results, 'test.db');
+		
+		buildTable($EQUIV_TABLE, $results);
 	}
-	
-	my @fields = @{$results->{$key}};
-	my $status = selectStatus($fields[0], $fields[1]);
-	$document{STATUS} = $status if $status;
-	$document{BEFORE_TEXT} = formatVersion($fields[0]);
-	$document{AFTER_TEXT} = formatVersion($fields[1]);
-	
-	push @results, \%document;
 }
 
-@results = sort {
-		return -1 if ($a->{CODE_DOC} and not $b->{CODE_DOC});
-		return 1 if (not $a->{CODE_DOC} and $b->{CODE_DOC});
-		return ($a->{DOCUMENT} cmp $b->{DOCUMENT}) unless ($a->{CODE_DOC});
-		return $a->{CODE_DOC} cmp $b->{CODE_DOC} or $a->{DOCUMENT} cmp $b->{DOCUMENT};
-	} @results;
 
-unlink(OUT_FILENAME);
-open (FILE, ">".OUT_FILENAME);
-	
-my $t = HTML::Template -> new( filename => "./listDocs.tmpl" );
 
-$t->param(BEFORE_REF => $BEFORE_REF);
-$t->param(AFTER_REF => $AFTER_REF);
-$t->param(RESULTS => \@results);
-my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
-$t->param(DATE => $tm);
+INFO "Processing results. It can take some time.";
+#
+#
 
-print FILE $t->output;
-close(FILE);
+sub buildTable {
+	my ($equivTable, $results) = @_;
+	my @results;
+	foreach my $key (keys %$results) {
+		my %document;
+		$document{DOCUMENT} = $key;
+
+		foreach my $testedItem (keys %$equivTable) {
+			if($key =~ /$testedItem/) {
+				$document{CODE_DOC} = $equivTable->{$testedItem}->[0];
+				$document{DOCUMENT} = $equivTable->{$testedItem}->[1];
+				delete $equivTable->{$testedItem};
+				last;
+			}
+		}
+		
+		my @fields = @{$results->{$key}};
+		my $status = selectStatus($fields[0], $fields[1]);
+		$document{STATUS} = $status if $status;
+		$document{BEFORE_TEXT} = formatVersion($fields[0]);
+		$document{AFTER_TEXT} = formatVersion($fields[1]);
+		
+		push @results, \%document;
+	}
+
+	@results = sort {
+			return -1 if ($a->{CODE_DOC} and not $b->{CODE_DOC});
+			return 1 if (not $a->{CODE_DOC} and $b->{CODE_DOC});
+			return ($a->{DOCUMENT} cmp $b->{DOCUMENT}) unless ($a->{CODE_DOC});
+			return $a->{CODE_DOC} cmp $b->{CODE_DOC} or $a->{DOCUMENT} cmp $b->{DOCUMENT};
+		} @results;
+
+	unlink(OUT_FILENAME);
+	open (FILE, ">".OUT_FILENAME);
+		
+	my $t = HTML::Template -> new( filename => "./listDocs.tmpl" );
+
+	$t->param(BEFORE_REF => $BEFORE_REF);
+	$t->param(AFTER_REF => $AFTER_REF);
+	$t->param(RESULTS => \@results);
+	my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
+	$t->param(DATE => $tm);
+
+	print FILE $t->output;
+	close(FILE);
+}
+
+sub localizeVariable {
+	my ($generalValue, $localizedValue) = @_;
+	return $localizedValue if $localizedValue;
+	return $generalValue; 
+}
 
 sub formatVersion {
 	my ($element) = @_;
@@ -140,6 +174,13 @@ sub selectStatus {
 	return 'downgraded' if $status > 0;
 	
 	return '';
+}
+
+sub getStructUsingReference {
+	my ($directory, $reference) = @_; 
+	return getDirectoryStructure($directory) if ($reference =~ /^[\\\/]main[\\\/]latest/i);
+	return getDirectoryStructure($directory, -label => $reference) if ($reference =~ /^[^\/\\\{\}\(\)]+$/);
+	LOGDIE "Script is not able to handle references like \"$reference\"";
 }
 
 sub loadCSV {
