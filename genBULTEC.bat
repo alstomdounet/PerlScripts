@@ -15,6 +15,7 @@ use warnings;
 use Common;
 use Data::Dumper;
 use ClearcaseMgt qw(getDirectoryStructure getAttribute);
+use ClearquestMgt qw(connectCQ makeQuery);
 use Storable qw(store retrieve thaw freeze);
 use HTML::Template;
 use Time::localtime;
@@ -30,6 +31,8 @@ use constant {
 INFO "Starting program (V ".PROGRAM_VERSION.")";
 
 my $config = loadLocalConfig(getScriptName().'.config.xml', 'config.xml', ForceArray => qr/^(document|table)$/);
+my $CQConfig = loadSharedConfig('Clearquest-config.xml');
+
 backCopy('config.xml', getScriptName().'.config.xml');
 
 my $BEFORE_REF = $config->{defaultParams}->{references}->{reference};
@@ -50,7 +53,17 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		my $BEFORE_REF_TABLE = localizeVariable($BEFORE_REF_DOC, $table->{references}->{reference});
 		my $AFTER_REF_TABLE = localizeVariable($AFTER_REF_DOC, $table->{references}->{target});
 		my $ANALYSED_DIRECTORY_TABLE = localizeVariable($ANALYSED_DIRECTORY_DOC, $table->{analysedDirectory});
+		
+		#connectCQ($CQConfig->{clearquest_shared}->{login}, $CQConfig->{clearquest_shared}->{password}, $CQConfig->{clearquest_shared}->{database});
 
+		makeCQQuery($config->{CQ_Queries}->{listVersions}, 'versions.db');
+		my $listCR = makeCQQuery($config->{CQ_Queries}->{listCR}, 'AllCR.db');
+		
+		my $docBiasis = getListOfBiases($listCR);
+
+		open FILE,">debug.txt";
+		print FILE Dumper $docBiasis;
+		close FILE;
 		
 		#my $BEFORE_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $BEFORE_REF_TABLE);
 		#my $AFTER_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $AFTER_REF_TABLE);
@@ -59,18 +72,81 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		my $results = retrieve('test.db');
 		#store($results, 'test.db');
 		
-		buildTable($EQUIV_TABLE, $results);
+		
+		
+		buildTable($EQUIV_TABLE, $results, $docBiasis);
 	}
 }
 
-
-
 INFO "Processing results. It can take some time.";
-#
-#
+
+sub isAssigned {
+	my ($state, $substate) = @_;
+	return 1 if $state eq 'Assigned' or $state eq 'Analysed';
+	return 1 if $state eq 'Realised' and $substate ne 'complete';
+	return 0;
+}
+
+sub getListOfBiases {
+	my ($listCR) = @_;
+	DEBUG "Building parent child tree";
+	my %parentList;
+	my %CRList;
+	foreach my $CR (@$listCR) {
+		$CRList{$CR->{id}} = $CR;
+		push @{$parentList{$CR->{id}}}, $CR->{child_record} if $CR->{child_record};
+	}
+	
+	my %docBiasis;
+	DEBUG "Finding potential documentation biasis";
+	foreach my $CR (@$listCR) {
+		next unless $CR->{'sub_system.name'} eq 'SyFRSCC';
+		next unless isAssigned ($CR->{state}, $CR->{substate});
+		
+		my $biasFound = 0;
+		if($CR->{parent_record}) {
+			my $parentCR = $CRList{$CR->{parent_record}};
+			$biasFound++ if isADocumentBias($parentCR->{'sub_system.name'}, $CR->{'component.name'}, $parentCR->{'component.name'}, $parentCR->{state}, $parentCR->{substate});
+			foreach my $childID (@{$parentList{$CR->{parent_record}}}) {
+				my $childCR = $CRList{$childID};
+				$biasFound++ if isADocumentBias($childCR->{'sub_system.name'}, $CR->{'component.name'}, $childCR->{'component.name'}, $childCR->{state}, $childCR->{substate});
+			}
+		}
+		
+		if($CR->{child_record}) {
+			my $childCR = $CRList{$CR->{child_record}};
+			$biasFound++ if isADocumentBias($childCR->{'sub_system.name'}, $CR->{'component.name'}, $childCR->{'component.name'}, $childCR->{state}, $childCR->{substate});
+		}
+		
+		$biasFound++ if (not $CR->{parent_record} and not $CR->{child_record});
+		
+		DEBUG $CR->{id}." is a bias" and push @{$docBiasis{$CR->{'component.name'}}}, $CR if $biasFound;
+	}
+	
+	return \%docBiasis;
+}
+
+sub isADocumentBias {
+	my ($sub_system, $refComponent, $component, $state, $substate) = @_;
+	return 0 if $sub_system ne 'SyFDD' or $component ne $refComponent;
+	return 0 if $state eq 'Assigned' or $state eq 'Analysed';
+	return 0 if $state eq 'Realised' and $substate ne 'complete';
+	return 1;
+}
+
+sub makeCQQuery {
+	my ($query, $file) = @_;
+	
+	return retrieve($file) if -r $file;
+	
+	my @fields = split(/\s*,\s*/, $query->{fieldsToRetrieve});
+	my $results = makeQuery($query->{ClearquestType}, \@fields, $query->{filtering});
+	store($results, $file) if $file;
+	return $results;
+}
 
 sub buildTable {
-	my ($equivTable, $results) = @_;
+	my ($equivTable, $results, $biasList) = @_;
 	my @results;
 	foreach my $key (keys %$results) {
 		my %document;
@@ -90,6 +166,7 @@ sub buildTable {
 		$document{STATUS} = $status if $status;
 		$document{BEFORE_TEXT} = formatVersion($fields[0]);
 		$document{AFTER_TEXT} = formatVersion($fields[1]);
+		$document{BIAS} = Dumper $biasList->{$document{CODE_DOC}} if $document{CODE_DOC} and $biasList->{$document{CODE_DOC}};
 		
 		push @results, \%document;
 	}
