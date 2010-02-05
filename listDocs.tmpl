@@ -11,9 +11,9 @@
     background-color: rgb(0, 0, 0);
     }
 
-  table { border: 0.2em solid rgb(255, 255, 255);
+  table { border: 0.2em solid slategrey;
     font-size: 0.8em;
-    background-color: slategrey;
+    background-color: white;
     color: rgb(0, 0, 0);
     width: 90%;
     margin-left: 5%;
@@ -22,7 +22,7 @@
     border-collapse: collapse;
     }
 
-  td { border: 1px dotted rgb(255, 255, 255);
+  td { border: 1px dotted slategrey;
     padding: 0.2em 1em;
     }
 
@@ -31,7 +31,7 @@
     font-weight: bold;
     }
 
-  tr { border: 0.1em solid rgb(255, 255, 255);
+  tr { border: 0.1em solid slategrey;
     }
 
   th.subheader { padding: 0.4em 1.5em;
@@ -59,6 +59,11 @@
     text-align: left;
     color: rgb(255, 255, 255);
   }
+  
+  .scheduled_version {
+	font-weight: bold; 
+	text-decoration: underline
+  }
 
   .upgraded { background-color: lawngreen; }
   .downgraded {	background-color: red; }
@@ -74,10 +79,11 @@
 	  <th>Code</th>
       <th>Document</th>
 	  <th>Référence<br />(<TMPL_VAR name=BEFORE_REF>)</th>
-	  <th>Actuel<br />(<TMPL_VAR name=AFTER_REF>)</th>
+	  <th>Cible<br />(<TMPL_VAR name=AFTER_REF>)</th>
+	  <th>Ecart<br />documentaire</th>
     </tr>
 	<TMPL_LOOP name=RESULTS>
-	<tr<TMPL_IF name=STATUS> class="<TMPL_VAR name=STATUS>"</TMPL_IF>>
+	<tr>
 	<TMPL_IF name=CODE_DOC>
 		<td class='CodeDoc'><TMPL_VAR name=CODE_DOC></td>
 		<td><TMPL_VAR name=DOCUMENT></td>
@@ -85,7 +91,15 @@
 		<td colspan=2><TMPL_VAR name=DOCUMENT></td>
 	</TMPL_IF>
 		<td><TMPL_VAR name=BEFORE_TEXT></td>
-		<td><TMPL_VAR name=AFTER_TEXT></td>
+		<td<TMPL_IF name=STATUS> class="<TMPL_VAR name=STATUS>"</TMPL_IF>><TMPL_VAR name=AFTER_TEXT></td>
+		<td><TMPL_IF name=BIASLIST><TMPL_LOOP name=BIASLIST>
+		<div class='scheduled_version'><TMPL_VAR name=SCHEDULED_VERSION></div>
+		<TMPL_LOOP name=CRLIST>
+		<TMPL_VAR name=ID><br>
+		</TMPL_LOOP>
+		</TMPL_LOOP>
+		<TMPL_ELSE>&nbsp;</TMPL_IF>
+		</td>
 	</tr>
 	</TMPL_LOOP>
 </table>

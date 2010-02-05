@@ -120,7 +120,7 @@ sub getListOfBiases {
 		
 		$biasFound++ if (not $CR->{parent_record} and not $CR->{child_record});
 		
-		DEBUG $CR->{id}." is a bias" and push @{$docBiasis{$CR->{'component.name'}}}, $CR if $biasFound;
+		DEBUG $CR->{id}." is a bias" and push @{$docBiasis{$CR->{'component.name'}}{$CR->{'scheduled_version.name'}}{$CR->{id}}}, $CR if $biasFound;
 	}
 	
 	return \%docBiasis;
@@ -161,12 +161,27 @@ sub buildTable {
 			}
 		}
 		
+		if ($document{CODE_DOC} and $biasList->{$document{CODE_DOC}}) {
+			my $list = $biasList->{$document{CODE_DOC}};
+			my @list;
+			foreach my $key (sort keys %$list) {
+				my $version = $list->{$key};
+				my @CRList;
+				foreach my $key (sort keys %$version) {
+					push(@CRList, { ID => $key } );
+				}
+				push(@list, { SCHEDULED_VERSION => $key , CRLIST => \@CRList } );
+			}
+			
+			$document{BIASLIST} = \@list;
+		}
+		
 		my @fields = @{$results->{$key}};
 		my $status = selectStatus($fields[0], $fields[1]);
 		$document{STATUS} = $status if $status;
 		$document{BEFORE_TEXT} = formatVersion($fields[0]);
 		$document{AFTER_TEXT} = formatVersion($fields[1]);
-		$document{BIAS} = Dumper $biasList->{$document{CODE_DOC}} if $document{CODE_DOC} and $biasList->{$document{CODE_DOC}};
+
 		
 		push @results, \%document;
 	}
