@@ -49,22 +49,21 @@ foreach my $bug (@results) {
 	my $bugID = $bug->{id};
 	INFO "Processing CR \"$bugID\"";
 
-			my $entity = getEntity('ChangeRequest',$bugID);
-			editEntity($entity, 'Rectify');
-			
-			my %fields;
-			$fields{'scheduled_version'} = $scheduled_version;
-			my $result = changeFields($entity, -Fields => \%fields);
-			if($result) {
-				$result = makeChanges($entity);
-				ERROR "Validation / commit has failed on child \"$bugID\"."  and next unless $result;
-				INFO "Modifications of child CR \"$bugID\" done correctly.";
-			}
-			else {
-				ERROR "Modifications of fields of child \"$bugID\" has not been performed correctly.";
-				cancelAction($entity);
-			}
+	my $entity = getEntity('ChangeRequest',$bugID);
+	editEntity($entity, 'Rectify');
 	
+	my %fields;
+	$fields{'scheduled_version'} = $scheduled_version;
+	my $result = changeFields($entity, -Fields => \%fields);
+	if($result) {
+		$result = makeChanges($entity);
+		ERROR "Validation / commit has failed on child \"$bugID\"."  and next unless $result;
+		INFO "Modifications of child CR \"$bugID\" done correctly.";
+	}
+	else {
+		ERROR "Modifications of fields of child \"$bugID\" has not been performed correctly.";
+		cancelAction($entity);
+	}
 }
 
 __END__
