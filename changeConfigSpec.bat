@@ -11,7 +11,7 @@ use Common;
 use ClearcaseMgt qw(getConfigSpec setConfigSpec getViewNameByElement isSnapshotView);
 use Data::Dumper;
 
-my %Config = loadConfig("config.xml"); # Loading / preprocessing of the configuration file
+my $Config = loadLocalConfig("config.xml"); # Loading / preprocessing of the configuration file
 
 ############################################################################################
 # 
@@ -23,7 +23,7 @@ use Tk::ItemStyle;
 use Cwd;
 
 use constant {
-	PROGRAM_VERSION => '0.1',
+	PROGRAM_VERSION => '0.2',
 	CFGSPEC_HEADER_NOT_PRESENT => 'Ce fichier ne contient pas d\'entêtes',
 	CFGSPEC_SNP_PATH => './ConfigSpecs-snapshot',
 	CFGSPEC_DYN_PATH => './ConfigSpecs-dynamic',
@@ -33,11 +33,11 @@ INFO "Starting program (V ".PROGRAM_VERSION.")";
 
 my %configSpec;
 my ($description, $header, $title, $PATH_TO_ACTIVE_VIEW, $ACTIVE_VIEW, $ISSNAPSHOTVIEW, $PATH_TO_CFGSPEC, %pathToFiles);
-my $OFFLINE_MODE = $Config{offlineMode}{isActive};
+my $OFFLINE_MODE = $Config->{offlineMode}->{isActive};
 my $configSpec = "";
 if($OFFLINE_MODE) {
 	WARN "PROGRAM IS RUNNING IN OFFLINE MODE";
-	$ISSNAPSHOTVIEW = $Config{offlineMode}{isSnapshotView};
+	$ISSNAPSHOTVIEW = $Config->{offlineMode}->{isSnapshotView};
 }
 else {
 	$PATH_TO_ACTIVE_VIEW = $ARGV[0];
@@ -264,7 +264,8 @@ sub changeConfigSpec {
 	
 	DEBUG "Applying config-spec \"$configSpec->{wholeFilename}\"";
 	my $BACKUP;
-	open $BACKUP, ">config-spec.backup" or ERROR "Unable to do a backup of current config-spec : $!";
+	my $BACKUP_FILE = getScriptDirectory()."config-spec.backup";
+	open $BACKUP, ">$BACKUP_FILE" or ERROR "Unable to do a backup of current config-spec ($BACKUP_FILE): $!";
 	print $BACKUP $currentConfigSpec and close $BACKUP if $BACKUP;
 
 	$mw->messageBox(-title => "Avertissement", -message => "La mise à jour d'une vue snapshop requiert une mise à jour de tous les fichiers.\nIl s'agit d'une opération longue (plus de 10 minutes), qui fige l'interface durant ce temps.", -type => 'ok', -icon => 'warning') if $ISSNAPSHOTVIEW;
