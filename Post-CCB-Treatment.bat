@@ -16,7 +16,7 @@ use ClearquestMgt qw(changeFields makeQuery makeChanges connectCQ disconnectCQ g
 use GraphicalCommon;
 
 use constant {
-	PROGRAM_VERSION => '0.3'
+	PROGRAM_VERSION => '0.4'
 };
 
 ############################################################################################
@@ -68,7 +68,7 @@ if (-r $CqDatabase) {
 	my $storedData = retrieve($CqDatabase);
 	%CqFieldsDesc = %$storedData;
 }
-else { LOGDIE "Not valid database found in \"$CqDatabase\""; }
+else { LOGDIE "No valid database found in \"$CqDatabase\""; }
 my $processedCR;
 my $processedCRUI;
 my $contentFrame;
@@ -177,9 +177,18 @@ sub preload {
 sub changeCR {
 	my $CrToProcess = shift;
 	
-	$listOfCRToProcess{$selection{id}} = \%selection if $selection{id};
+	if(not $selection{isModified} and $selection{id}) {
 	
-	loadCR($CrToProcess);
+		my $response = $mw->messageBox(-title => "Confirmation requested", -message => "Do you want that modifications done on this CR to be registered on server?", -type => 'yesno', -icon => 'question');
+		
+		if($response eq "Yes") {
+			DEBUG "User has requested to register $selection{id}";
+			$selection{isModified} = 1;
+		}
+	}
+	
+	$listOfCRToProcess{$selection{id}} = \%selection if $selection{id};
+	loadCR($CrToProcess) if $CrToProcess;
 }
 
 sub filterAnswers {
@@ -193,7 +202,7 @@ sub loadCR {
 	$buttonValidate->configure(-state => 'disabled');
 	DEBUG "Destroying content frame" and $contentFrame->destroy() if $contentFrame;
 	$processedCR = $listOfCRToProcess{$id};
-	$processedCR->{isModified} = 1;
+
 	$mw->messageBox(-title => "CR not found", -message => "$id was not found in Clearquest database. \nPlease check CR number, or eventually look into logfile.", -type => 'ok', -icon => 'error') and return unless $processedCR;
 	
 	$contentFrame = $mw->Frame()->pack( -fill=>'both', -expand => 1);
@@ -210,17 +219,14 @@ sub loadCR {
 	
 	foreach my $subID (sort keys %{$processedCR->{childs}}) {
 		DEBUG "Processing child $subID";
-		buildTab($notebook,$subID,$processedCR->{childs}{$subID}, $processedCRUI->{childs}{$subID});
+		buildTab($notebook,$subID,$processedCR->{childs}{$subID}, $processedCRUI->{childs}{$subID}, $id);
 	}
 	$mw->geometry("640x480");
 	$buttonValidate->configure(-state => 'normal');
 }
 
 sub buildTab {
-	my $notebook = shift;
-	my $tabName = shift;
-	my $content = shift;
-	my $receiver = shift;
+	my ($notebook, $tabName, $content, $receiver, $parentID) = @_;
 	
 	$receiver->{tabName} = $tabName;
 	
@@ -244,6 +250,11 @@ sub buildTab {
 		updateComponents($content->{fields}{sub_system}, $receiver->{listComponents}, $receiver->{dynamicComponentList});
 		${$receiver->{listComponents}->{selection}} = $backup;
 	}
+	
+	unless($content->{fields}{proposed_change} =~ m/^=== Analyse de \w+ \(CR parent atvcm\d{8}\) ===/) {
+		$content->{fields}{proposed_change} = "=== Analyse de $content->{fields}{analyst} (CR parent $parentID) ===\n".$content->{fields}{proposed_change}."\n=== Complément d'analyse ===" if $content->{fields}{proposed_change};
+	}
+	
 	$receiver->{listAnalyser} = addListBox($tab1, 'Analyst', $CqFieldsDesc{analyst}{shortDesc}, \$content->{fields}{analyst}, -searchable => 0);
 	$receiver->{listTypes} = addListBox($tab1, 'Type', $CqFieldsDesc{submitter_CR_type}{shortDesc}, \$content->{fields}{submitter_cr_type});
 	$receiver->{TextImpactedItems} = addDescriptionField($tab1, 'Impacted items', \$content->{fields}{impacted_items}, -height => 1);
@@ -316,6 +327,8 @@ sub retrieveBug {
 }
 
 sub validateChanges {
+	changeCR();
+	
 	my $response = $mw->messageBox(-title => "Confirmation requested", -message => "Do you really want perform all these modifications?", -type => 'yesno', -icon => 'question');
 	
 	DEBUG "User has answered \"$response\" to cancellation question";
