@@ -23,20 +23,20 @@ use constant {
 # 
 ############################################################################################
 INFO "Starting program (V ".PROGRAM_VERSION.")";
-my %Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the common configuration file
-my $Clearquest_login = $Config{clearquest_shared}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
+my $Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the common configuration file
+my $Clearquest_login = $Config->{clearquest_shared}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
 my $crypted_string = $Clearquest_login;
 my $scriptDir = getScriptDirectory();
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
 
 my $Clearquest_password;
-if (ref($Config{clearquest_shared}->{password})) {
+if (ref($Config->{clearquest_shared}->{password})) {
 	DEBUG "No credential given. Asking one for current session.";
 	
 	$| = 1;
 	
-	print "Insert hereafter password for user \'$Config{clearquest_shared}->{login}\' : ";
+	print "Insert hereafter password for user \'$Config->{clearquest_shared}->{login}\' : ";
 	use Term::ReadKey;
 	my $key;
 	$Clearquest_password = '';
@@ -48,17 +48,17 @@ if (ref($Config{clearquest_shared}->{password})) {
 	ReadMode 'normal';
 
 	INFO("Clearquest password was defined for current session.");
-	$Config{clearquest_shared}->{password} = $Clearquest_password;
+	$Config->{clearquest_shared}->{password} = $Clearquest_password;
 }
 else {
-	$Clearquest_password = $Config{clearquest_shared}->{password};	
+	$Clearquest_password = $Config->{clearquest_shared}->{password};	
 }
 
 $crypted_string = $Clearquest_password;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_password = \"$crypted_string\"";
 
-my $Clearquest_database = $Config{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
+my $Clearquest_database = $Config->{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
 DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
 
 
@@ -108,7 +108,7 @@ $mw->minsize(640,480);
 
 my %listOfCRToProcess = preload();
 my @listOfCR = sort keys %listOfCRToProcess;
-my %selection;
+#my %selection;
 
 my $searchFrame = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
 my $CrToProcess;
@@ -129,8 +129,8 @@ MainLoop();
 ############################################################################################
 sub preload {
 	my %output;
-	my @parentCR;
-	my @subCR;
+	my $parentCR;
+	my $subCR;
 	
 	if(-r $scriptDir.'modifiedCR.db') {
 		INFO "Found database for unfinished operation";
@@ -147,26 +147,26 @@ sub preload {
 	INFO "Retrieving potential parents";
 	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version);
 	my %filter = (State => 'Assigned', product => 'PRIMA EL II');
-	@parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
-	@parentCR = filterAnswers(\@parentCR, 'child_record','^.+$'); # Finds all parent CR
-	$output{parentCR} = \@parentCR;
+	$parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	$parentCR = filterAnswers($parentCR, 'child_record','^.+$'); # Finds all parent CR
+	$output{parentCR} = $parentCR;
 	
 	INFO "Retrieving potential childs";
 	%filter = (State => 'Analysed', substate => 'in progress', product => 'PRIMA EL II');
-	@subCR = makeQuery("ChangeRequest", \@fields, \%filter);
-	$output{subCR} = \@subCR;
+	$subCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	$output{subCR} = $subCR;
 
 	INFO "Analysing results";
 	my %results;
-	foreach my $CR (@parentCR) {
+	foreach my $CR (@$parentCR) {
 		my $child = $CR->{child_record};
 		
-		my @results = filterAnswers($output{subCR}, 'id', "^$child\$");
-		next if scalar(@results == 0);
+		my $results = filterAnswers($output{subCR}, 'id', "^$child\$");
+		next if scalar(@$results) == 0;
 		unless ($results{$CR->{id}}) {
 			$results{$CR->{id}}{fields} = $CR;
 		}
-		$results{$CR->{id}}{childs}{$child}{fields} = shift @results;
+		$results{$CR->{id}}{childs}{$child}{fields} = shift @$results;
 	}
 	
 	INFO "Found ".scalar(keys %results)." parent CR";
@@ -177,24 +177,25 @@ sub preload {
 sub changeCR {
 	my $CrToProcess = shift;
 	
-	if(not $selection{isModified} and $selection{id}) {
+	if($processedCR and not $processedCR->{isModified}) {
 	
 		my $response = $mw->messageBox(-title => "Confirmation requested", -message => "Do you want that modifications done on this CR to be registered on server?", -type => 'yesno', -icon => 'question');
 		
 		if($response eq "Yes") {
-			DEBUG "User has requested to register $selection{id}";
-			$selection{isModified} = 1;
+			DEBUG "User has requested to register $processedCR->{fields}->{id}";
+			$processedCR->{isModified} = 1;
 		}
 	}
 	
-	$listOfCRToProcess{$selection{id}} = \%selection if $selection{id};
+	#$listOfCRToProcess{$processedCR->{fields}->{id}} = $processedCR if $processedCR->{fields}->{id};
 	loadCR($CrToProcess) if $CrToProcess;
 }
 
 sub filterAnswers {
 	my ($arrayRef, $key, $value) = @_;
 	
-	return grep { $_->{$key} =~ /$value/ } @$arrayRef;
+	my @array = grep { $_->{$key} =~ /$value/ } @$arrayRef;
+	return \@array;
 }
 
 sub loadCR {
