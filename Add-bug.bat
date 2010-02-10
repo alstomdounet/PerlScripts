@@ -20,12 +20,12 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.2',
+	PROGRAM_VERSION => '2.3',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
-my %Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
-my %localConfig = loadLocalConfig("config.xml"); # Loading / preprocessing of the configuration file
+my $Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
+my $localConfig = loadLocalConfig("config.xml"); # Loading / preprocessing of the configuration file
 
 #################################
 # Global variables
@@ -104,7 +104,7 @@ use Tk::JComboBox;
 use Tk::Balloon;
 use CQPerlExt; 
 
-my $Clearquest_login = $Config{clearquest_shared}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
+my $Clearquest_login = $Config->{clearquest_shared}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
 my $crypted_string = $Clearquest_login;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
@@ -112,12 +112,12 @@ DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
 
 
 
-if (ref($Config{clearquest_shared}->{password})) {
+if (ref($Config->{clearquest_shared}->{password})) {
 	DEBUG "No credential given. Asking one for current session.";
 	
 	$| = 1;
 	
-	print "Insert hereafter password for user \'$Config{clearquest_shared}->{login}\' : ";
+	print "Insert hereafter password for user \'$Config->{clearquest_shared}->{login}\' : ";
 	use Term::ReadKey;
 	my $key;
 	$Clearquest_password = '';
@@ -129,17 +129,17 @@ if (ref($Config{clearquest_shared}->{password})) {
 	ReadMode 'normal';
 
 	INFO("Clearquest password was defined for current session.");
-	$Config{clearquest_shared}->{password} = $Clearquest_password;
+	$Config->{clearquest_shared}->{password} = $Clearquest_password;
 }
 else {
-	$Clearquest_password = $Config{clearquest_shared}->{password};	
+	$Clearquest_password = $Config->{clearquest_shared}->{password};	
 }
 
 $crypted_string = $Clearquest_password;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_password = \"$crypted_string\"";
 
-my $Clearquest_database = $Config{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
+my $Clearquest_database = $Config->{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
 DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
 
 my $windowSizeX = 640;
@@ -153,7 +153,7 @@ my $syncNeeded = 0;
 if (-r $CqDatabase) {
 	my $storedData = retrieve($CqDatabase);
 	%CqFieldsDesc = %$storedData;
-	$syncNeeded = (time() - $CqFieldsDesc{lastUpdate} - $localConfig{scriptInfos}->{refreshDatabase}) > 0;
+	$syncNeeded = (time() - $CqFieldsDesc{lastUpdate} - $localConfig->{scriptInfos}->{refreshDatabase}) > 0;
 	$syncNeeded = (PROGRAM_VERSION ne $CqFieldsDesc{scriptVersion}) unless $syncNeeded;
 }
 else { $syncNeeded = 1; }
@@ -175,16 +175,16 @@ sub syncFieldsWithClearQuest {
 	INFO "Synchronization of Clearquest fields is required.";
 	
 	INFO "Connecting to Clearquest database";
-	my $session = connectCQ($Config{clearquest_shared}->{login}, $Config{clearquest_shared}->{password}, $Config{clearquest_shared}->{database});
+	my $session = connectCQ($Config->{clearquest_shared}->{login}, $Config->{clearquest_shared}->{password}, $Config->{clearquest_shared}->{database});
 	return unless $session;
 	
 	my @fieldList = ('sub_system', 'sub_system.component', 'sub_system.component.comment');
 	
-	my %filters = ('name' => $Config{clearquest_shared}->{product});
-	my @results = makeQuery('Product', \@fieldList , \%filters);
+	my %filters = ('name' => $Config->{clearquest_shared}->{product});
+	my $results = makeQuery('Product', \@fieldList , \%filters);
 	
 	my %results;
-	foreach my $item (@results) {
+	foreach my $item (@$results) {
 		$results{$item->{'sub_system'}}{$item->{'sub_system.component'}} = $item->{'sub_system.component.comment'};
 	}
 	
@@ -208,7 +208,7 @@ sub syncFieldsWithClearQuest {
 	
 	my $rec = $session->BuildEntity("ChangeRequest");
 
-	$data->{product} = $Config{clearquest_shared}->{product};
+	$data->{product} = $Config->{clearquest_shared}->{product};
 	$rec->SetFieldValue('product', $data->{product});
 	$rec->SetFieldValue('write_arrival_state', 'Recorded');
 	
@@ -258,11 +258,11 @@ Tk::CmdLine::SetResources(  # set multiple resources
 );
 
 my $alternateStatusWhenNobugsSelected = 'disabled';
-$alternateStatusWhenNobugsSelected = 'normal' if $Config{scriptInfos}->{allowNoBugsCheckins};
+$alternateStatusWhenNobugsSelected = 'normal' if $Config->{scriptInfos}->{allowNoBugsCheckins};
 
 DEBUG "Building graphical interface";
 
-my $mw = MainWindow->new(-title => "Interface to add new bugs into \"".$Config{clearquest_shared}->{product}."\"");
+my $mw = MainWindow->new(-title => "Interface to add new bugs into \"".$Config->{clearquest_shared}->{product}."\"");
 $mw->withdraw; # disable immediate display
 $mw->minsize($windowSizeX,$windowSizeY);
 
@@ -414,7 +414,7 @@ sub sendCrToCQ {
 
 		return 0 unless -r $bugsDatabase;
 		$data = retrieve($bugsDatabase);
-		$cfg = \%Config;
+		$cfg = $Config;
 	}
 	
 	$bug = pop(@{$data->{bugList}});
@@ -840,7 +840,7 @@ sub ExportEncryptedDb {
 
 	my %data;
 	%data = %{retrieve($bugsDatabase)} if -r $bugsDatabase;
-	$data{config} = \%Config;
+	$data{config} = $Config;
 	$data{CQFields} = thaw($frozenCQFields);
 	
 	my $data = freeze(\%data);
