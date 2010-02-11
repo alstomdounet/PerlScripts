@@ -78,6 +78,7 @@ my $contentFrame;
 use Tk;
 use Tk::JComboBox;
 use Tk::Balloon;
+use Tk::Checkbutton;
 use Tk::Pane;
 
 ############################################################################################
@@ -122,7 +123,7 @@ if($response eq "Yes") {
 	
 	INFO "Retrieving all childs";
 	%filter = (product => 'PRIMA EL II', parent_record => {operator => 'IS_NOT_NULL'});
-	my @countFields = qw(realised_cost_analysis realised_cost_hardware realised_cost_software realised_cost_system realised_cost_validation);
+	my @countFields = qw(realised_cost_analysis realised_cost_hardware realised_cost_software realised_cost_system realised_cost_validation realised_version);
 	@fields = ('parent_record', 'id', 'state', 'substate', @countFields);
 	#my $subCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	#store ($subCR, 'child.db');
@@ -330,8 +331,11 @@ sub loadCR {
 	$titleFrame->Label(-text => "Titre", -width => 15 )->pack( -side => 'left' );
 	$titleFrame->Label(-text => $processedCR->{fields}{headline}, -font => 'arial 9 bold')->pack( -side => 'left', -fill => 'x', -expand => 1 );
 	
+	$processedCR->{fields}{changeState} = 1 unless exists $processedCR->{fields}{changeState};
 	addDescriptionField($parentFrame, 'Description', \$processedCR->{fields}{description}, -readonly => 1, -height => 3);
 	addDescriptionField($parentFrame, 'CCB comment', \$processedCR->{fields}{ccb_comment}, -readonly => 1, -height => 1);
+	addCheckButton($parentFrame, 'Change this parent into its Realised / in progress state', \$processedCR->{fields}{changeState});
+	$titleFrame->Label(-text => "Titre", -width => 15 )->pack( -side => 'left' );
 	
 	my $notebook = $contentFrame->NoteBook()->pack( -fill=>'both', -expand=>1 );
 	
@@ -341,6 +345,13 @@ sub loadCR {
 	}
 	$mw->geometry("640x480");
 	$buttonValidate->configure(-state => 'normal');
+}
+
+sub addCheckButton {
+	my ($parentFrame, $text, $variableRef) = @_;
+	my $titleFrame = $parentFrame->Frame() -> pack(-side => 'top', -fill => 'x');
+	$titleFrame->Label(-text => "", -width => 15 )->pack( -side => 'left' );
+	return $titleFrame->Checkbutton(-text => $text, -variable => $variableRef)->pack( -side => 'left' );
 }
 
 sub buildTab {
@@ -379,6 +390,8 @@ sub buildTab {
 	$receiver->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change});
 	
 	$receiver->{listSubsystems}->{listbox}->configure(-browsecmd => sub {updateComponents($content->{fields}{sub_system}, $receiver->{listComponents}, $receiver->{dynamicComponentList});});
+	$receiver->{checkBox} = addCheckButton($tab1, 'Pass this CR directly in Assigned state', \$content->{fields}{changeState});
+	$receiver->{checkBox}->configure(-command => sub { $receiver->{listAnalyser}->{label}->configure(-text => ($content->{fields}{changeState}) ? ('Implementer') : ('Analyst')); } );
 }
 
 sub updateComponents {	
