@@ -335,8 +335,8 @@ sub buildTab {
 	my @test;
 	foreach my $item (@{$CqFieldsDesc{sub_system}{shortDesc}}) {
 		push (@test, { -name => $item, -value => $CqFieldsDesc{sub_system}{equivTable}{$item} });
-		#push (@test, { -name => $item, -value => $item.$item });
 	}
+	
 	$receiver->{listSubsystems} = addListBox($tab1, 'Subsystem', \@test, \$content->{fields}{sub_system});
 	my @list;
 	$receiver->{dynamicComponentList} = \@list;
@@ -463,19 +463,8 @@ sub validateChanges {
 				push(@changedFields, { FieldName => $field, FieldValue => $processedCR->{fields}->{$field}});
 			}
 
-			my $entity = getEntity('ChangeRequest',$bugID);
-			editEntity($entity, 'Rectify');
-			my $result = changeFields($entity, -OrderedFields => \@changedFields);
-			if($result) {
-				$result = makeChanges($entity);
-				ERROR "Validation / commit has failed on child \"$bugID\"." and $errors_occured++ and next unless $result;
-				INFO "Modifications of child CR \"$bugID\" done correctly.";
-			}
-			else {
-				ERROR "Modifications of fields of child \"$bugID\" has not been performed correctly.";
-				$errors_occured++;
-				cancelAction($entity);
-			}
+			my $result = _performModifications {$bugID, 'Rectify', \@changedFields);
+			ERROR "$bugID was not rectified correctly" and $error++ unless $result;
 		}
 		
 		if($errors_occured) {
@@ -483,20 +472,8 @@ sub validateChanges {
 		}
 		else {
 			my $bugID = $processedCR->{fields}->{id};
-			my $entity = getEntity('ChangeRequest',$bugID);
-			editEntity($entity, 'Realise');
 			my %fields = ('work_in_progress' => 'Yes', 'realised_item' => "$childProcessed CR crées et affectées.");
-			my $result = changeFields($entity, -Fields => \%fields);
-			if($result) {
-				$result = makeChanges($entity);
-				ERROR "Parent CR \"$bugID\" has childs changed correctly, but not its state." and $errors_occured++ and next unless $result;
-				INFO "Realisation of parent CR \"$bugID\" done correctly.";
-			}
-			else {
-				ERROR "Modifications of fields of parent CR \"$bugID\" has not been performed correctly.";
-				$errors_occured++;
-				cancelAction($entity);
-			}
+			_performModifications {$processedCR->{fields}->{id}, 'Realise', undef, \%fields) or ERROR "$bugID has not changed its state in Realise / complete";
 			push (@success_CR, $processedCR->{fields}->{id});
 		}
 	}
@@ -509,6 +486,22 @@ sub validateChanges {
 	close FILE;
 	
 	INFO "All modifications done correctly. Removing backup database" and unlink $scriptDir.'modifiedCR.db';
+}
+
+sub _performModifications {
+	my ($bugID, $action, $orderedFields, $fields) = @_;
+	my $entity = getEntity('ChangeRequest',$bugID);
+	editEntity($entity, $action);
+	my $result = changeFields($entity, -OrderedFields => $orderedFields, -Fields => $fields);
+	if($result) {
+		$result = makeChanges($entity);
+		return 0 unless $result;
+		return 1;
+	}
+	else {
+		cancelAction($entity);
+		return 0;
+	}
 }
 
 sub _copyElement {
