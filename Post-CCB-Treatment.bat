@@ -122,51 +122,52 @@ if($response eq "Yes") {
 	my $subCR = retrieve('child.db');
 	
 	INFO "Analysing results";
-	my %results;
-	my %wrongResults;
-	PARENT_CR : foreach my $parent (@$parentCRList) {
-		my $CR = $parent->{id};
-		next if $wrongResults{$CR};
-		my $child = $parent->{child_record};
-		
-		foreach my $childCR (keys %$subCR) {
-			my $child = $subCR->{$childCR};
-			if($child->{parentCR}) {
-				$results{$CR}{realised_cost_analysis} += $child->{realised_cost_analysis};
-				$results{$CR}{realised_cost_hardware} += $child->{realised_cost_hardware};
-				$results{$CR}{realised_cost_software} += $child->{realised_cost_software};
-				$results{$CR}{realised_cost_system} += $child->{realised_cost_system};
-				$results{$CR}{realised_cost_validation} += $child->{realised_cost_validation};
-				delete($subCR->{$childCR});
-				next PARENT_CR;
-			}
+	my %parentList;
+	DEBUG "Preprocessing parent";
+	foreach my $parent (@$parentCRList) {
+		my $parentID = $parent->{id};
+		unless (exists $parentList{$parentID}) {
+			$parentList{$parentID}{fields} = $parent;
+			$parentList{$parentID}{result} = 'REALISED';
 		}
-		
-		# A child is missing, so it means it was not validated / Closed.
-		delete($results{$CR});
-		$wrongResults{$CR} = 1;
+		$parentList{$parentID}{$parent->{child_record}} = 1;
 	}
 	
-	foreach my $CrToClose (keys %results) {
-		INFO "Marking $CrToClose as definetely closed";
-		next;
-		my $entity = getEntity('ChangeRequest',$CrToClose);
-		editEntity($entity, 'Complete');
-		my $result = changeFields($entity, -Fields => $results{$CrToClose});
-		if($result) {
-			$result = makeChanges($entity);
-			ERROR "CR \"$CrToClose\" is not closed." unless $result;
-			INFO "Realisation of parent CR \"$CrToClose\" done correctly.";
-		}
-		else {
-			ERROR "Modifications of fields of CR \"$CrToClose\" has failed.";
-			cancelAction($entity);
-		}		
+	foreach my $child (@$subCR) {
+		next unless exists $parentList{$child->{parent_record}};
+		next unless exists $parentList{$child->{parent_record}}{$child->{id}};
+		$parentList{$child->{parent_record}}{$child->{id}} = $child;
 	}
 	
-	INFO "Found ".scalar(keys %results)." parent CR";
+	foreach my $parentID (sort keys %parentList) {
+		my $parent = $parentList{$parentID};
+		foreach my $childID (sort keys %$parent) {
+			unless(isRealised($parent->{$childID})) { $parent{result} = 'UNREALISED'; last; }
+			if(isUndefined($parent->{$childID})) { $parent{result} = 'UNDEFINED'; last; }
+		}
+	}
+	
+	DEBUG Dumper \%parentList;
 }
 exit;
+
+sub isUndefined {
+	my ($item) = @_;
+	my $state = $item->{state};
+	return 1 if $state eq 'Rejected' or $state eq 'Duplicated' or $state eq 'Updated' or $state eq 'Validation_failed' or $state eq 'Postponed';
+	return 0;
+}
+
+sub isRealised {
+	my ($item) = @_;
+	my $state = $item->{state};
+	my $substate = $item->{substate};
+
+	return 1 if $state eq 'Validated' and not $substate eq 'in progress';
+	return 1 if $state eq 'Closed';
+
+	return 0;
+}
 
 my %listOfCRToProcess = preload();
 my @listOfCR = sort keys %listOfCRToProcess;
