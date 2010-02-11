@@ -122,7 +122,8 @@ if($response eq "Yes") {
 	
 	INFO "Retrieving all childs";
 	%filter = (product => 'PRIMA EL II', parent_record => {operator => 'IS_NOT_NULL'});
-	@fields = qw(parent_record id state substate);
+	my @countFields = qw(realised_cost_analysis realised_cost_hardware realised_cost_software realised_cost_system realised_cost_validation);
+	@fields = ('parent_record', 'id', 'state', 'substate', @countFields);
 	#my $subCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	#store ($subCR, 'child.db');
 	my $subCR = retrieve('child.db');
@@ -152,10 +153,14 @@ if($response eq "Yes") {
 		foreach my $childID (sort keys %{$parent->{childs}}) {
 			my $child = $parent->{childs}->{$childID};
 			my $substate = ($child->{substate}) ? $child->{substate} : 'No substate';
-			$list .= "\t$child->{id} : $child->{state} / $substate\n";
+			$list .= "   - $child->{id} : $child->{state} / $substate\n";
 			
 			unless(isRealised($child)) { $result = UNREALISED; }
 			if(isUndefined($child)) { $result = UNDEFINED; }
+			
+			foreach my $addedField (@countFields) {
+				$parent->{fields}->{$addedField} += $child->{$addedField};
+			}
 		}
 		
 		my $complete = 0;
@@ -169,17 +174,32 @@ if($response eq "Yes") {
 			$correct = 1 if $result eq UNREALISED and not $editInProgress;
 		}
 		
+		next unless $correct or $complete;
 		my $icon = 'info';
-		my $message = "$parentID is in state $result, with following childs:\n$list\nDo you want to complete it?";
+		my $message = "$parentID is $parent->{fields}->{substate}, and has been determined as $result, with following childs:\n$list\nDo you want to complete it?";
 		if ($correct) {
 			$icon = 'error';
-			$message = "<WARNING> $parentID is in state $parent->{fields}->{substate}, but has been determined as $result, with following childs:\n$list\nIt should have been as a CR in work. Do you want to CORRECT it?";
+			$message = "$parentID is $parent->{fields}->{substate}, but has been determined as $result, with following childs:\n$list\nIt should have been defined as a CR in progress. Do you want to CORRECT it?";
 		}
 		
 		my $response = '';
 		$response = $mw->messageBox(-title => "Modification of CR in state $result", -message => $message, -type => 'yesno', -icon => $icon) if $complete or $correct;
 		if($response eq "Yes") {
-			DEBUG Dumper $parent;
+			if($correct) {
+				my %fields = ('work_in_progress' => 'Yes');
+				my $result = _performModifications($parentID, 'modify', undef, \%fields);
+				ERROR "$parentID was not corrected due to an error" and next unless $result;
+			}
+			
+			if($complete) {
+				my %fields;
+				foreach my $addedField (@countFields) {
+					$fields{$addedField} = $parent->{$addedField};
+				}
+				print Dumper \%fields;
+				#my $result = _performModifications($parentID, 'complete', undef, \%fields);
+				#ERROR "$parentID was not corrected due to an error" and next unless $result;
+			}
 		}
 	}
 }
@@ -463,8 +483,8 @@ sub validateChanges {
 				push(@changedFields, { FieldName => $field, FieldValue => $processedCR->{fields}->{$field}});
 			}
 
-			my $result = _performModifications {$bugID, 'Rectify', \@changedFields);
-			ERROR "$bugID was not rectified correctly" and $error++ unless $result;
+			my $result = _performModifications ($bugID, 'Rectify', \@changedFields);
+			ERROR "$bugID was not rectified correctly" and $errors_occured++ unless $result;
 		}
 		
 		if($errors_occured) {
@@ -473,7 +493,7 @@ sub validateChanges {
 		else {
 			my $bugID = $processedCR->{fields}->{id};
 			my %fields = ('work_in_progress' => 'Yes', 'realised_item' => "$childProcessed CR crées et affectées.");
-			_performModifications {$processedCR->{fields}->{id}, 'Realise', undef, \%fields) or ERROR "$bugID has not changed its state in Realise / complete";
+			_performModifications ($bugID, 'Realise', undef, \%fields) or ERROR "$bugID has not changed its state in Realised / complete";
 			push (@success_CR, $processedCR->{fields}->{id});
 		}
 	}
