@@ -130,24 +130,33 @@ if($response eq "Yes") {
 			$parentList{$parentID}{fields} = $parent;
 			$parentList{$parentID}{result} = 'REALISED';
 		}
-		$parentList{$parentID}{$parent->{child_record}} = 1;
+		$parentList{$parentID}{childs}{$parent->{child_record}} = 1;
 	}
 	
 	foreach my $child (@$subCR) {
 		next unless exists $parentList{$child->{parent_record}};
-		next unless exists $parentList{$child->{parent_record}}{$child->{id}};
-		$parentList{$child->{parent_record}}{$child->{id}} = $child;
+		next unless exists $parentList{$child->{parent_record}}{childs}{$child->{id}};
+		$parentList{$child->{parent_record}}{childs}{$child->{id}} = $child;
 	}
 	
 	foreach my $parentID (sort keys %parentList) {
 		my $parent = $parentList{$parentID};
-		foreach my $childID (sort keys %$parent) {
-			unless(isRealised($parent->{$childID})) { $parent{result} = 'UNREALISED'; last; }
-			if(isUndefined($parent->{$childID})) { $parent{result} = 'UNDEFINED'; last; }
+		
+		my $list = '';
+		foreach my $childID (sort keys %{$parent->{childs}}) {
+			my $child = $parent->{childs}->{$childID};
+			my $substate = ($child->{substate}) ? $child->{substate} : 'No substate';
+			$list .= "\t$child->{id} : $child->{state} / $substate\n";
+			
+			unless(isRealised($child)) { $parent->{result} = 'UNREALISED'; }
+			if(isUndefined($child)) { $parent->{result} = 'UNDEFINED'; }
+		}
+		
+		my $response = $mw->messageBox(-title => "Modification of CR in state $parent->{result}", -message => "$parentID is in state $parent->{result}, with following childs:\n$list\n\nDo you want to modify it?", -type => 'yesno', -icon => 'question');
+		if($response eq "Yes") {
+			DEBUG Dumper $parent;
 		}
 	}
-	
-	DEBUG Dumper \%parentList;
 }
 exit;
 
@@ -163,8 +172,9 @@ sub isRealised {
 	my $state = $item->{state};
 	my $substate = $item->{substate};
 
-	return 1 if $state eq 'Validated' and not $substate eq 'in progress';
 	return 1 if $state eq 'Closed';
+	return 1 if $state eq 'Validated' and not $substate eq 'in progress';
+	return 1 if $state eq 'Realised' and $substate eq 'complete';
 
 	return 0;
 }
