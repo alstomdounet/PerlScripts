@@ -11,7 +11,7 @@ use Common;
 use Storable qw(store retrieve);
 use Tk::NoteBook;
 use Data::Dumper;
-use ClearquestMgt qw(changeFields makeQuery makeChanges connectCQ disconnectCQ getChangeRequestFields getEntity editEntity getEntityFields getChilds getAvailableActions getFieldsRequiredness cancelAction); 
+use ClearquestMgt qw(changeFields makeQuery makeChanges connectCQ disconnectCQ getEntity editEntity getEntityFields getChilds getAvailableActions getFieldsRequiredness cancelAction); 
 
 use GraphicalCommon;
 
@@ -61,14 +61,6 @@ DEBUG "Using \$Clearquest_password = \"$crypted_string\"";
 my $Clearquest_database = $Config->{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
 DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
 
-
-my %CqFieldsDesc;
-my $CqDatabase = getSharedDirectory().'ClearquestFieldsImage.db';
-if (-r $CqDatabase) {
-	my $storedData = retrieve($CqDatabase);
-	%CqFieldsDesc = %$storedData;
-}
-else { LOGDIE "No valid database found in \"$CqDatabase\""; }
 my $processedCR;
 my $processedCRUI;
 my $contentFrame;
@@ -105,6 +97,76 @@ DEBUG "Building graphical interface";
 my $mw = MainWindow->new(-title => "Interface to distribute bugs");
 $mw->withdraw; # disable immediate display
 $mw->minsize(640,480);
+
+my $CqDatabase = getSharedDirectory().'ClearquestFieldsImage.db';
+LOGDIE "No valid database found in \"$CqDatabase\"" unless -r $CqDatabase;
+my %CqFieldsDesc = %{retrieve($CqDatabase)};
+
+my $response = $mw->messageBox(-title => "Confirmation request", -message => "Do you want to complete automatically CR\nwhich are currently in progress (if possible)?", -type => 'yesno', -icon => 'question');
+
+INFO "Connecting to Clearquest";
+#connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
+
+if($response eq "Yes") {
+	my %filter = (state => 'Realised', product => 'PRIMA EL II', child_record => {operator => 'IS_NOT_NULL'} );
+	my @fields = qw(id child_record state substate);
+	#my $parentCRList = makeQuery("ChangeRequest", \@fields, \%filter);
+	#store ($parentCRList, 'parentDB.db');
+	my $parentCRList = retrieve('parentDB.db');
+	
+	INFO "Retrieving all childs";
+	%filter = (product => 'PRIMA EL II', parent_record => {operator => 'IS_NOT_NULL'});
+	@fields = qw(parent_record id state substate);
+	#my $subCR = makeQuery("ChangeRequest", \@fields, \%filter);
+	#store ($subCR, 'child.db');
+	my $subCR = retrieve('child.db');
+	
+	INFO "Analysing results";
+	my %results;
+	my %wrongResults;
+	PARENT_CR : foreach my $parent (@$parentCRList) {
+		my $CR = $parent->{id};
+		next if $wrongResults{$CR};
+		my $child = $parent->{child_record};
+		
+		foreach my $childCR (keys %$subCR) {
+			my $child = $subCR->{$childCR};
+			if($child->{parentCR}) {
+				$results{$CR}{realised_cost_analysis} += $child->{realised_cost_analysis};
+				$results{$CR}{realised_cost_hardware} += $child->{realised_cost_hardware};
+				$results{$CR}{realised_cost_software} += $child->{realised_cost_software};
+				$results{$CR}{realised_cost_system} += $child->{realised_cost_system};
+				$results{$CR}{realised_cost_validation} += $child->{realised_cost_validation};
+				delete($subCR->{$childCR});
+				next PARENT_CR;
+			}
+		}
+		
+		# A child is missing, so it means it was not validated / Closed.
+		delete($results{$CR});
+		$wrongResults{$CR} = 1;
+	}
+	
+	foreach my $CrToClose (keys %results) {
+		INFO "Marking $CrToClose as definetely closed";
+		next;
+		my $entity = getEntity('ChangeRequest',$CrToClose);
+		editEntity($entity, 'Complete');
+		my $result = changeFields($entity, -Fields => $results{$CrToClose});
+		if($result) {
+			$result = makeChanges($entity);
+			ERROR "CR \"$CrToClose\" is not closed." unless $result;
+			INFO "Realisation of parent CR \"$CrToClose\" done correctly.";
+		}
+		else {
+			ERROR "Modifications of fields of CR \"$CrToClose\" has failed.";
+			cancelAction($entity);
+		}		
+	}
+	
+	INFO "Found ".scalar(keys %results)." parent CR";
+}
+exit;
 
 my %listOfCRToProcess = preload();
 my @listOfCR = sort keys %listOfCRToProcess;
@@ -144,15 +206,14 @@ sub preload {
 	
 	INFO "Connecting to Clearquest";
 	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
-	INFO "Retrieving potential parents";
+	INFO "Retrieving all parents";
 	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version);
-	my %filter = (State => 'Assigned', product => 'PRIMA EL II');
+	my %filter = (State => 'Assigned', product => 'PRIMA EL II', child_record => {operator => 'IS_NOT_NULL'});
 	$parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
-	$parentCR = filterAnswers($parentCR, 'child_record','^.+$'); # Finds all parent CR
 	$output{parentCR} = $parentCR;
 	
-	INFO "Retrieving potential childs";
-	%filter = (State => 'Analysed', substate => 'in progress', product => 'PRIMA EL II');
+	INFO "Retrieving all childs";
+	%filter = (State => 'Analysed', substate => 'in progress', product => 'PRIMA EL II', parent_record => {operator => 'IS_NOT_NULL'});
 	$subCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	$output{subCR} = $subCR;
 
@@ -309,8 +370,6 @@ sub retrieveBug {
 		return %$bug;
 	}
 	
-	INFO "Connecting to Clearquest";
-	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 	INFO "Retrieving needed informations";
 	my $entity = getEntity('ChangeRequest',$bugID);
 	my %fields = getEntityFields($entity);
@@ -352,9 +411,11 @@ sub validateChanges {
 		INFO "Processing parent CR \"$processedCR->{fields}->{id}\"";
 
 		my $errors_occured = 0;
+		my $childProcessed = 0;
 		foreach my $bugID (sort keys %{$processedCR->{childs}}) {
 			DEBUG "Processing child CR \"$bugID\"";
 			my $CR = $processedCR->{childs}->{$bugID}->{fields};
+			$childProcessed++;
 			
 			my @changedFields;
 			
@@ -385,6 +446,21 @@ sub validateChanges {
 			push (@failed_CR, $processedCR->{fields}->{id});
 		}
 		else {
+			my $bugID = $processedCR->{fields}->{id};
+			my $entity = getEntity('ChangeRequest',$bugID);
+			editEntity($entity, 'Realise');
+			my %fields = ('work_in_progress' => 'Yes', 'realised_item' => "$childProcessed CR crées et affectées.");
+			my $result = changeFields($entity, -Fields => \%fields);
+			if($result) {
+				$result = makeChanges($entity);
+				ERROR "Parent CR \"$bugID\" has childs changed correctly, but not its state." and $errors_occured++ and next unless $result;
+				INFO "Realisation of parent CR \"$bugID\" done correctly.";
+			}
+			else {
+				ERROR "Modifications of fields of parent CR \"$bugID\" has not been performed correctly.";
+				$errors_occured++;
+				cancelAction($entity);
+			}
 			push (@success_CR, $processedCR->{fields}->{id});
 		}
 	}
