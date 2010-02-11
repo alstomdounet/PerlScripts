@@ -19,6 +19,12 @@ use constant {
 	PROGRAM_VERSION => '0.4'
 };
 
+use constant {
+	UNDEFINED => 'UNDEFINED',
+	UNREALISED => 'UNREALISED',
+	REALISED => 'REALISED',
+};
+
 ############################################################################################
 # 
 ############################################################################################
@@ -128,7 +134,6 @@ if($response eq "Yes") {
 		my $parentID = $parent->{id};
 		unless (exists $parentList{$parentID}) {
 			$parentList{$parentID}{fields} = $parent;
-			$parentList{$parentID}{result} = 'REALISED';
 		}
 		$parentList{$parentID}{childs}{$parent->{child_record}} = 1;
 	}
@@ -141,6 +146,7 @@ if($response eq "Yes") {
 	
 	foreach my $parentID (sort keys %parentList) {
 		my $parent = $parentList{$parentID};
+		my $result = REALISED;
 		
 		my $list = '';
 		foreach my $childID (sort keys %{$parent->{childs}}) {
@@ -148,11 +154,30 @@ if($response eq "Yes") {
 			my $substate = ($child->{substate}) ? $child->{substate} : 'No substate';
 			$list .= "\t$child->{id} : $child->{state} / $substate\n";
 			
-			unless(isRealised($child)) { $parent->{result} = 'UNREALISED'; }
-			if(isUndefined($child)) { $parent->{result} = 'UNDEFINED'; }
+			unless(isRealised($child)) { $result = UNREALISED; }
+			if(isUndefined($child)) { $result = UNDEFINED; }
 		}
 		
-		my $response = $mw->messageBox(-title => "Modification of CR in state $parent->{result}", -message => "$parentID is in state $parent->{result}, with following childs:\n$list\n\nDo you want to modify it?", -type => 'yesno', -icon => 'question');
+		my $complete = 0;
+		my $correct = 0;
+		my $editInProgress = $parent->{fields}->{substate} eq 'in progress';
+		if($result eq UNDEFINED) {
+			($editInProgress) ? ($complete = 1) : ($correct = 1);
+		}
+		else {
+			$complete = 1 if $result eq REALISED and $editInProgress;
+			$correct = 1 if $result eq UNREALISED and not $editInProgress;
+		}
+		
+		my $icon = 'info';
+		my $message = "$parentID is in state $result, with following childs:\n$list\nDo you want to complete it?";
+		if ($correct) {
+			$icon = 'error';
+			$message = "<WARNING> $parentID is in state $parent->{fields}->{substate}, but has been determined as $result, with following childs:\n$list\nIt should have been as a CR in work. Do you want to CORRECT it?";
+		}
+		
+		my $response = '';
+		$response = $mw->messageBox(-title => "Modification of CR in state $result", -message => $message, -type => 'yesno', -icon => $icon) if $complete or $correct;
 		if($response eq "Yes") {
 			DEBUG Dumper $parent;
 		}
