@@ -116,7 +116,7 @@ INFO "Connecting to Clearquest";
 
 if($response eq "Yes") {
 	my %filter = (state => 'Realised', product => 'PRIMA EL II', child_record => {operator => 'IS_NOT_NULL'} );
-	my @fields = qw(id child_record state substate);
+	my @fields = qw(id child_record state substate implementer);
 	#my $parentCRList = makeQuery("ChangeRequest", \@fields, \%filter);
 	#store ($parentCRList, 'parentDB.db');
 	my $parentCRList = retrieve('parentDB.db');
@@ -204,7 +204,6 @@ if($response eq "Yes") {
 		}
 	}
 }
-exit;
 
 sub isUndefined {
 	my ($item) = @_;
@@ -225,7 +224,9 @@ sub isRealised {
 	return 0;
 }
 
-my %listOfCRToProcess = preload();
+#my %listOfCRToProcess = preload();
+#store(\%listOfCRToProcess, 'CRList.db');
+my %listOfCRToProcess = %{retrieve('CRList.db')};
 my @listOfCR = sort keys %listOfCRToProcess;
 #my %selection;
 
@@ -335,7 +336,6 @@ sub loadCR {
 	addDescriptionField($parentFrame, 'Description', \$processedCR->{fields}{description}, -readonly => 1, -height => 3);
 	addDescriptionField($parentFrame, 'CCB comment', \$processedCR->{fields}{ccb_comment}, -readonly => 1, -height => 1);
 	addCheckButton($parentFrame, 'Change this parent into its Realised / in progress state', \$processedCR->{fields}{changeState});
-	$titleFrame->Label(-text => "Titre", -width => 15 )->pack( -side => 'left' );
 	
 	my $notebook = $contentFrame->NoteBook()->pack( -fill=>'both', -expand=>1 );
 	
@@ -360,6 +360,8 @@ sub buildTab {
 	$receiver->{tabName} = $tabName;
 	
 	my $tab1 = $notebook->add($tabName, -label => $tabName);
+	
+	$receiver->{checkBox} = addCheckButton($tab1, 'Pass this CR directly in Assigned state', \$content->{fields}{changeState});
 
 	my (@mandatoryFields, @listSubSystems);
 	$receiver->{tab} = $tab1;
@@ -390,7 +392,6 @@ sub buildTab {
 	$receiver->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change});
 	
 	$receiver->{listSubsystems}->{listbox}->configure(-browsecmd => sub {updateComponents($content->{fields}{sub_system}, $receiver->{listComponents}, $receiver->{dynamicComponentList});});
-	$receiver->{checkBox} = addCheckButton($tab1, 'Pass this CR directly in Assigned state', \$content->{fields}{changeState});
 	$receiver->{checkBox}->configure(-command => sub { $receiver->{listAnalyser}->{label}->configure(-text => ($content->{fields}{changeState}) ? ('Implementer') : ('Analyst')); } );
 }
 
