@@ -123,8 +123,8 @@ if($response eq "Yes") {
 	
 	INFO "Retrieving all childs";
 	%filter = (product => 'PRIMA EL II', parent_record => {operator => 'IS_NOT_NULL'});
-	my @countFields = qw(realised_cost_analysis realised_cost_hardware realised_cost_software realised_cost_system realised_cost_validation realised_version);
-	@fields = ('parent_record', 'id', 'state', 'substate', @countFields);
+	my @countFields = qw(realised_cost_analysis realised_cost_hardware realised_cost_software realised_cost_system realised_cost_validation);
+	@fields = ('parent_record', 'id', 'state', 'substate', 'realised_version', @countFields);
 	#my $subCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	#store ($subCR, 'child.db');
 	my $subCR = retrieve('child.db');
@@ -160,7 +160,7 @@ if($response eq "Yes") {
 			if(isUndefined($child)) { $result = UNDEFINED; }
 			
 			foreach my $addedField (@countFields) {
-				$parent->{fields}->{$addedField} += $child->{$addedField};
+				$parent->{fields}->{$addedField} += $child->{$addedField} if $child->{$addedField};
 			}
 		}
 		
