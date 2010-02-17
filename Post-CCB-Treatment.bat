@@ -23,6 +23,7 @@ use constant {
 	UNDEFINED => 'UNDEFINED',
 	UNREALISED => 'UNREALISED',
 	REALISED => 'REALISED',
+	DEFAULT_VALIDATOR => 'deder',
 };
 
 ############################################################################################
@@ -103,7 +104,7 @@ DEBUG "Building graphical interface";
 
 my $mw = MainWindow->new(-title => "Interface to distribute bugs");
 $mw->withdraw; # disable immediate display
-$mw->minsize(640,480);
+$mw->minsize(640,500);
 
 my $CqDatabase = getSharedDirectory().'ClearquestFieldsImage.db';
 LOGDIE "No valid database found in \"$CqDatabase\"" unless -r $CqDatabase;
@@ -334,7 +335,7 @@ sub loadCR {
 	
 	$processedCR->{fields}{changeState} = 1 unless exists $processedCR->{fields}{changeState};
 	addDescriptionField($parentFrame, 'Description', \$processedCR->{fields}{description}, -readonly => 1, -height => 3);
-	addDescriptionField($parentFrame, 'CCB comment', \$processedCR->{fields}{ccb_comment}, -readonly => 1, -height => 1);
+	addDescriptionField($parentFrame, 'CCB comment', \$processedCR->{fields}{ccb_comment}, -height => 1);
 	addCheckButton($parentFrame, 'Change this parent into its Realised / in progress state', \$processedCR->{fields}{changeState});
 	
 	my $notebook = $contentFrame->NoteBook()->pack( -fill=>'both', -expand=>1 );
@@ -343,7 +344,7 @@ sub loadCR {
 		DEBUG "Processing child $subID";
 		buildTab($notebook,$subID,$processedCR->{childs}{$subID}, $processedCRUI->{childs}{$subID}, $id);
 	}
-	$mw->geometry("640x480");
+	$mw->geometry("640x500");
 	$buttonValidate->configure(-state => 'normal');
 }
 
@@ -388,8 +389,8 @@ sub buildTab {
 	
 	$receiver->{listAnalyser} = addListBox($tab1, 'Analyst', $CqFieldsDesc{analyst}{shortDesc}, \$content->{fields}{analyst}, -searchable => 0);
 	$receiver->{listTypes} = addListBox($tab1, 'Type', $CqFieldsDesc{submitter_CR_type}{shortDesc}, \$content->{fields}{submitter_cr_type});
-	$receiver->{TextImpactedItems} = addDescriptionField($tab1, 'Impacted items', \$content->{fields}{impacted_items}, -height => 1);
-	$receiver->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change});
+	$receiver->{TextImpactedItems} = addDescriptionField($tab1, 'Impacted items', \$content->{fields}{impacted_items}, -height => 10);
+	$receiver->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change}, -height => 10);
 	
 	$receiver->{listSubsystems}->{listbox}->configure(-browsecmd => sub {updateComponents($content->{fields}{sub_system}, $receiver->{listComponents}, $receiver->{dynamicComponentList});});
 	$receiver->{checkBox}->configure(-command => sub { $receiver->{listAnalyser}->{label}->configure(-text => ($content->{fields}{changeState}) ? ('Implementer') : ('Analyst')); } );
@@ -490,6 +491,7 @@ sub validateChanges {
 			my @changedFields;
 			
 			foreach my $field (@selectedFields) {
+				next if $field eq 'analyst' and $CR->{changeState}; # If it has to change state, then it is not necessary to change analyst.
 				push(@changedFields, { FieldName => $field, FieldValue => $CR->{$field}});
 			}
 			
@@ -498,14 +500,25 @@ sub validateChanges {
 			}
 
 			my $result = _performModifications ($bugID, 'Rectify', \@changedFields);
-			ERROR "$bugID was not rectified correctly" and $errors_occured++ unless $result;
+			ERROR "$bugID was not rectified correctly" and $errors_occured++ and next unless $result;
+			if($CR->{changeState}) {
+				my %fields = (estimated_cost_validation => 0, estimated_cost_system => 0, estimated_cost_hardware => 0, estimated_cost_software => 0);
+				$result = _performModifications ($bugID, 'Complete', \%fields);
+				ERROR "$bugID was not completed correctly" and $errors_occured++ and next unless $result;
+				
+				%fields = (implementer => $CR->{analyst}, ccb_comment => $processedCR->{fields}->{ccb_comment}, validator => DEFAULT_VALIDATOR);
+				$result = _performModifications ($bugID, 'Assign', \%fields);
+				ERROR "$bugID was not completed correctly" and $errors_occured++ and next unless $result;	
+			}
 		}
 		
 		if($errors_occured) {
 			push (@failed_CR, $processedCR->{fields}->{id});
 		}
-		else {
+		elsif ($processedCR->{fields}->{changeState}) {
 			my $bugID = $processedCR->{fields}->{id};
+			DEBUG "Changing state of $bugID in realised / in progress";
+
 			my %fields = ('work_in_progress' => 'Yes', 'realised_item' => "$childProcessed CR crées et affectées.");
 			_performModifications ($bugID, 'Realise', undef, \%fields) or ERROR "$bugID has not changed its state in Realised / complete";
 			push (@success_CR, $processedCR->{fields}->{id});
