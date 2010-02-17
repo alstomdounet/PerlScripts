@@ -37,7 +37,49 @@ my $scriptDir = getScriptDirectory();
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
 
-my $Clearquest_password;
+my $Clearquest_database = $Config->{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
+DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
+
+#################################
+# Main thread : this one is used to lauch auxiliary tasks
+#################################
+use threads;                    # Pour créer nos threads
+use threads::shared;            # Pour partager nos données entre threads
+
+my $killThread : shared;          # Permet de tuer le thread proprement
+my $FunctionName : shared;         # Contient le nom de la fonction à appeler
+my $ThreadWorking : shared;       # Contient la valeur permettant au thread de lancer une procédure
+my @ArgumentsThread : shared;     # Contient les arguements à passer à une éventuelle procédure
+my $ResultFunction : shared;    # Contient le résultat des fonctions lancées dans le thread
+my $frozenListCR : shared;
+my $Clearquest_password : shared;
+
+$ThreadWorking = 0;               # 0 : thread ne fait rien, 1 : il bosse
+$killThread    = 0;               # 0 : thread en vie, 1 : thread se termine
+
+
+my $Thread = threads->create( \&SubProcessesThread ); # Thread creation
+#################################
+# Main thread : this one is used to lauch auxiliary tasks
+sub SubProcessesThread {
+	my %FunctionsThreaded = ( "sendCrToCQ" => \&sendCrToCQ );
+	DEBUG "Thread is started";
+
+	while ($killThread != 1) { 	# Loop while we don't request to kill the thread
+		if ( $ThreadWorking == 1 ) {     # Request thread to initiate its work
+			DEBUG "Thread has began its task (function '$FunctionName')";
+			$ResultFunction = $FunctionsThreaded{$FunctionName}->(@ArgumentsThread); # Launch function
+
+			$ThreadWorking = 0; # Thread has finished its work
+			DEBUG "Thread has finished its task";
+		}
+		sleep 1;
+    }
+	DEBUG "Thread is about to exit";
+	$killThread = 0;
+	return;
+}
+
 if (ref($Config->{clearquest_shared}->{password})) {
 	DEBUG "No credential given. Asking one for current session.";
 	
@@ -65,8 +107,6 @@ $crypted_string = $Clearquest_password;
 $crypted_string =~ s/./*/g;
 DEBUG "Using \$Clearquest_password = \"$crypted_string\"";
 
-my $Clearquest_database = $Config->{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
-DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
 
 my $processedCR;
 my $processedCRUI;
@@ -208,7 +248,7 @@ if($response eq "Yes") {
 
 sub isUndefined {
 	my ($item) = @_;
-	my $state = $item->{state};
+	my $state = $item->{state} or LOGDIE "State is not defined";
 	return 1 if $state eq 'Rejected' or $state eq 'Duplicated' or $state eq 'Updated' or $state eq 'Validation_failed' or $state eq 'Postponed';
 	return 0;
 }
@@ -457,6 +497,79 @@ sub retrieveBug {
 	return %bug;
 }
 
+sub sendCrToCQ {
+	my $session = shift;
+	my $externalParams = shift;
+	
+	DEBUG "Using parameters provided by some database files";
+	my $listCR = retrieve($scriptDir.'modifiedCR.db');
+	
+	my @selectedFields = qw(sub_system component analyst impacted_items submitter_cr_type proposed_change);
+	my @copiedFieldsFromParent = qw(zone scheduled_version);
+
+	INFO "Connecting to clearquest database \"$Clearquest_database\" with user \"$Clearquest_login\"";
+	$session = connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
+	
+	my @success_CR;
+	my @failed_CR;
+	foreach my $listCR (values %$listCR) {
+		next unless $listCR->{isModified};
+		INFO "Processing parent CR \"$listCR->{fields}->{id}\"";
+
+		my $errors_occured = 0;
+		my $childProcessed = 0;
+		foreach my $bugID (sort keys %{$listCR->{childs}}) {
+			INFO "Processing child CR \"$bugID\"";
+			my $CR = $listCR->{childs}->{$bugID}->{fields};
+			$childProcessed++;
+			
+			my @changedFields;
+			
+			foreach my $field (@selectedFields) {
+				next if $field eq 'analyst' and $CR->{changeState}; # If it has to change state, then it is not necessary to change analyst.
+				push(@changedFields, { FieldName => $field, FieldValue => $CR->{$field}});
+			}
+			
+			foreach my $field (@copiedFieldsFromParent) {
+				push(@changedFields, { FieldName => $field, FieldValue => $listCR->{fields}->{$field}});
+			}
+
+			my $result = _performModifications ($bugID, 'Rectify', \@changedFields);
+			ERROR "$bugID was not rectified correctly" and $errors_occured++ and next unless $result;
+			if($CR->{changeState}) {
+				my %fields = (realised_cost_analysis => 0, estimated_cost_validation => 0, estimated_cost_system => 0, estimated_cost_hardware => 0, estimated_cost_software => 0);
+				$result = _performModifications ($bugID, 'Complete', undef, \%fields);
+				ERROR "$bugID was not completed correctly" and $errors_occured++ and next unless $result;
+				
+								%fields = (implementer => $CR->{analyst}, ccb_comment => $listCR->{fields}->{ccb_comment}, validator => DEFAULT_VALIDATOR);
+				$result = _performModifications ($bugID, 'Assign', undef, \%fields);
+				ERROR "$bugID was not completed correctly" and $errors_occured++ and next unless $result;	
+			}
+		}
+		
+		if($errors_occured) {
+			push (@failed_CR, $listCR->{fields}->{id});
+		}
+		elsif ($listCR->{fields}->{changeState}) {
+			my $bugID = $listCR->{fields}->{id};
+			DEBUG "Changing state of $bugID in realised / in progress";
+
+			my %fields = ('work_in_progress' => 'Yes', 'realised_item' => "$childProcessed CR crées et affectées.");
+			_performModifications ($bugID, 'Realise', undef, \%fields) or ERROR "$bugID has not changed its state in Realised / complete";
+			push (@success_CR, $listCR->{fields}->{id});
+		}
+	}
+
+	open FILE, ">${scriptDir}Report.txt";
+	
+	print FILE "Hereafter are correctly modified parent CR:\n - ".join("\n - ", @success_CR)  if scalar (@success_CR) > 0;
+	print FILE "\n\nHereafter are failed parent CR:\n - ".join("\n - ", @failed_CR) if scalar (@failed_CR) > 0;
+	
+	close FILE;
+	
+	INFO "All modifications done correctly. Removing backup database" and unlink $scriptDir.'modifiedCR.db';
+}
+
 sub validateChanges {
 	changeCR();
 	
@@ -469,70 +582,16 @@ sub validateChanges {
 	my $saved_output = _copyElement(\%listOfCRToProcess);
 	store $saved_output, $scriptDir.'modifiedCR.db';
 	
-	my @selectedFields = qw(sub_system component analyst impacted_items submitter_cr_type proposed_change);
-	my @copiedFieldsFromParent = qw(zone scheduled_version);
-
-	INFO "Connecting to clearquest database \"$Clearquest_database\" with user \"$Clearquest_login\"";
-	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
-	
-	my @success_CR;
-	my @failed_CR;
-	foreach my $processedCR (values %listOfCRToProcess) {
-		next unless $processedCR->{isModified};
-		INFO "Processing parent CR \"$processedCR->{fields}->{id}\"";
-
-		my $errors_occured = 0;
-		my $childProcessed = 0;
-		foreach my $bugID (sort keys %{$processedCR->{childs}}) {
-			DEBUG "Processing child CR \"$bugID\"";
-			my $CR = $processedCR->{childs}->{$bugID}->{fields};
-			$childProcessed++;
+	$FunctionName = 'sendCrToCQ';
+	#@ArgumentsThread = ($session);
+	$ThreadWorking = 1;
 			
-			my @changedFields;
-			
-			foreach my $field (@selectedFields) {
-				next if $field eq 'analyst' and $CR->{changeState}; # If it has to change state, then it is not necessary to change analyst.
-				push(@changedFields, { FieldName => $field, FieldValue => $CR->{$field}});
-			}
-			
-			foreach my $field (@copiedFieldsFromParent) {
-				push(@changedFields, { FieldName => $field, FieldValue => $processedCR->{fields}->{$field}});
-			}
-
-			my $result = _performModifications ($bugID, 'Rectify', \@changedFields);
-			ERROR "$bugID was not rectified correctly" and $errors_occured++ and next unless $result;
-			if($CR->{changeState}) {
-				my %fields = (estimated_cost_validation => 0, estimated_cost_system => 0, estimated_cost_hardware => 0, estimated_cost_software => 0);
-				$result = _performModifications ($bugID, 'Complete', \%fields);
-				ERROR "$bugID was not completed correctly" and $errors_occured++ and next unless $result;
-				
-				%fields = (implementer => $CR->{analyst}, ccb_comment => $processedCR->{fields}->{ccb_comment}, validator => DEFAULT_VALIDATOR);
-				$result = _performModifications ($bugID, 'Assign', \%fields);
-				ERROR "$bugID was not completed correctly" and $errors_occured++ and next unless $result;	
-			}
-		}
-		
-		if($errors_occured) {
-			push (@failed_CR, $processedCR->{fields}->{id});
-		}
-		elsif ($processedCR->{fields}->{changeState}) {
-			my $bugID = $processedCR->{fields}->{id};
-			DEBUG "Changing state of $bugID in realised / in progress";
-
-			my %fields = ('work_in_progress' => 'Yes', 'realised_item' => "$childProcessed CR crées et affectées.");
-			_performModifications ($bugID, 'Realise', undef, \%fields) or ERROR "$bugID has not changed its state in Realised / complete";
-			push (@success_CR, $processedCR->{fields}->{id});
-		}
+	DEBUG "Waiting that thread finishes its task...";
+	while ($ThreadWorking == 1) {
+		sleep 1;
+		$mw->update;
 	}
-
-	open FILE, ">${scriptDir}Report.txt";
 	
-	print FILE "Hereafter are correctly modified parent CR:\n - ".join("\n - ", @success_CR)  if scalar (@success_CR) > 0;
-	print FILE "\n\nHereafter are failed parent CR:\n - ".join("\n - ", @failed_CR) if scalar (@failed_CR) > 0;
-	
-	close FILE;
-	
-	INFO "All modifications done correctly. Removing backup database" and unlink $scriptDir.'modifiedCR.db';
 }
 
 sub _performModifications {
