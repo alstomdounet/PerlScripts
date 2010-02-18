@@ -63,12 +63,19 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		
 		my %tableElements = ('TABLE_NAME', $table->{title});
 		
-		if($table->{type}) {
-			my $type;
-			$type = 'DOCLIST' if ($table->{type} =~ /^documentation$/);
-			$type = 'GENERICLIST' if ($table->{type} =~ /^generic$/);
-			LOGDIE "Type $table->{type} is unknown" unless $type;
-			$tableElements{$type} = 1;
+		if(not $table->{type}) {
+			DEBUG "Requesting standard template";
+		}
+		elsif($table->{type} =~ /^generic$/) {
+			DEBUG "Requesting generic template";
+			$tableElements{GENERICLIST} = 1;
+		}
+		elsif ($table->{type} =~ /^documentation$/) {
+			DEBUG "Requesting documentation template";
+			$tableElements{DOCLIST} = 1;
+		}
+		else {
+			LOGDIE "Type $table->{type} is unknown";
 		}
 		
 		push(@tables, \%tableElements);
