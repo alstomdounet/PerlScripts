@@ -40,6 +40,9 @@ my $AFTER_REF = $config->{defaultParams}->{references}->{target};
 my $ANALYSED_DIRECTORY =  $config->{defaultParams}->{analysedDirectory};
 my $EQUIV_TABLE = loadCSV($config->{defaultParams}->{equivTable}) if $config->{defaultParams}->{equivTable};
 
+INFO "Connecting to Clearquest with login $CQConfig->{clearquest_shared}->{login}";
+connectCQ($CQConfig->{clearquest_shared}->{login}, $CQConfig->{clearquest_shared}->{password}, $CQConfig->{clearquest_shared}->{database});
+
 foreach my $document (@{$config->{documents}->{document}}) {
 	INFO "Processing document \"$document->{title}\"";
 	$document->{title} = 'Titre manquant' unless $document->{title};
@@ -48,13 +51,12 @@ foreach my $document (@{$config->{documents}->{document}}) {
 	my $ANALYSED_DIRECTORY_DOC = localizeVariable($ANALYSED_DIRECTORY, $document->{defaultParams}->{analysedDirectory});
 	
 	foreach my $table (@{$document->{tables}->{table}}) {
-		INFO "Procesing table \"$table->{title}\"";	
+		INFO "Processing table \"$table->{title}\"";	
 		$table->{title} = 'Titre manquant' unless $table->{title};
 		my $BEFORE_REF_TABLE = localizeVariable($BEFORE_REF_DOC, $table->{references}->{reference});
 		my $AFTER_REF_TABLE = localizeVariable($AFTER_REF_DOC, $table->{references}->{target});
 		my $ANALYSED_DIRECTORY_TABLE = localizeVariable($ANALYSED_DIRECTORY_DOC, $table->{analysedDirectory});
 		
-		#connectCQ($CQConfig->{clearquest_shared}->{login}, $CQConfig->{clearquest_shared}->{password}, $CQConfig->{clearquest_shared}->{database});
 
 		makeCQQuery($config->{CQ_Queries}->{listVersions}, 'versions.db');
 		my $listCR = makeCQQuery($config->{CQ_Queries}->{listCR}, 'AllCR.db');
@@ -65,14 +67,12 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		print FILE Dumper $docBiasis;
 		close FILE;
 		
-		#my $BEFORE_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $BEFORE_REF_TABLE);
-		#my $AFTER_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $AFTER_REF_TABLE);
-		#my $results = compareLabels($ANALYSED_DIRECTORY_TABLE, $BEFORE_LIST, $AFTER_LIST);
+		my $BEFORE_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $BEFORE_REF_TABLE);
+		my $AFTER_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $AFTER_REF_TABLE);
+		my $results = compareLabels($ANALYSED_DIRECTORY_TABLE, $BEFORE_LIST, $AFTER_LIST);
 		
-		my $results = retrieve('test.db');
-		#store($results, 'test.db');
-		
-		
+		#my $results = retrieve('test.db');
+		store($results, 'test.db');
 		
 		buildTable($EQUIV_TABLE, $results, $docBiasis);
 	}
