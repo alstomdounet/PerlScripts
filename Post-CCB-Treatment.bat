@@ -14,6 +14,7 @@ use Data::Dumper;
 use ClearquestMgt qw(changeFields makeQuery makeChanges connectCQ disconnectCQ getEntity editEntity getEntityFields getChilds getAvailableActions getFieldsRequiredness cancelAction); 
 
 use GraphicalCommon;
+use ClearquestCommon;
 
 use constant {
 	PROGRAM_VERSION => '0.4'
@@ -306,7 +307,7 @@ sub preload {
 	INFO "Connecting to Clearquest";
 	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 	INFO "Retrieving all parents";
-	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version);
+	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version scheduled_version.name);
 	my %filter = (State => 'Assigned', product => 'PRIMA EL II', child_record => {operator => 'IS_NOT_NULL'});
 	$parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	$output{parentCR} = $parentCR;
