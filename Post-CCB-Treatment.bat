@@ -13,8 +13,9 @@ use Tk::NoteBook;
 use Data::Dumper;
 use ClearquestMgt qw(changeFields makeQuery makeChanges connectCQ disconnectCQ getEntity editEntity getEntityFields getChilds getAvailableActions getFieldsRequiredness cancelAction); 
 
-use GraphicalCommon;
 use ClearquestCommon;
+use GraphicalCommon;
+
 
 use constant {
 	PROGRAM_VERSION => '0.4'
@@ -154,22 +155,22 @@ my %CqFieldsDesc = %{retrieve($CqDatabase)};
 my $response = $mw->messageBox(-title => "Confirmation request", -message => "Do you want to complete automatically CR\nwhich are currently in progress (if possible)?", -type => 'yesno', -icon => 'question');
 
 INFO "Connecting to Clearquest";
-#connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
+connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 
 if($response eq "Yes") {
 	my %filter = (state => 'Realised', product => 'PRIMA EL II', child_record => {operator => 'IS_NOT_NULL'} );
-	my @fields = qw(id child_record state substate implementer);
-	#my $parentCRList = makeQuery("ChangeRequest", \@fields, \%filter);
-	#store ($parentCRList, 'parentDB.db');
-	my $parentCRList = retrieve('parentDB.db');
+	my @fields = qw(id child_record state substate implementer realised_item);
+	my $parentCRList = makeQuery("ChangeRequest", \@fields, \%filter); store ($parentCRList, 'parentDB.db');
+
+	#my $parentCRList = retrieve('parentDB.db');
 	
 	INFO "Retrieving all childs";
 	%filter = (product => 'PRIMA EL II', parent_record => {operator => 'IS_NOT_NULL'});
-	my @countFields = qw(realised_cost_analysis realised_cost_hardware realised_cost_software realised_cost_system realised_cost_validation);
-	@fields = ('parent_record', 'id', 'state', 'substate', 'realised_version', @countFields);
-	#my $subCR = makeQuery("ChangeRequest", \@fields, \%filter);
-	#store ($subCR, 'child.db');
-	my $subCR = retrieve('child.db');
+	my @countFields = qw(realised_cost_hardware realised_cost_software realised_cost_system);
+	@fields = ('parent_record', 'id', 'state', 'substate', 'realised_version', 'realised_version.name', @countFields);
+	my $subCR = makeQuery("ChangeRequest", \@fields, \%filter);	store ($subCR, 'child.db');
+
+	#my $subCR = retrieve('child.db');
 	
 	INFO "Analysing results";
 	my %parentList;
@@ -182,10 +183,28 @@ if($response eq "Yes") {
 		$parentList{$parentID}{childs}{$parent->{child_record}} = 1;
 	}
 	
+	my $releaseList = buildReleasesList('ReleasesList.txt');
+	
+
+	my %alreadyPrintItems;
 	foreach my $child (@$subCR) {
 		next unless exists $parentList{$child->{parent_record}};
 		next unless exists $parentList{$child->{parent_record}}{childs}{$child->{id}};
+		my $release = $child->{'realised_version.name'};
+		$alreadyPrintItems{$release}++ if $release and not ($alreadyPrintItems{$release} or $releaseList->{hash}{$release});
 		$parentList{$child->{parent_record}}{childs}{$child->{id}} = $child;
+	}
+	
+	if (keys(%alreadyPrintItems) > 0) {
+		my $foundItemsFile = getScriptDirectory().'MissingReleases.txt';
+		ERROR "Release list needs to be updated with ".scalar(keys(%alreadyPrintItems))." new release definitions";
+	
+		open FILE, ">$foundItemsFile";
+		print FILE join "\n", reverse sort keys %alreadyPrintItems;
+		close FILE;
+	}
+	else {
+		INFO "Release list (".$releaseList->{count}. " definitions) doesn't need to be updated";
 	}
 	
 	foreach my $parentID (sort keys %parentList) {
@@ -196,11 +215,22 @@ if($response eq "Yes") {
 		foreach my $childID (sort keys %{$parent->{childs}}) {
 			my $child = $parent->{childs}->{$childID};
 			my $substate = ($child->{substate}) ? $child->{substate} : 'No substate';
-			$list .= "   - $child->{id} : $child->{state} / $substate\n";
+			my $additionalField = "";
+			if($child->{'realised_version.name'}) {
+				$additionalField = " (".$child->{'realised_version.name'}.")";
+				my $oldRealisedVersion = $parent->{fields}->{'realised_version.name'} ? $parent->{fields}->{'realised_version.name'} : '';
+				$parent->{fields}->{'realised_version.name'} = $child->{'realised_version.name'} unless $parent->{fields}->{'realised_version.name'};
+
+				$parent->{fields}->{'realised_version.name'} = getLatestRelease($releaseList,$parent->{fields}->{'realised_version.name'}, $child->{'realised_version.name'});
+				$parent->{fields}->{'realised_version'} = $child->{'realised_version'} if $oldRealisedVersion ne $parent->{fields}->{'realised_version.name'};
+			}
+
+			$list .= "   - $child->{id} : $child->{state} / $substate".$additionalField."\n";
 			
 			unless(isRealised($child)) { $result = UNREALISED; }
 			if(isUndefined($child)) { $result = UNDEFINED; }
 			
+
 			foreach my $addedField (@countFields) {
 				$parent->{fields}->{$addedField} += $child->{$addedField} if $child->{$addedField};
 			}
@@ -219,10 +249,12 @@ if($response eq "Yes") {
 		
 		next unless $correct or $complete;
 		my $icon = 'info';
-		my $message = "$parentID is $parent->{fields}->{substate}, and has been determined as $result, with following childs:\n$list\nDo you want to complete it?";
+		my $message = "This message should not appear"; 
+		
+		$message = "$parentID is $parent->{fields}->{substate}, and has been determined as $result, with following childs:\n$list\nDo you want to complete it for ".$parent->{fields}->{'realised_version.name'}." ?" if $complete;
 		if ($correct) {
 			$icon = 'error';
-			$message = "$parentID is $parent->{fields}->{substate}, but has been determined as $result, with following childs:\n$list\nIt should have been defined as a CR in progress. Do you want to CORRECT it?";
+			$message = "$parentID is $parent->{fields}->{substate}, but has been determined as $result, with following childs:\n$list\nIt should have been defined as a CR in progress. Do you want to RECTIFY it?";
 		}
 		
 		my $response = '';
@@ -230,18 +262,18 @@ if($response eq "Yes") {
 		if($response eq "Yes") {
 			if($correct) {
 				my %fields = ('work_in_progress' => 'Yes');
-				my $result = _performModifications($parentID, 'modify', undef, \%fields);
+				my $result = _performModifications($parentID, 'Rectify', undef, \%fields);
 				ERROR "$parentID was not corrected due to an error" and next unless $result;
 			}
 			
 			if($complete) {
-				my %fields;
+				my %fields = ('realised_version' => $parent->{fields}->{'realised_version'});
+				$fields{'realised_item'} = scalar keys(%{$parent->{childs}})." CR crées et affectées." unless $parent->{fields}->{'realised_item'};
 				foreach my $addedField (@countFields) {
-					$fields{$addedField} = $parent->{$addedField};
+					$fields{$addedField} = $parent->{fields}{$addedField} ? $parent->{fields}{$addedField} : 0;
 				}
-				print Dumper \%fields;
-				#my $result = _performModifications($parentID, 'complete', undef, \%fields);
-				#ERROR "$parentID was not corrected due to an error" and next unless $result;
+				my $result = _performModifications($parentID, 'complete', undef, \%fields);
+				ERROR "$parentID was not corrected due to an error" and next unless $result;
 			}
 		}
 	}
@@ -307,7 +339,7 @@ sub preload {
 	INFO "Connecting to Clearquest";
 	connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 	INFO "Retrieving all parents";
-	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version scheduled_version.name);
+	my @fields = qw(id description headline zone child_record ccb_comment sub_system component analyst submitter_cr_type impacted_items proposed_change scheduled_version);
 	my %filter = (State => 'Assigned', product => 'PRIMA EL II', child_record => {operator => 'IS_NOT_NULL'});
 	$parentCR = makeQuery("ChangeRequest", \@fields, \%filter);
 	$output{parentCR} = $parentCR;
