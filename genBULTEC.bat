@@ -57,14 +57,12 @@ foreach my $document (@{$config->{documents}->{document}}) {
 	foreach my $table (@{$document->{tables}->{table}}) {
 		INFO "Processing table \"$table->{title}\"";	
 		$table->{title} = 'Titre manquant' unless $table->{title};
-		my $BEFORE_REF_TABLE = localizeVariable($BEFORE_REF_DOC, $table->{references}->{reference});
-		my $AFTER_REF_TABLE = localizeVariable($AFTER_REF_DOC, $table->{references}->{target});
-		my $ANALYSED_DIRECTORY_TABLE = localizeVariable($ANALYSED_DIRECTORY_DOC, $table->{analysedDirectory});
 		
 		my %tableElements = ('TABLE_NAME', $table->{title});
 		
 		if(not $table->{type}) {
-			DEBUG "Requesting standard template";
+			DEBUG "Requesting classic template";
+			push(@tables, genClassicTable($table));
 		}
 		elsif($table->{type} =~ /^generic$/) {
 			DEBUG "Requesting generic template";
@@ -72,14 +70,16 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		}
 		elsif ($table->{type} =~ /^documentation$/) {
 			DEBUG "Requesting documentation template";
+			$table->{references}->{reference} = localizeVariable($BEFORE_REF_DOC, $table->{references}->{reference});
+			$table->{references}->{target} = localizeVariable($AFTER_REF_DOC, $table->{references}->{target});
+			$table->{analysedDirectory} = localizeVariable($ANALYSED_DIRECTORY_DOC, $table->{analysedDirectory});
+
 			$tableElements{DOCLIST} = 1;
 		}
 		else {
 			LOGDIE "Type $table->{type} is unknown";
 		}
 		
-		push(@tables, \%tableElements);
-
 		# makeCQQuery($config->{CQ_Queries}->{listVersions}, 'versions.db');
 		# my $listCR = makeCQQuery($config->{CQ_Queries}->{listCR}, 'AllCR.db');
 		
@@ -239,6 +239,42 @@ sub buildTable {
 
 	# print FILE $t->output;
 	# close(FILE);
+}
+
+sub genClassicTable {
+	my ($table) = @_;
+	
+	my (@fieldsSort, @listFields);
+	LOGDIE "You have to lowercase those items first";
+	@listFields = split(/,\s*/, $table->{fieldsToRetrieve}) if $table->{fieldsToRetrieve};
+	DEBUG "Field dbid was missing (it is required)." and push(@listFields, 'dbid') unless grep(/^dbid$/, @listFields);
+	DEBUG "Field id was missing (it is required)." and push(@listFields, 'id') unless grep(/^id$/, @listFields);
+
+	@fieldsSort = split(/,\s*/, $table->{fieldsSorting}) if $table->{fieldsSorting};
+	my $results = makeQuery($table->{ClearquestType}, \@listFields, $table->{filtering}, \@fieldsSort);
+
+	my @headerToPrint;
+	push(@headerToPrint, { FIELD => '#'});
+	foreach my $field (@listFields) {
+		next if $field eq 'dbid';
+		push(@headerToPrint, { FIELD => $field});
+	}
+	
+	my @resultsToPrint;
+	my $number = 0;
+	foreach my $result (@$results) {
+		my @resultToPrint;
+		foreach my $field (@listFields) {
+			next if ($field eq 'dbid' or $field eq 'id');
+			my $field = $result->{$field};
+			$field =~ s/\n/<br \/>\n/g;
+			push(@resultToPrint, { CONTENT => $field});
+		}
+		push(@resultsToPrint, { NUMBER => ++$number, DBID => $result->{'dbid'}, ID => $result->{'id'}, RESULT => \@resultToPrint });
+	}
+	
+	my %tableProperties = (HEADER => \@headerToPrint, RESULTS => \@resultsToPrint);
+	return \%tableProperties;
 }
 
 sub localizeVariable {
