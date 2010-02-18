@@ -20,7 +20,8 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.3',
+	PROGRAM_VERSION => '2.4',
+	DATABASE_VERSION => '2.2',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
@@ -154,7 +155,7 @@ if (-r $CqDatabase) {
 	my $storedData = retrieve($CqDatabase);
 	%CqFieldsDesc = %$storedData;
 	$syncNeeded = (time() - $CqFieldsDesc{lastUpdate} - $localConfig->{scriptInfos}->{refreshDatabase}) > 0;
-	$syncNeeded = (PROGRAM_VERSION ne $CqFieldsDesc{scriptVersion}) unless $syncNeeded;
+	$syncNeeded = (DATABASE_VERSION ne $CqFieldsDesc{scriptVersion}) unless $syncNeeded;
 }
 else { $syncNeeded = 1; }
 
@@ -162,7 +163,7 @@ else { $syncNeeded = 1; }
 if($syncNeeded) {
 	syncFieldsWithClearQuest(\%CqFieldsDesc);
 } else { DEBUG "Using all Clearquest data stored in database."; }
-LOGDIE "You have a database at V.$CqFieldsDesc{scriptVersion}. You have to upgrade it because program is now at V.".PROGRAM_VERSION if (PROGRAM_VERSION ne $CqFieldsDesc{scriptVersion});
+LOGDIE "You have a database at V.$CqFieldsDesc{databaseVersion}. You have to upgrade it because program is now at V.".DATABASE_VERSION if (DATABASE_VERSION ne $CqFieldsDesc{databaseVersion});
 
 
 $frozenCQFields = freeze(\%CqFieldsDesc);
@@ -228,6 +229,7 @@ sub syncFieldsWithClearQuest {
 
 	$data->{lastUpdate} = time();
 	$data->{scriptVersion} = PROGRAM_VERSION;
+	$data->{databaseVersion} = DATABASE_VERSION;
 
 	store ($data, $CqDatabase);
 }
