@@ -25,7 +25,7 @@ use XML::Simple;
 
 use constant {
 	PROGRAM_VERSION => '0.1 beta',
-	OUT_FILENAME => 'testOutput.html',
+	TEMPLATE_DIRECTORY => './Templates/',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
@@ -35,13 +35,15 @@ my $CQConfig = loadSharedConfig('Clearquest-config.xml');
 
 backCopy('config.xml', getScriptName().'.config.xml');
 
+my $SCRIPT_DIRECTORY = getScriptDirectory();
+
 my $BEFORE_REF = $config->{defaultParams}->{references}->{reference};
 my $AFTER_REF = $config->{defaultParams}->{references}->{target};
 my $ANALYSED_DIRECTORY =  $config->{defaultParams}->{analysedDirectory};
 my $EQUIV_TABLE = loadCSV($config->{defaultParams}->{equivTable}) if $config->{defaultParams}->{equivTable};
 
 INFO "Connecting to Clearquest with login $CQConfig->{clearquest_shared}->{login}";
-connectCQ($CQConfig->{clearquest_shared}->{login}, $CQConfig->{clearquest_shared}->{password}, $CQConfig->{clearquest_shared}->{database});
+#connectCQ($CQConfig->{clearquest_shared}->{login}, $CQConfig->{clearquest_shared}->{password}, $CQConfig->{clearquest_shared}->{database});
 
 foreach my $document (@{$config->{documents}->{document}}) {
 	INFO "Processing document \"$document->{title}\"";
@@ -50,6 +52,8 @@ foreach my $document (@{$config->{documents}->{document}}) {
 	my $AFTER_REF_DOC = localizeVariable($AFTER_REF, $document->{defaultParams}->{references}->{target});
 	my $ANALYSED_DIRECTORY_DOC = localizeVariable($ANALYSED_DIRECTORY, $document->{defaultParams}->{analysedDirectory});
 	
+	my @tables;
+	
 	foreach my $table (@{$document->{tables}->{table}}) {
 		INFO "Processing table \"$table->{title}\"";	
 		$table->{title} = 'Titre manquant' unless $table->{title};
@@ -57,25 +61,47 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		my $AFTER_REF_TABLE = localizeVariable($AFTER_REF_DOC, $table->{references}->{target});
 		my $ANALYSED_DIRECTORY_TABLE = localizeVariable($ANALYSED_DIRECTORY_DOC, $table->{analysedDirectory});
 		
+		my %tableElements = ('TABLE_NAME', $table->{title});
+		
+		if($table->{type}) {
+			my $type;
+			$type = 'DOCLIST' if ($table->{type} =~ /^documentation$/);
+			$type = 'GENERICLIST' if ($table->{type} =~ /^generic$/);
+			LOGDIE "Type $table->{type} is unknown" unless $type;
+			$tableElements{$type} = 1;
+		}
+		
+		push(@tables, \%tableElements);
 
-		makeCQQuery($config->{CQ_Queries}->{listVersions}, 'versions.db');
-		my $listCR = makeCQQuery($config->{CQ_Queries}->{listCR}, 'AllCR.db');
+		# makeCQQuery($config->{CQ_Queries}->{listVersions}, 'versions.db');
+		# my $listCR = makeCQQuery($config->{CQ_Queries}->{listCR}, 'AllCR.db');
 		
-		my $docBiasis = getListOfBiases($listCR);
+		# my $docBiasis = getListOfBiases($listCR);
 
-		open FILE,">debug.txt";
-		print FILE Dumper $docBiasis;
-		close FILE;
+		# open FILE,">debug.txt";
+		# print FILE Dumper $docBiasis;
+		# close FILE;
 		
-		my $BEFORE_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $BEFORE_REF_TABLE);
-		my $AFTER_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $AFTER_REF_TABLE);
-		my $results = compareLabels($ANALYSED_DIRECTORY_TABLE, $BEFORE_LIST, $AFTER_LIST);
+		# my $BEFORE_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $BEFORE_REF_TABLE);
+		# my $AFTER_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $AFTER_REF_TABLE);
+		# my $results = compareLabels($ANALYSED_DIRECTORY_TABLE, $BEFORE_LIST, $AFTER_LIST);
 		
-		#my $results = retrieve('test.db');
-		store($results, 'test.db');
+		# #my $results = retrieve('test.db');
+		# store($results, 'test.db');
 		
-		buildTable($EQUIV_TABLE, $results, $docBiasis);
+		# buildTable($EQUIV_TABLE, $results, $docBiasis);
 	}
+	
+	open (FILE, ">".$SCRIPT_DIRECTORY.$document->{filename});
+		
+	my $t = HTML::Template -> new( filename => TEMPLATE_DIRECTORY."main.tmpl" );
+
+	$t->param(TABLES => \@tables);
+	my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
+	$t->param(DATE => $tm);
+
+	print FILE $t->output;
+	close(FILE);
 }
 
 INFO "Processing results. It can take some time.";
@@ -191,21 +217,21 @@ sub buildTable {
 			return 1 if (not $a->{CODE_DOC} and $b->{CODE_DOC});
 			return ($a->{DOCUMENT} cmp $b->{DOCUMENT}) unless ($a->{CODE_DOC});
 			return $a->{CODE_DOC} cmp $b->{CODE_DOC} or $a->{DOCUMENT} cmp $b->{DOCUMENT};
-		} @results;
+		 } @results;
 
-	unlink(OUT_FILENAME);
-	open (FILE, ">".OUT_FILENAME);
+	# unlink(OUT_FILENAME);
+	# open (FILE, ">".OUT_FILENAME);
 		
-	my $t = HTML::Template -> new( filename => "./listDocs.tmpl" );
+	# my $t = HTML::Template -> new( filename => "./listDocs.tmpl" );
 
-	$t->param(BEFORE_REF => $BEFORE_REF);
-	$t->param(AFTER_REF => $AFTER_REF);
-	$t->param(RESULTS => \@results);
-	my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
-	$t->param(DATE => $tm);
+	# $t->param(BEFORE_REF => $BEFORE_REF);
+	# $t->param(AFTER_REF => $AFTER_REF);
+	# $t->param(RESULTS => \@results);
+	# my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
+	# $t->param(DATE => $tm);
 
-	print FILE $t->output;
-	close(FILE);
+	# print FILE $t->output;
+	# close(FILE);
 }
 
 sub localizeVariable {
