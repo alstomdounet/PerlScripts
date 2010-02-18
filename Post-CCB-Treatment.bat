@@ -146,7 +146,7 @@ DEBUG "Building graphical interface";
 
 my $mw = MainWindow->new(-title => "Interface to distribute bugs");
 $mw->withdraw; # disable immediate display
-$mw->minsize(640,500);
+$mw->minsize(640,520);
 
 my $CqDatabase = getSharedDirectory().'ClearquestFieldsImage.db';
 LOGDIE "No valid database found in \"$CqDatabase\"" unless -r $CqDatabase;
@@ -159,7 +159,7 @@ connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 
 if($response eq "Yes") {
 	my %filter = (state => 'Realised', product => 'PRIMA EL II', child_record => {operator => 'IS_NOT_NULL'} );
-	my @fields = qw(id child_record state substate implementer realised_item);
+	my @fields = qw(id child_record state substate implementer realised_item sub_system.name);
 	my $parentCRList = makeQuery("ChangeRequest", \@fields, \%filter); store ($parentCRList, 'parentDB.db');
 
 	#my $parentCRList = retrieve('parentDB.db');
@@ -167,7 +167,7 @@ if($response eq "Yes") {
 	INFO "Retrieving all childs";
 	%filter = (product => 'PRIMA EL II', parent_record => {operator => 'IS_NOT_NULL'});
 	my @countFields = qw(realised_cost_hardware realised_cost_software realised_cost_system);
-	@fields = ('parent_record', 'id', 'state', 'substate', 'realised_version', 'realised_version.name', @countFields);
+	@fields = ('parent_record', 'id', 'state', 'substate', 'realised_version', 'realised_version.name', 'sub_system.name', @countFields);
 	my $subCR = makeQuery("ChangeRequest", \@fields, \%filter);	store ($subCR, 'child.db');
 
 	#my $subCR = retrieve('child.db');
@@ -225,7 +225,7 @@ if($response eq "Yes") {
 				$parent->{fields}->{'realised_version'} = $child->{'realised_version'} if $oldRealisedVersion ne $parent->{fields}->{'realised_version.name'};
 			}
 
-			$list .= "   - $child->{id} : $child->{state} / $substate".$additionalField."\n";
+			$list .= "   - $child->{id} (".$child->{'sub_system.name'}.") : $child->{state} / $substate".$additionalField."\n";
 			
 			unless(isRealised($child)) { $result = UNREALISED; }
 			if(isUndefined($child)) { $result = UNDEFINED; }
@@ -251,10 +251,10 @@ if($response eq "Yes") {
 		my $icon = 'info';
 		my $message = "This message should not appear"; 
 		
-		$message = "$parentID is $parent->{fields}->{substate}, and has been determined as $result, with following childs:\n$list\nDo you want to complete it for ".$parent->{fields}->{'realised_version.name'}." ?" if $complete;
+		$message = "$parentID (".$parent->{fields}->{'sub_system.name'}.") is $parent->{fields}->{substate}, and has been determined as $result, with following childs:\n$list\nDo you want to complete it for ".$parent->{fields}->{'realised_version.name'}." ?" if $complete;
 		if ($correct) {
 			$icon = 'error';
-			$message = "$parentID is $parent->{fields}->{substate}, but has been determined as $result, with following childs:\n$list\nIt should have been defined as a CR in progress. Do you want to RECTIFY it?";
+			$message = "$parentID (".$parent->{fields}->{'sub_system.name'}.") is $parent->{fields}->{substate}, but has been determined as $result, with following childs:\n$list\nIt should have been defined as a CR in progress. Do you want to RECTIFY it?";
 		}
 		
 		my $response = '';
@@ -417,7 +417,7 @@ sub loadCR {
 		DEBUG "Processing child $subID";
 		buildTab($notebook,$subID,$processedCR->{childs}{$subID}, $processedCRUI->{childs}{$subID}, $id);
 	}
-	$mw->geometry("640x500");
+	$mw->geometry("640x520");
 	$buttonValidate->configure(-state => 'normal');
 }
 
@@ -462,8 +462,8 @@ sub buildTab {
 	
 	$receiver->{listAnalyser} = addListBox($tab1, 'Analyst', $CqFieldsDesc{analyst}{shortDesc}, \$content->{fields}{analyst}, -searchable => 0);
 	$receiver->{listTypes} = addListBox($tab1, 'Type', $CqFieldsDesc{submitter_CR_type}{shortDesc}, \$content->{fields}{submitter_cr_type});
-	$receiver->{TextImpactedItems} = addDescriptionField($tab1, 'Impacted items', \$content->{fields}{impacted_items}, -height => 10);
-	$receiver->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change}, -height => 10);
+	$receiver->{TextImpactedItems} = addDescriptionField($tab1, 'Impacted items', \$content->{fields}{impacted_items}, -height => 3);
+	$receiver->{TextProposedChanges} = addDescriptionField($tab1, 'Proposed changes', \$content->{fields}{proposed_change}, -height => 3);
 	
 	$receiver->{listSubsystems}->{listbox}->configure(-browsecmd => sub {updateComponents($content->{fields}{sub_system}, $receiver->{listComponents}, $receiver->{dynamicComponentList});});
 	$receiver->{checkBox}->configure(-command => sub { $receiver->{listAnalyser}->{label}->configure(-text => ($content->{fields}{changeState}) ? ('Implementer') : ('Analyst')); } );
