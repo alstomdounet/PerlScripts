@@ -160,7 +160,7 @@ connectCQ ($Clearquest_login, $Clearquest_password, $Clearquest_database);
 if($response eq "Yes") {
 	my %filter = (state => 'Realised', product => 'PRIMA EL II', child_record => {operator => 'IS_NOT_NULL'} );
 	my @fields = qw(id child_record state substate implementer realised_item sub_system.name);
-	my $parentCRList = makeQuery("ChangeRequest", \@fields, \%filter); store ($parentCRList, 'parentDB.db');
+	my $parentCRList = makeQuery("ChangeRequest", \@fields, \%filter); 
 
 	#my $parentCRList = retrieve('parentDB.db');
 	
@@ -168,7 +168,7 @@ if($response eq "Yes") {
 	%filter = (product => 'PRIMA EL II', parent_record => {operator => 'IS_NOT_NULL'});
 	my @countFields = qw(realised_cost_hardware realised_cost_software realised_cost_system);
 	@fields = ('parent_record', 'id', 'state', 'substate', 'realised_version', 'realised_version.name', 'sub_system.name', @countFields);
-	my $subCR = makeQuery("ChangeRequest", \@fields, \%filter);	store ($subCR, 'child.db');
+	my $subCR = makeQuery("ChangeRequest", \@fields, \%filter);	
 
 	#my $subCR = retrieve('child.db');
 	
@@ -298,11 +298,10 @@ sub isRealised {
 	return 0;
 }
 
-#my %listOfCRToProcess = preload();
+my %listOfCRToProcess = preload();
 #store(\%listOfCRToProcess, 'CRList.db');
-my %listOfCRToProcess = %{retrieve('CRList.db')};
+#my %listOfCRToProcess = %{retrieve('CRList.db')};
 my @listOfCR = sort keys %listOfCRToProcess;
-#my %selection;
 
 my $searchFrame = $mw->Frame() -> pack(-side => 'top', -fill => 'x');
 my $CrToProcess;
