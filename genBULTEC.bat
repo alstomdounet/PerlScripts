@@ -43,14 +43,14 @@ my $ANALYSED_DIRECTORY =  $config->{defaultParams}->{analysedDirectory};
 my $EQUIV_TABLE = loadCSV($config->{defaultParams}->{equivTable}) if $config->{defaultParams}->{equivTable};
 
 INFO "Connecting to Clearquest with login $CQConfig->{clearquest_shared}->{login}";
-#connectCQ($CQConfig->{clearquest_shared}->{login}, $CQConfig->{clearquest_shared}->{password}, $CQConfig->{clearquest_shared}->{database});
+connectCQ($CQConfig->{clearquest_shared}->{login}, $CQConfig->{clearquest_shared}->{password}, $CQConfig->{clearquest_shared}->{database});
 
 foreach my $document (@{$config->{documents}->{document}}) {
 	INFO "Processing document \"$document->{title}\"";
 	$document->{title} = 'Titre manquant' unless $document->{title};
-	my $BEFORE_REF_DOC = localizeVariable($BEFORE_REF, $document->{defaultParams}->{references}->{reference});
-	my $AFTER_REF_DOC = localizeVariable($AFTER_REF, $document->{defaultParams}->{references}->{target});
-	my $ANALYSED_DIRECTORY_DOC = localizeVariable($ANALYSED_DIRECTORY, $document->{defaultParams}->{analysedDirectory});
+	$document->{defaultParams}->{references}->{reference} = localizeVariable($BEFORE_REF, $document->{defaultParams}->{references}->{reference});
+	$document->{defaultParams}->{references}->{target} = localizeVariable($AFTER_REF, $document->{defaultParams}->{references}->{target});
+	$document->{defaultParams}->{analysedDirectory} = localizeVariable($ANALYSED_DIRECTORY, $document->{defaultParams}->{analysedDirectory});
 	
 	my @tables;
 	
@@ -58,11 +58,10 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		INFO "Processing table \"$table->{title}\"";	
 		$table->{title} = 'Titre manquant' unless $table->{title};
 		
-		my %tableElements = ('TABLE_NAME', $table->{title});
-		
+		my %tableElements;
 		if(not $table->{type}) {
 			DEBUG "Requesting classic template";
-			push(@tables, genClassicTable($table));
+			%tableElements = %{genClassicTable($table)};
 		}
 		elsif($table->{type} =~ /^generic$/) {
 			DEBUG "Requesting generic template";
@@ -70,33 +69,35 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		}
 		elsif ($table->{type} =~ /^documentation$/) {
 			DEBUG "Requesting documentation template";
-			$table->{references}->{reference} = localizeVariable($BEFORE_REF_DOC, $table->{references}->{reference});
-			$table->{references}->{target} = localizeVariable($AFTER_REF_DOC, $table->{references}->{target});
-			$table->{analysedDirectory} = localizeVariable($ANALYSED_DIRECTORY_DOC, $table->{analysedDirectory});
+			$table->{references}->{reference} = localizeVariable($document->{defaultParams}->{references}->{reference}, $table->{references}->{reference});
+			$table->{references}->{target} = localizeVariable($document->{defaultParams}->{references}->{target}, $table->{references}->{target});
+			$table->{analysedDirectory} = localizeVariable($document->{defaultParams}->{analysedDirectory}, $table->{analysedDirectory});
 
+			# makeCQQuery($config->{CQ_Queries}->{listVersions}, 'versions.db');
+			# my $listCR = makeCQQuery($config->{CQ_Queries}->{listCR}, 'AllCR.db');
+			
+			# my $docBiasis = getListOfBiases($listCR);
+
+			# open FILE,">debug.txt";
+			# print FILE Dumper $docBiasis;
+			# close FILE;
+			
+			# my $BEFORE_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $BEFORE_REF_TABLE);
+			# my $AFTER_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $AFTER_REF_TABLE);
+			# my $results = compareLabels($ANALYSED_DIRECTORY_TABLE, $BEFORE_LIST, $AFTER_LIST);
+			
+			# #my $results = retrieve('test.db');
+			# store($results, 'test.db');
+			
+			# buildTable($EQUIV_TABLE, $results, $docBiasis);
 			$tableElements{DOCLIST} = 1;
 		}
 		else {
 			LOGDIE "Type $table->{type} is unknown";
 		}
 		
-		# makeCQQuery($config->{CQ_Queries}->{listVersions}, 'versions.db');
-		# my $listCR = makeCQQuery($config->{CQ_Queries}->{listCR}, 'AllCR.db');
-		
-		# my $docBiasis = getListOfBiases($listCR);
-
-		# open FILE,">debug.txt";
-		# print FILE Dumper $docBiasis;
-		# close FILE;
-		
-		# my $BEFORE_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $BEFORE_REF_TABLE);
-		# my $AFTER_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $AFTER_REF_TABLE);
-		# my $results = compareLabels($ANALYSED_DIRECTORY_TABLE, $BEFORE_LIST, $AFTER_LIST);
-		
-		# #my $results = retrieve('test.db');
-		# store($results, 'test.db');
-		
-		# buildTable($EQUIV_TABLE, $results, $docBiasis);
+		$tableElements{TABLE_NAME} = $table->{title};
+		push(@tables, \%tableElements);
 	}
 	
 	open (FILE, ">".$SCRIPT_DIRECTORY.$document->{filename});
@@ -167,7 +168,7 @@ sub isADocumentBias {
 	return 1;
 }
 
-sub makeCQQuery {
+sub makeCQQuery2 {
 	my ($query, $file) = @_;
 	
 	return retrieve($file) if -r $file;
@@ -245,19 +246,19 @@ sub genClassicTable {
 	my ($table) = @_;
 	
 	my (@fieldsSort, @listFields);
-	LOGDIE "You have to lowercase those items first";
+	$table->{fieldsToRetrieve} = lc($table->{fieldsToRetrieve});
 	@listFields = split(/,\s*/, $table->{fieldsToRetrieve}) if $table->{fieldsToRetrieve};
-	DEBUG "Field dbid was missing (it is required)." and push(@listFields, 'dbid') unless grep(/^dbid$/, @listFields);
-	DEBUG "Field id was missing (it is required)." and push(@listFields, 'id') unless grep(/^id$/, @listFields);
+	DEBUG "Field id was missing (it is required)." and unshift(@listFields, 'id') unless grep(/^id$/, @listFields);
+	DEBUG "Field dbid was missing (it is required)." and unshift(@listFields, 'dbid') unless grep(/^dbid$/, @listFields);
+
 
 	@fieldsSort = split(/,\s*/, $table->{fieldsSorting}) if $table->{fieldsSorting};
-	my $results = makeQuery($table->{ClearquestType}, \@listFields, $table->{filtering}, \@fieldsSort);
+	my $results = makeQuery("ChangeRequest", \@listFields, $table->{filtering}, \@fieldsSort);
 
 	my @headerToPrint;
-	push(@headerToPrint, { FIELD => '#'});
 	foreach my $field (@listFields) {
-		next if $field eq 'dbid';
-		push(@headerToPrint, { FIELD => $field});
+		next if $field eq 'dbid' or $field eq 'id';
+		push(@headerToPrint, { FIELD => ucfirst($field)});
 	}
 	
 	my @resultsToPrint;

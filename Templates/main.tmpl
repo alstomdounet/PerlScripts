@@ -80,7 +80,7 @@
 <TMPL_IF name=GENERICLIST>
 <h2>Générateur générique : <TMPL_VAR name=TABLE_NAME></h2>
 <TMPL_ELSE>
-<h2>Générateur standard : <TMPL_VAR name=TABLE_NAME></h2>
+<TMPL_INCLUDE NAME="_listCR.tmpl">
 </TMPL_IF>
 </TMPL_IF>
 </TMPL_LOOP>
