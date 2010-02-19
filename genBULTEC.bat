@@ -24,7 +24,7 @@ use Text::CSV;
 use XML::Simple;
 
 use constant {
-	PROGRAM_VERSION => '0.1 beta',
+	PROGRAM_VERSION => '0.2',
 	TEMPLATE_DIRECTORY => './Templates/',
 };
 
@@ -74,23 +74,7 @@ foreach my $document (@{$config->{documents}->{document}}) {
 			$table->{references}->{target} = localizeVariable($document->{defaultParams}->{references}->{target}, $table->{references}->{target});
 			$table->{analysedDirectory} = localizeVariable($document->{defaultParams}->{analysedDirectory}, $table->{analysedDirectory});
 
-			# makeCQQuery($config->{CQ_Queries}->{listVersions}, 'versions.db');
-			# my $listCR = makeCQQuery($config->{CQ_Queries}->{listCR}, 'AllCR.db');
-			
-			# my $docBiasis = getListOfBiases($listCR);
-
-			# open FILE,">debug.txt";
-			# print FILE Dumper $docBiasis;
-			# close FILE;
-			
-			# my $BEFORE_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $BEFORE_REF_TABLE);
-			# my $AFTER_LIST = getStructUsingReference($ANALYSED_DIRECTORY_TABLE, $AFTER_REF_TABLE);
-			# my $results = compareLabels($ANALYSED_DIRECTORY_TABLE, $BEFORE_LIST, $AFTER_LIST);
-			
-			# #my $results = retrieve('test.db');
-			# store($results, 'test.db');
-			
-			# buildTable($EQUIV_TABLE, $results, $docBiasis);
+			%tableElements = %{genDocumentTable($table)};
 			$tableElements{DOCLIST} = 1;
 		}
 		else {
@@ -114,6 +98,18 @@ foreach my $document (@{$config->{documents}->{document}}) {
 }
 
 INFO "Processing results. It can take some time.";
+
+sub genDocumentTable {
+	my ($table) = @_;
+	LOGDIE "This table is not available at the moment";
+	
+	my @fields = split(/\s*,\s*/, $config->{CQ_Queries}->{listCR}->{fieldsToRetrieve});
+	my $listCR = makeQuery("ChangeRequest", \@fields, $config->{CQ_Queries}->{listCR});
+	
+	my $docBiasis = getListOfBiases($listCR);
+	my $results = compareLabels($table->{analysedDirectory}, $table->{references}->{reference}, $table->{references}->{target});
+	return buildTable($EQUIV_TABLE, $results, $docBiasis);
+}
 
 sub isAssigned {
 	my ($state, $substate) = @_;
@@ -169,17 +165,6 @@ sub isADocumentBias {
 	return 1;
 }
 
-sub makeCQQuery2 {
-	my ($query, $file) = @_;
-	
-	return retrieve($file) if -r $file;
-	
-	my @fields = split(/\s*,\s*/, $query->{fieldsToRetrieve});
-	my $results = makeQuery($query->{ClearquestType}, \@fields, $query->{filtering});
-	store($results, $file) if $file;
-	return $results;
-}
-
 sub buildTable {
 	my ($equivTable, $results, $biasList) = @_;
 	my @results;
@@ -228,19 +213,8 @@ sub buildTable {
 			return $a->{CODE_DOC} cmp $b->{CODE_DOC} or $a->{DOCUMENT} cmp $b->{DOCUMENT};
 		 } @results;
 
-	# unlink(OUT_FILENAME);
-	# open (FILE, ">".OUT_FILENAME);
-		
-	# my $t = HTML::Template -> new( filename => "./listDocs.tmpl" );
-
-	# $t->param(BEFORE_REF => $BEFORE_REF);
-	# $t->param(AFTER_REF => $AFTER_REF);
-	# $t->param(RESULTS => \@results);
-	# my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
-	# $t->param(DATE => $tm);
-
-	# print FILE $t->output;
-	# close(FILE);
+	my %results = (BEFORE_REF => $BEFORE_REF, AFTER_REF => $AFTER_REF, RESULTS => \@results);
+	return \%results;
 }
 
 sub genClassicTable {
@@ -325,7 +299,11 @@ sub formatVersion {
 }
 
 sub compareLabels {
-	my ($refDirectory, $beforeList, $afterList) = @_;
+	my ($refDirectory, $BEFORE_REF_TABLE, $AFTER_REF_TABLE) = @_;
+	
+	my $beforeList = getStructUsingReference($refDirectory, $BEFORE_REF_TABLE);
+	my $afterList = getStructUsingReference($refDirectory, $AFTER_REF_TABLE);
+
 	$refDirectory = quotemeta($refDirectory);
 	
 	my %elements;
