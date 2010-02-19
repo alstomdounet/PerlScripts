@@ -1,3 +1,4 @@
+<TMPL_IF name=RESULTS>
 <table summary="<TMPL_VAR name=TABLE_NAME>">
     <caption><TMPL_VAR name=TABLE_NAME></caption>
     <tr class="header1">
@@ -16,3 +17,6 @@
 	</tr>
 	</TMPL_LOOP>
 </table>
+<TMPL_ELSE>
+<h2>La table "<TMPL_VAR name=TABLE_NAME>" ne donne pas de résultats</h2>
+</TMPL_IF>

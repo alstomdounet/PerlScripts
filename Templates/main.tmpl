@@ -78,7 +78,7 @@
 <h2>Générateur document : <TMPL_VAR name=TABLE_NAME></h2>
 <TMPL_ELSE>
 <TMPL_IF name=GENERICLIST>
-<h2>Générateur générique : <TMPL_VAR name=TABLE_NAME></h2>
+<TMPL_INCLUDE NAME="_listCQGeneric.tmpl">
 <TMPL_ELSE>
 <TMPL_INCLUDE NAME="_listCR.tmpl">
 </TMPL_IF>
