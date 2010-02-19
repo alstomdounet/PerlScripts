@@ -65,6 +65,7 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		}
 		elsif($table->{type} =~ /^generic$/) {
 			DEBUG "Requesting generic template";
+			%tableElements = %{genGenericTable($table)};
 			$tableElements{GENERICLIST} = 1;
 		}
 		elsif ($table->{type} =~ /^documentation$/) {
@@ -247,12 +248,11 @@ sub genClassicTable {
 	
 	my (@fieldsSort, @listFields);
 	$table->{fieldsToRetrieve} = lc($table->{fieldsToRetrieve});
+	@fieldsSort = split(/,\s*/, $table->{fieldsSorting}) if $table->{fieldsSorting};
 	@listFields = split(/,\s*/, $table->{fieldsToRetrieve}) if $table->{fieldsToRetrieve};
 	DEBUG "Field id was missing (it is required)." and unshift(@listFields, 'id') unless grep(/^id$/, @listFields);
 	DEBUG "Field dbid was missing (it is required)." and unshift(@listFields, 'dbid') unless grep(/^dbid$/, @listFields);
 
-
-	@fieldsSort = split(/,\s*/, $table->{fieldsSorting}) if $table->{fieldsSorting};
 	my $results = makeQuery("ChangeRequest", \@listFields, $table->{filtering}, \@fieldsSort);
 
 	my @headerToPrint;
@@ -272,6 +272,37 @@ sub genClassicTable {
 			push(@resultToPrint, { CONTENT => $field});
 		}
 		push(@resultsToPrint, { NUMBER => ++$number, DBID => $result->{'dbid'}, ID => $result->{'id'}, RESULT => \@resultToPrint });
+	}
+	
+	my %tableProperties = (HEADER => \@headerToPrint, RESULTS => \@resultsToPrint);
+	return \%tableProperties;
+}
+
+sub genGenericTable {
+	my ($table) = @_;
+	
+	my (@fieldsSort, @listFields);
+	$table->{fieldsToRetrieve} = lc($table->{fieldsToRetrieve});
+	@fieldsSort = split(/,\s*/, $table->{fieldsSorting}) if $table->{fieldsSorting};
+	@listFields = split(/,\s*/, $table->{fieldsToRetrieve}) if $table->{fieldsToRetrieve};
+
+	my $results = makeQuery($table->{clearquestType}, \@listFields, $table->{filtering}, \@fieldsSort);	
+	
+	my @headerToPrint;
+	foreach my $field (@listFields) {
+		push(@headerToPrint, { FIELD => ucfirst($field)});
+	}
+	
+	my @resultsToPrint;
+	my $number = 0;
+	foreach my $result (@$results) {
+		my @resultToPrint;
+		foreach my $field (@listFields) {
+			my $field = $result->{$field};
+			$field =~ s/\n/<br \/>\n/g;
+			push(@resultToPrint, { CONTENT => $field});
+		}
+		push(@resultsToPrint, { NUMBER => ++$number, RESULT => \@resultToPrint });
 	}
 	
 	my %tableProperties = (HEADER => \@headerToPrint, RESULTS => \@resultsToPrint);
