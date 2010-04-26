@@ -74,15 +74,7 @@
 <body>
 <h3>Fichier généré le <TMPL_VAR name=DATE></h3>
 <TMPL_LOOP name=TABLES>
-<TMPL_IF name=DOCLIST>
-<h2>Générateur document : <TMPL_VAR name=TABLE_NAME></h2>
-<TMPL_ELSE>
-<TMPL_IF name=GENERICLIST>
-<h2>Générateur générique : <TMPL_VAR name=TABLE_NAME></h2>
-<TMPL_ELSE>
-<TMPL_INCLUDE NAME="_listCR.tmpl">
-</TMPL_IF>
-</TMPL_IF>
+<TMPL_INCLUDE NAME="_list.tmpl">
 </TMPL_LOOP>
 </body>
 </html>
