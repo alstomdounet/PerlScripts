@@ -1,0 +1,15 @@
+<table summary="<TMPL_VAR name=TABLE_NAME>">
+    <caption><TMPL_VAR name=TABLE_NAME></caption>
+    <tr class="header1">
+	  <th width="33%">&nbsp;</th>
+	  <th width="33%">Texte</th>
+	  <th width="33%">&nbsp;</th>
+    </tr>
+	<TMPL_LOOP name=REQUIREMENTS>
+	<tr>
+		<td>A</td>
+		<td class='text'><TMPL_VAR name=TEXTE></td>
+		<td>B</td>
+	</tr>
+	</TMPL_LOOP>
+</table>

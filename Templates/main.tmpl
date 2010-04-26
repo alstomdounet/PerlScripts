@@ -10,6 +10,11 @@
     text-align: left;
     background-color: rgb(0, 0, 0);
     }
+	
+td.text {
+	white-space: pre-wrap;
+	width: 34%;
+}
 
   table { border: 0.2em solid slategrey;
     font-size: 0.8em;
@@ -73,8 +78,6 @@
 </head>
 <body>
 <h3>Fichier généré le <TMPL_VAR name=DATE></h3>
-<TMPL_LOOP name=TABLES>
-<TMPL_INCLUDE NAME="_list.tmpl">
-</TMPL_LOOP>
+<TMPL_INCLUDE NAME="_list_CaC.tmpl">
 </body>
 </html>
