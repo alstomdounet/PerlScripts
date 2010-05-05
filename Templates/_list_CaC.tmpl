@@ -1,15 +1,39 @@
-<table summary="<TMPL_VAR name=TABLE_NAME>">
+<table class='main' summary="<TMPL_VAR name=TABLE_NAME>">
     <caption><TMPL_VAR name=TABLE_NAME></caption>
     <tr class="header1">
-	  <th width="33%">&nbsp;</th>
+	  <th width="33%">Exigences VBN</th>
 	  <th width="33%">Texte</th>
-	  <th width="33%">&nbsp;</th>
+	  <th width="33%">Exigences REI</th>
     </tr>
-	<TMPL_LOOP name=REQUIREMENTS>
+	<TMPL_LOOP name=REQUIREMENTS_CDC>
 	<tr>
-		<td>A</td>
-		<td class='text'><TMPL_VAR name=TEXTE></td>
-		<td>B</td>
+		<td>
+			<TMPL_IF name=REQUIREMENTS_VBN>
+			<table class='subrequirements'>
+				<TMPL_LOOP name=REQUIREMENTS_VBN>
+				<tr>
+					<TMPL_INCLUDE NAME="_req_cell.tmpl">
+				</tr>
+				</TMPL_LOOP>
+			</table>
+			<TMPL_ELSE>
+			No VBN requirements found
+			</TMPL_IF>
+		</td>
+		<TMPL_INCLUDE NAME="_req_cell.tmpl">
+		<td>
+			<TMPL_IF name=REQUIREMENTS_REI>
+			<table class='subrequirements'>
+				<TMPL_LOOP name=REQUIREMENTS_REI>
+				<tr>
+					<TMPL_INCLUDE NAME="_req_cell.tmpl">
+				</tr>
+				</TMPL_LOOP>
+			</table>
+			<TMPL_ELSE>
+			No REI requirements found
+			</TMPL_IF>
+		</td>
 	</tr>
 	</TMPL_LOOP>
 </table>

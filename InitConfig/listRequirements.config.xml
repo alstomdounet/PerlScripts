@@ -1,88 +1,25 @@
 <?xml version='1.0' encoding='ISO-8859-1'?>
 <config>
 	<documents>
-		<document>
-			<title>Document de test</title>
-			<filename>output.html</filename>
-			<defaultParams />
-			<tables>
-				<table type="documentation">
-					<title>Liste des SyFRSCC</title>
-					<analysedDirectory>D:\clearcase_storage\gmanciet_view\PRIMA2\ProjectSpecificDocs\02_Requirements\SyFRSCC</analysedDirectory>
-				</table>
-			</tables>
-		</document>
-		<document>
-			<title>Liste des CR à traiter</title>
-			<filename>Liste de mes CR.html</filename>
-			<tables>
-				<table>
-					<title>Liste des CR à affecter</title><!-- Ceci est le titre de la table -->
-					<fieldsToRetrieve>component.name, sub_system.name, headline, description</fieldsToRetrieve><!-- Liste des champs qui doivent être récupérés. Les champs apparaîtront dans l'ordre -->
-					<fieldsSorting2>component.name, sub_system.name</fieldsSorting2>
-					<filtering><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
-						<product>PRIMA EL II</product>
-						<state>submitted</state>
-						<submitter>[CURRENT_USER]</submitter>
-					</filtering>
-				</table>
-				<table>
-					<title>Liste des CR à analyser</title><!-- Ceci est le titre de la table -->
-					<fieldsToRetrieve>component.name, sub_system.name, headline, state, substate, scheduled_version.name</fieldsToRetrieve><!-- Liste des champs qui doivent être récupérés. Les champs apparaîtront dans l'ordre -->
-					<fieldsSorting>component.name, sub_system.name</fieldsSorting>
-					<filtering><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
-						<product>PRIMA EL II</product>
-						<node operator="OR">
-							<state>Recorded</state>
-							<node operator="AND">
-								<state>Analysed</state>
-								<substate operator="NEQ">Complete</substate>
-							</node>
-						</node>
-						<owner>[CURRENT_USER]</owner>
-					</filtering>
-				</table>
-				<table>
-					<title>Liste des CR à réaliser</title>
-					<fieldsToRetrieve>sub_system.name, component.name,  headline, state, substate, scheduled_version.name, realised_version.name, realised_item, parent_record, child_record</fieldsToRetrieve>
-					<fieldsSorting>component.name, sub_system.name</fieldsSorting>
-					<filtering><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
-						<product>PRIMA EL II</product>
-						<owner>[CURRENT_USER]</owner>
-						<node operator="OR">
-							<state>Assigned</state>
-							<node operator="AND">
-								<state>Realised</state>
-								<substate operator="NEQ">Complete</substate>
-							</node>
-						</node>
-					</filtering>
-				</table>
-				<table type='generic'>
-					<title>Liste des version dans Prima</title>
-					<clearquestType>product_version</clearquestType>
-					<fieldsToRetrieve>name, comment, date, effective_date, scheduled_date, software_version</fieldsToRetrieve>
-					<fieldsSorting>name</fieldsSorting>
-					<filtering>
-						<product>PRIMA EL II</product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
-					</filtering>
-				</table>
-			</tables>
-		</document>		
+		<ClauseByClause>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\SyRB_PP_contractuel_iw.xls</FileName>
+			<Sheet>Exigences contractuelles</Sheet>
+		</ClauseByClause>
+		<Requirements_VBN>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\SyRB_PP_contractuel_iw.xls</FileName>
+			<Sheet>Exigences RB</Sheet>
+		</Requirements_VBN>
+		<Requirements_REI>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\Requirements_REI_iw.xls</FileName>
+			<Sheet>RSAD</Sheet>
+		</Requirements_REI>
+		<Requirements_VBN_CBC>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\SyRB_PP_contractuel_iw.xls</FileName>
+			<Sheet>matrice tracabilite contrat-RB</Sheet>
+		</Requirements_VBN_CBC>
+		<Requirements_REI_CBC>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\Couverture_RSAD_CdC_iw.xls</FileName>
+			<Sheet>Couverture</Sheet>
+		</Requirements_REI_CBC>
 	</documents>
-	<CQ_Queries>
-		<listVersions ClearquestType="product_version">
-			<title>Liste des version dans Prima</title>
-			<fieldsToRetrieve>name, comment, date, effective_date, scheduled_date, software_version</fieldsToRetrieve>	
-			<filtering>
-				<product>PRIMA EL II</product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
-			</filtering>
-		</listVersions>
-		<listCR ClearquestType="ChangeRequest">
-			<fieldsToRetrieve>id,sub_system.name, component.name,  headline, state, substate, scheduled_version.name, realised_version.name, realised_item, parent_record, child_record</fieldsToRetrieve>
-			<filtering>
-				<product>PRIMA EL II</product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
-			</filtering>
-		</listCR>
-	</CQ_Queries>
 </config>

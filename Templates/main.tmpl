@@ -1,23 +1,25 @@
 <!DOCTYPE html PUBLIC -//W3C//DTD HTML 4.01 Transitional//EN>
 <html>
 <head>
-  <meta content="text/html; charset=ISO-8859-1 http-equiv=content-type">
-  <title><TMPL_VAR name=TABLE_NAME></title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <title>Résultats d'analyse au <TMPL_VAR name=DATE></title>
  <style type="text/css">
   body { margin: 1em;
     font-family: Arial,Helvetica,sans-serif;
     color: rgb(255, 255, 255);
+	   font-size: 0.8em;
     text-align: left;
     background-color: rgb(0, 0, 0);
     }
 	
-td.text {
+div.text {
 	white-space: pre-wrap;
-	width: 34%;
+	text-align:left;
+	padding:4px;
 }
 
-  table { border: 0.2em solid slategrey;
-    font-size: 0.8em;
+  table.main { border: 0.2em solid slategrey;
+
     background-color: white;
     color: rgb(0, 0, 0);
     width: 90%;
@@ -27,10 +29,24 @@ td.text {
     border-collapse: collapse;
     }
 
-  td { border: 1px dotted slategrey;
+table.subrequirements {
+	background-color: white;
+    color: rgb(0, 0, 0);
+}
+	
+table.subrequirements td {
+	padding: 0;
+	border: 1px dotted grey;
+}
+
+  td { border: 0px;
     padding: 0.2em 1em;
     }
-
+	
+td > table.subrequirements {
+	padding: 0;
+}
+	
   td.head { padding: 0.2em 1em;
     text-align: right;
     font-weight: bold;
@@ -70,14 +86,73 @@ td.text {
 	text-decoration: underline
   }
 
-  .upgraded { background-color: lawngreen; }
-  .downgraded {	background-color: red; }
-  .new { background-color: slateblue;  }
-  .deleted { background-color: red; }
+  .accepted { width:50px; height:50px; background-color: lawngreen; }
+  .partially_accepted {	width:50px; height:50px; background-color: lightgreen; }
+  .not_classified { width:50px; height:50px; background-color: grey;  }
+  .not_understood { width:50px; height:50px; background-color: grey; }
+  
+  .req_id {
+	float:left;      
+	font-weight:bold;
+	margin-right: 10px;
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 6px;
+	height:30px;
+	margin:4px;
+	background-color: lightgrey;
+   }
+  
+  .header-cell { 
+	margin: auto;
+	text-align: center;
+	width: 100%;
+	}
+
+  .color_risk_0 { background-color: green; font-weight:bold; }
+  .color_risk_1 { background-color: yellow; font-weight:bold; }
+  .color_risk_2 { background-color: orange; font-weight:bold; }
+  .color_risk_3 { background-color: red; font-weight:bold; }
+  .color_risk_9 { background-color: black; color:white; font-weight:bold; }
+  .risk_0 { height:100%; width:38px; padding-top: 6px; float:right; background-color: green; font-weight:bold;	 }
+  .risk_1 { height:100%; width:38px; padding-top: 6px; float:right; background-color: yellow; font-weight:bold;	 }
+  .risk_2 { height:100%; width:38px; padding-top: 6px; float:right; background-color: orange;font-weight:bold;  }
+  .risk_3 { height:100%; width:38px; padding-top: 6px; float:right; background-color: red;font-weight:bold;  }
+  .risk_9 { height:100%; width:38px; padding-top: 6px; float:right; background-color: black; color:white; font-weight:bold;}
   </style>
 </head>
 <body>
+
 <h3>Fichier généré le <TMPL_VAR name=DATE></h3>
+
+<table class='main' summary="Signification des couleurs">
+    <caption>Signification des couleurs</caption>
+	<tr>
+		<th>Code couleur</th>
+		<th>Signification</th>
+	</tr>
+	<tr>
+		<td class="color_risk_0">R-0: pas de risque</td>
+		<td>L'exigence ne souffre d'aucune ambiguité.</td>
+	</tr>
+	<tr>
+		<td class="color_risk_1">R-1: Risque limité</td>
+		<td>Cette exigence a besoin de quelques actions d'éclaircissement.</td>	
+	</tr>
+	<tr>
+		<td class="color_risk_2">R-2: Risque élevé</td>
+		<td>L'exigence n'est pas sous contrôle, mais une action est en cours pour tenter d'en abaisser le risque.</td>
+	</tr>
+	<tr>
+		<td class="color_risk_3">R-3: Risque majeur</td>
+		<td>L'exigence n'est pas sous contrôle : Il est nécessaire d'accomplir des actions afin d'en abaisser le risque (accord, éclaircissement, etc).</td>
+	</tr>
+	<tr>
+		<td class="color_risk_9">R-9: Pas d'évaluations</td>
+		<td>L'exigence n'a pas encore été analysée.</td>
+	</tr>
+</table>
+
 <TMPL_INCLUDE NAME="_list_CaC.tmpl">
 </body>
 </html>
