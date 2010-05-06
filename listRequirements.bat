@@ -23,7 +23,7 @@ use XML::Simple;
 use open ':encoding(utf8)';
 
 use constant {
-	PROGRAM_VERSION => '0.1',
+	PROGRAM_VERSION => '0.2',
 	TEMPLATE_DIRECTORY => './Templates/',
 };
 
@@ -37,27 +37,29 @@ DEBUG "Using $DATA_DIRECTORY as script directory";
 
 INFO "Reading source files";
 my %source;
-my @fields;
-@fields = ('Exigence_CDC', 'Texte');
-$source{CDC_LIST} = loadExcel($config->{documents}->{ClauseByClause}->{FileName}, $config->{documents}->{ClauseByClause}->{Sheet}, \@fields);
+my %fields;
 
-@fields = ('Exigence_VBN', 'Texte');
-$source{VBN_LIST} = loadExcel($config->{documents}->{Requirements_VBN}->{FileName}, $config->{documents}->{Requirements_VBN}->{Sheet}, \@fields);
+%fields = ('Exigence_CDC' => 0, 'Texte' => 1);
+$source{CDC_LIST} = loadExcel($config->{documents}->{ClauseByClause}->{FileName}, $config->{documents}->{ClauseByClause}->{Sheet}, \%fields);
 
-@fields = ('Exigence_REI', 'Texte');
-$source{REI_LIST} = loadExcel($config->{documents}->{Requirements_REI}->{FileName}, $config->{documents}->{Requirements_REI}->{Sheet}, \@fields);
+%fields = ('Exigence_VBN' => 0, 'Texte' => 1);
+$source{VBN_LIST} = loadExcel($config->{documents}->{Requirements_VBN}->{FileName}, $config->{documents}->{Requirements_VBN}->{Sheet}, \%fields);
 
+%fields = ('Exigence_REI' => 0, 'Texte' => 1);
+$source{REI_LIST} = loadExcel($config->{documents}->{Requirements_REI}->{FileName}, $config->{documents}->{Requirements_REI}->{Sheet}, \%fields);
 
-@fields = ('Exigence_CDC', 'Exigence_VBN', 'state', 'req_level', 'Risk');
-$source{VBN_CDC_List} = loadExcel($config->{documents}->{Requirements_VBN_CBC}->{FileName}, $config->{documents}->{Requirements_VBN_CBC}->{Sheet}, \@fields);
+%fields = ('Exigence_CDC' => 0, 'Exigence_VBN' => 1, 'state' => 2, 'req_level' => 3, 'Risk' => 4);
+$source{VBN_CDC_List} = loadExcel($config->{documents}->{Requirements_VBN_CBC}->{FileName}, $config->{documents}->{Requirements_VBN_CBC}->{Sheet}, \%fields);
 
-@fields = ('Exigence_CDC', 'Exigence_REI', 'Applicabilite', 'Risk', 'Comment');
-$source{REI_CDC_List} = loadExcel($config->{documents}->{Requirements_REI_CBC}->{FileName}, $config->{documents}->{Requirements_REI_CBC}->{Sheet}, \@fields);
+%fields = ('Exigence_CDC' => 0, 'Exigence_REI' => 1, 'Applicabilite' => 2, 'Risk' => 3, 'Comment' => 4);
+$source{REI_CDC_List} = loadExcel($config->{documents}->{Requirements_REI_CBC}->{FileName}, $config->{documents}->{Requirements_REI_CBC}->{Sheet}, \%fields);
 
 INFO "Preprocessing source files";
 my %list_CDC = map { $_->{Exigence_CDC} => $_ } @{$source{CDC_LIST}};
 my %list_VBN = map { $_->{Exigence_VBN} => $_ } @{$source{VBN_LIST}};
 my %list_REI = map { $_->{Exigence_REI} => $_ } @{$source{REI_LIST}};
+
+
 
 INFO "generating list of requirements compliant for VBN side";
 my %list_VBN_CDC;
@@ -69,8 +71,8 @@ foreach (sort @{$source{VBN_CDC_List}}) {
 	my %item;
 	my $orig_item = $list_VBN{$_->{Exigence_VBN}};
 	$item{Texte} = $orig_item->{Texte};
-	if("$_->{Risk}") {
-		$item{Risk} = $_->{Risk};
+	if(defined $_->{Risk} and "$_->{Risk}" ne "") {
+		$item{Risk} = "R".$_->{Risk};
 	}
 	
 	$item{Req_ID} = $_->{Exigence_VBN};
@@ -100,8 +102,8 @@ foreach (sort @{$source{REI_CDC_List}}) {
 	}
 	
 	my %item;
-	if("$_->{Risk}") {
-		$item{Risk} = $_->{Risk};
+	if( defined $_->{Risk} and "$_->{Risk}" ne "") {
+		$item{Risk} = "R".$_->{Risk};
 	}
 	
 	my $orig_item = $list_REI{$_->{Exigence_REI}};
@@ -148,47 +150,37 @@ sub loadExcel {
 	
     my $oWkS = $oBook->worksheet($sheet) or LOGDIE "No sheet called $sheet is found";
     DEBUG "Properties of sheet \"$oWkS->{Name}\" : Rows[$oWkS->{MinRow},$oWkS->{MaxRow}], Columns[$oWkS->{MinCol},$oWkS->{MaxCol}]";
-	my @header;
-	@header = @$header if($header and @$header);
 	
 	my $dimScalar = 0;
 	my %header;
-	for(my $iC = scalar(@header) ; defined $oWkS->{MaxCol} && $iC <= $oWkS->{MaxCol} ; $iC++) {
-		my $oWkC = "";
-		unless($oWkS->{Cells}[0][$iC]) {
-			WARN "Column $iC has no name. This one and followings will be ignored.";
-			last;
+	foreach my $key (keys(%$header)) {
+		if ($header->{$key} >= $oWkS->{MinCol} and $header->{$key} <= $oWkS->{MaxCol}) {	
+			DEBUG "Column #$header->{$key} called \"$key\" is being processed";
 		}
-		$oWkC = $oWkS->{Cells}[0][$iC]->Value;
-		
-		if($header{$oWkC}) {
-			ERROR "Column \"$oWkC\" has already be defined. This one and followings will be ignored.";
-			last;
+		else {
+			LOGDIE "Column {$key => $header->{$key}} was defined out of column range";
 		}
-		
-		$header{$oWkC}++;
 	}
 	
-	
-	my $maxCol = scalar(@header);
     for(my $iR = 1 ; defined $oWkS->{MaxRow} && $iR <= $oWkS->{MaxRow} ; $iR++) {
 		my %line;
-		for(my $iC = 0 ; $iC < $maxCol ; $iC++) {
+		
+		foreach my $key (keys(%$header)) {
+			my $iC = $header->{$key};
 			my $oWkC = "";
-			if(not $oWkS->{Cells}[$iR][$iC] or not $oWkS->{Cells}[$iR][$iC]->Value) {
-				#WARN "No value defined on cell [$iR , $iC].";
+			if(not defined $oWkS->{Cells}[$iR][$iC]) {
 				$oWkC = "";
 			}
 			else {
-				$oWkC = $oWkS->{Cells}[$iR][$iC]->Value;
+				$oWkC = "".$oWkS->{Cells}[$iR][$iC]->Value."";
 			}
 			
-			$line{__LineNumber} = $iR;
-			$line{$header[$iC]} = $oWkC;
+			$line{$key} = $oWkC;
         }
+		
+		$line{__LineNumber} = $iR;
 		push(@elements, \%line);
     }
-	
 	return \@elements;
 	
 }

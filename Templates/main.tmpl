@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-  <title>Résultats d'analyse au <TMPL_VAR name=DATE></title>
+  <title>Analysis results (<TMPL_VAR name=DATE>)</title>
  <style type="text/css">
   body { margin: 1em;
     font-family: Arial,Helvetica,sans-serif;
@@ -74,10 +74,10 @@ td > table.subrequirements {
   }
 
   caption { margin: 1em;
-    font-size: 2em;
+    font-size: 0.9em;
     font-weight: bold;
     font-style: italic;
-    text-align: left;
+    text-align: center;
     color: rgb(255, 255, 255);
   }
   
@@ -114,45 +114,53 @@ td > table.subrequirements {
   .color_risk_2 { background-color: orange; font-weight:bold; }
   .color_risk_3 { background-color: red; font-weight:bold; }
   .color_risk_9 { background-color: black; color:white; font-weight:bold; }
-  .risk_0 { height:100%; width:38px; padding-top: 6px; float:right; background-color: green; font-weight:bold;	 }
-  .risk_1 { height:100%; width:38px; padding-top: 6px; float:right; background-color: yellow; font-weight:bold;	 }
-  .risk_2 { height:100%; width:38px; padding-top: 6px; float:right; background-color: orange;font-weight:bold;  }
-  .risk_3 { height:100%; width:38px; padding-top: 6px; float:right; background-color: red;font-weight:bold;  }
-  .risk_9 { height:100%; width:38px; padding-top: 6px; float:right; background-color: black; color:white; font-weight:bold;}
+  .R0 { height:100%; width:38px; padding-top: 6px; float:right; background-color: green; font-weight:bold;	 }
+  .R1 { height:100%; width:38px; padding-top: 6px; float:right; background-color: yellow; font-weight:bold;	 }
+  .R2 { height:100%; width:38px; padding-top: 6px; float:right; background-color: orange;font-weight:bold;  }
+  .R3 { height:100%; width:38px; padding-top: 6px; float:right; background-color: red;font-weight:bold;  }
+  .R9 { height:100%; width:38px; padding-top: 6px; float:right; background-color: black; color:white; font-weight:bold;}
   </style>
 </head>
 <body>
 
-<h3>Fichier généré le <TMPL_VAR name=DATE></h3>
+<h1>Generic informations</h1>
 
-<table class='main' summary="Signification des couleurs">
-    <caption>Signification des couleurs</caption>
+<h3>File generated on <TMPL_VAR name=DATE></h3>
+
+<table class='main' summary="Colors meaning">
+    <caption>Colors meaning</caption>
 	<tr>
-		<th>Code couleur</th>
-		<th>Signification</th>
+		<th>Color</th>
+		<th>Meaning</th>
 	</tr>
 	<tr>
-		<td class="color_risk_0">R-0: pas de risque</td>
-		<td>L'exigence ne souffre d'aucune ambiguité.</td>
+		<td class="color_risk_0">R-0: No risks</td>
+		<td>Requirement is meaningfull, and requires no specific action.</td>
 	</tr>
 	<tr>
-		<td class="color_risk_1">R-1: Risque limité</td>
-		<td>Cette exigence a besoin de quelques actions d'éclaircissement.</td>	
+		<td class="color_risk_1">R-1: Small risk</td>
+		<td>Requirements needs some actions in order to explain/describe meaning or scope.</td>	
 	</tr>
 	<tr>
-		<td class="color_risk_2">R-2: Risque élevé</td>
-		<td>L'exigence n'est pas sous contrôle, mais une action est en cours pour tenter d'en abaisser le risque.</td>
+		<td class="color_risk_2">R-2: High risk</td>
+		<td>L'exigence n'est pas sous contrle, mais une action est en cours pour tenter d'en abaisser le risque.</td>
 	</tr>
 	<tr>
-		<td class="color_risk_3">R-3: Risque majeur</td>
-		<td>L'exigence n'est pas sous contrôle : Il est nécessaire d'accomplir des actions afin d'en abaisser le risque (accord, éclaircissement, etc).</td>
+		<td class="color_risk_3">R-3: Major risk</td>
+		<td>L'exigence n'est pas sous contrle : Il est ncessaire d'accomplir des actions afin d'en abaisser le risque (accord, claircissement, etc).</td>
 	</tr>
 	<tr>
-		<td class="color_risk_9">R-9: Pas d'évaluations</td>
-		<td>L'exigence n'a pas encore été analysée.</td>
+		<td class="color_risk_9">R-9: No analysis</td>
+		<td>Requirement has not been analysed yet.</td>
 	</tr>
 </table>
 
+<h1>Details of requirements covering</h1>
+
 <TMPL_INCLUDE NAME="_list_CaC.tmpl">
+
+<h1>Comments / history on REI covering side</h1>
+
+<h1>Comments / history on VBN covering side</h1>
 </body>
 </html>
