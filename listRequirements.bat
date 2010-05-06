@@ -51,7 +51,7 @@ $source{REI_LIST} = loadExcel($config->{documents}->{Requirements_REI}->{FileNam
 @fields = ('Exigence_CDC', 'Exigence_VBN', 'state', 'req_level', 'Risk');
 $source{VBN_CDC_List} = loadExcel($config->{documents}->{Requirements_VBN_CBC}->{FileName}, $config->{documents}->{Requirements_VBN_CBC}->{Sheet}, \@fields);
 
-@fields = ('Exigence_CDC', 'Applicabilite', 'Exigence_REI', 'Comment', 'Risk');
+@fields = ('Exigence_CDC', 'Exigence_REI', 'Applicabilite', 'Risk', 'Comment');
 $source{REI_CDC_List} = loadExcel($config->{documents}->{Requirements_REI_CBC}->{FileName}, $config->{documents}->{Requirements_REI_CBC}->{Sheet}, \@fields);
 
 INFO "Preprocessing source files";
@@ -64,8 +64,8 @@ my %list_VBN_CDC;
 my $i = 1;
 foreach (sort @{$source{VBN_CDC_List}}) {
 	$i++;
-	ERROR "Line $i: No equivalent found for VBN key called \"$_->{Exigence_VBN}\"" and next unless $list_VBN{$_->{Exigence_VBN}};
-	ERROR "Line $i: No equivalent found for CDC key called \"$_->{Exigence_CDC}\"" and next unless $list_CDC{$_->{Exigence_CDC}};
+	#ERROR "Line $i: No equivalent found for VBN key called \"$_->{Exigence_VBN}\"" and next unless $list_VBN{$_->{Exigence_VBN}};
+	#ERROR "Line $i: No equivalent found for CDC key called \"$_->{Exigence_CDC}\"" and next unless $list_CDC{$_->{Exigence_CDC}};
 	my %item;
 	my $orig_item = $list_VBN{$_->{Exigence_VBN}};
 	$item{Texte} = $orig_item->{Texte};
@@ -79,11 +79,26 @@ foreach (sort @{$source{VBN_CDC_List}}) {
 
 INFO "generating list of requirements compliant for REI side";
 my %list_REI_CDC;
+my %errors_reported;
 $i = 1;
 foreach (sort @{$source{REI_CDC_List}}) {
 	$i++;
-	#ERROR "Line $i: No equivalent found for REI key called \"$_->{Exigence_REI}\"" and next unless $list_REI{$_->{Exigence_REI}};
-	ERROR "Line $i: No equivalent found for CDC key called \"$_->{Exigence_CDC}\"" and next unless $list_CDC{$_->{Exigence_CDC}};
+
+	unless ($list_REI{$_->{Exigence_REI}}) {
+		next if $errors_reported{$_->{Exigence_REI}};
+		
+		ERROR "Line $_->{__LineNumber}: No equivalent found for REI key called \"$_->{Exigence_REI}\"";
+		$errors_reported{$_->{Exigence_REI}}++;
+		next;
+	}
+	
+	unless ($list_CDC{$_->{Exigence_CDC}}) {
+		next if $errors_reported{$_->{Exigence_CDC}};
+		ERROR "Line $_->{__LineNumber}: No equivalent found for CDC key called \"$_->{Exigence_CDC}\"";
+		$errors_reported{$_->{Exigence_CDC}}++;
+		next;
+	}
+	
 	my %item;
 	if("$_->{Risk}") {
 		$item{Risk} = $_->{Risk};
@@ -167,7 +182,8 @@ sub loadExcel {
 			else {
 				$oWkC = $oWkS->{Cells}[$iR][$iC]->Value;
 			}
-					
+			
+			$line{__LineNumber} = $iR;
 			$line{$header[$iC]} = $oWkC;
         }
 		push(@elements, \%line);
