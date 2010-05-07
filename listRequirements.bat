@@ -62,10 +62,10 @@ if (not DEBUG_MODE or not -r "Requirements_image.db") {
 	%fields = ('Exigence_REI' => 0, 'Texte' => 1);
 	$source{REI_LIST} = loadExcel($config->{documents}->{Requirements_REI}->{FileName}, $config->{documents}->{Requirements_REI}->{Sheet}, \%fields);
 
-	%fields = ('Exigence_CDC' => 0, 'Exigence_VBN' => 1, 'state' => 2, 'req_level' => 3, 'Risk' => 4);
+	%fields = ('Exigence_CDC' => 0, 'Exigence_VBN' => 1, 'Risk' => 4, 'History' => 5);
 	$source{VBN_CDC_List} = loadExcel($config->{documents}->{Requirements_VBN_CBC}->{FileName}, $config->{documents}->{Requirements_VBN_CBC}->{Sheet}, \%fields);
 
-	%fields = ('Exigence_CDC' => 0, 'Exigence_REI' => 1, 'Applicabilite' => 2, 'Risk' => 3, 'Comment' => 4);
+	%fields = ('Exigence_CDC' => 0, 'Exigence_REI' => 1, 'Applicabilite' => 2, 'Risk' => 3, 'History' => 4);
 	$source{REI_CDC_List} = loadExcel($config->{documents}->{Requirements_REI_CBC}->{FileName}, $config->{documents}->{Requirements_REI_CBC}->{Sheet}, \%fields);
 	store(\%source, "Requirements_image.db");
 }
@@ -79,11 +79,11 @@ my %list_CDC = map { $_->{Exigence_CDC} => $_ } @{$source{CDC_LIST}};
 my %list_VBN = map { $_->{Exigence_VBN} => $_ } @{$source{VBN_LIST}};
 my %list_REI = map { $_->{Exigence_REI} => $_ } @{$source{REI_LIST}};
 
-INFO "generating list of requirements compliant for VBN side";
-my ($list_REI_CDC, $errors_REI_CDC) = joinRequirements(\%list_CDC, \%list_REI, $source{REI_CDC_List}, 'Exigence_CDC', 'Exigence_REI');
-
 INFO "generating list of requirements compliant for REI side";
-my ($list_VBN_CDC, $errors_VBN_CDC) = joinRequirements(\%list_CDC, \%list_VBN, $source{VBN_CDC_List}, 'Exigence_CDC', 'Exigence_VBN');
+my ($list_REI_CDC, $errors_REI_CDC, $history_REI_CDC) = joinRequirements(\%list_CDC, \%list_REI, $source{REI_CDC_List}, 'Exigence_CDC', 'Exigence_REI');
+
+INFO "generating list of requirements compliant for VBN side";
+my ($list_VBN_CDC, $errors_VBN_CDC, $history_VBN_CDC) = joinRequirements(\%list_CDC, \%list_VBN, $source{VBN_CDC_List}, 'Exigence_CDC', 'Exigence_VBN');
 
 INFO "Generating final mapping";
 my @final_report;
@@ -98,12 +98,19 @@ foreach (sort @{$source{CDC_LIST}}) {
 	push(@final_report, \%requirement);
 }
 
+# Building history lists
+my @history;
+push(@history, { TITLE => 'History for REI requirements coverage', HISTORY_LIST => $history_REI_CDC });
+push(@history, { TITLE => 'History for VBN requirements coverage', HISTORY_LIST => $history_VBN_CDC });
+
+
 INFO "Generating HTML report";
 open (FILE, ">".$SCRIPT_DIRECTORY.'Results.html');
 		
 my $t = HTML::Template -> new( filename => TEMPLATE_DIRECTORY."main.tmpl", die_on_bad_params => 1 );
 
 $t->param(REQUIREMENTS_CDC => \@final_report);
+$t->param(HISTORY => \@history);
 my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
 $t->param(DATE => $tm);
 
@@ -116,6 +123,8 @@ sub joinRequirements {
 	DEBUG "Processing list of requirements";
 	
 	my %list;
+	my @history;
+	
 	my %errors;
 	my %analysis_table;
 	
@@ -141,13 +150,29 @@ sub joinRequirements {
 		}
 		
 		my %item;
+		my %hist_item;
+		
 		my $orig_item = $list_to_link->{$_->{$key_link}};
 		$item{Texte} = $orig_item->{Texte};
-		if(defined $_->{Risk} and "$_->{Risk}" ne "") {
+		my $risk = $_->{Risk};
+		if(defined $risk and "$risk" ne "") {
+			$risk = "R".$risk;
+			unless ($risk eq "R0" or $risk eq "R1" or $risk eq "R2" or $risk eq "R3" or $risk eq "R9") {
+				LOGDIE "Line $_->{__LineNumber}: Risk \"$risk\" is not a valid value";
+			}
+			
 			$item{Risk} = "R".$_->{Risk};
 		}
+		else {
+			$item{Risk} = 'R9';
+		}
+		
+		$item{Link_Key} = sprintf($key_link."_%04d", $_->{__LineNumber});
+		$hist_item{Link_Key} = $item{Link_Key};
+		$hist_item{History} = $_->{History};
 		
 		$item{Req_ID} = $_->{$key_link};
+		push(@history, \%hist_item);
 		push(@{$list{$_->{$key_ref}}}, \%item);
 	}
 	
@@ -159,7 +184,7 @@ sub joinRequirements {
 		$errors{TO_LINK_UNUSED}{$ref}++ unless $analysis_table{LIST_TO_LINK}->{$ref};
 	}
 	
-	return (\%list, \%errors);
+	return (\%list, \%errors, \@history);
 	
 }
 
