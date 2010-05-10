@@ -1,0 +1,29 @@
+<table class='main' summary="Statistics about analysis">
+    <caption>Statistics about analysis</caption>
+  <thead>   
+   <tr>
+      <th>Category</th>
+	  <th>Sub-category</th>
+      <th>Quantity</th>
+      <th>Percentage</th>
+    </tr>
+   </thead>   
+  <tbody>
+	<TMPL_LOOP name=CATEGORY>
+    <tr>
+      <th rowspan="<TMPL_VAR NAME="COUNT_LIST">"><TMPL_VAR NAME="NAME"></th>
+	<TMPL_LOOP name=LIST>
+    <TMPL_UNLESS NAME="__first__"><tr></TMPL_UNLESS>
+      <td><TMPL_VAR NAME="NAME"></td>
+      <td><TMPL_VAR NAME="VALUE"></td>
+      <td><TMPL_VAR NAME="PERCENTAGE"> %</td>
+    </tr>
+	</TMPL_LOOP>
+	<tr class='total'>
+      <td>Total</td>
+      <td><TMPL_VAR NAME="VALUE_TOTAL"></td>
+      <td>100 %</td>
+    </tr>
+	</TMPL_LOOP>
+  </tbody>
+</table>

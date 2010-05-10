@@ -25,7 +25,10 @@ use open ':encoding(utf8)';
 use constant {
 	PROGRAM_VERSION => '0.2',
 	TEMPLATE_DIRECTORY => './Templates/',
-	DEBUG_MODE => 0,
+	DEBUG_MODE => 1,
+	RISKS => '1_Risks',
+	COVERAGE => '2_Coverage',
+	MISSING_REQS => '2_mreq',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
@@ -80,10 +83,10 @@ my %list_VBN = map { $_->{Exigence_VBN} => $_ } @{$source{VBN_LIST}};
 my %list_REI = map { $_->{Exigence_REI} => $_ } @{$source{REI_LIST}};
 
 INFO "generating list of requirements compliant for REI side";
-my ($list_REI_CDC, $errors_REI_CDC, $history_REI_CDC) = joinRequirements(\%list_CDC, \%list_REI, $source{REI_CDC_List}, 'Exigence_CDC', 'Exigence_REI');
+my ($list_REI_CDC, $errors_REI_CDC, $history_REI_CDC, $stats_REI_CDC) = joinRequirements(\%list_CDC, \%list_REI, $source{REI_CDC_List}, 'Exigence_CDC', 'Exigence_REI');
 
 INFO "generating list of requirements compliant for VBN side";
-my ($list_VBN_CDC, $errors_VBN_CDC, $history_VBN_CDC) = joinRequirements(\%list_CDC, \%list_VBN, $source{VBN_CDC_List}, 'Exigence_CDC', 'Exigence_VBN');
+my ($list_VBN_CDC, $errors_VBN_CDC, $history_VBN_CDC, $stats_VBN_CDC) = joinRequirements(\%list_CDC, \%list_VBN, $source{VBN_CDC_List}, 'Exigence_CDC', 'Exigence_VBN');
 
 INFO "Generating final mapping";
 my @final_report;
@@ -103,14 +106,19 @@ my @history;
 push(@history, { TITLE => 'History for REI requirements coverage', HISTORY_LIST => $history_REI_CDC });
 push(@history, { TITLE => 'History for VBN requirements coverage', HISTORY_LIST => $history_VBN_CDC });
 
+my @statistics;
+push(@statistics, { TITLE => 'History for REI requirements coverage', CATEGORY => $stats_REI_CDC });
+push(@statistics, { TITLE => 'History for VBN requirements coverage', CATEGORY => $stats_VBN_CDC});
+
 
 INFO "Generating HTML report";
 open (FILE, ">".$SCRIPT_DIRECTORY.'Results.html');
 		
-my $t = HTML::Template -> new( filename => TEMPLATE_DIRECTORY."main.tmpl", die_on_bad_params => 1 );
+my $t = HTML::Template -> new( filename => TEMPLATE_DIRECTORY."main.tmpl", die_on_bad_params => 1, loop_context_vars => 1 );
 
 $t->param(REQUIREMENTS_CDC => \@final_report);
 $t->param(HISTORY => \@history);
+$t->param(STATISTICS => \@statistics);
 my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
 $t->param(DATE => $tm);
 
@@ -127,6 +135,9 @@ sub joinRequirements {
 	
 	my %errors;
 	my %analysis_table;
+	my %statistics;
+	
+	$statistics{+RISKS}{Name} = 'Risks analysis';
 	
 	foreach (sort @{$list_links}) {
 		# Identifying referenced 
@@ -155,17 +166,13 @@ sub joinRequirements {
 		my $orig_item = $list_to_link->{$_->{$key_link}};
 		$item{Texte} = $orig_item->{Texte};
 		my $risk = $_->{Risk};
-		if(defined $risk and "$risk" ne "") {
-			$risk = "R".$risk;
-			unless ($risk eq "R0" or $risk eq "R1" or $risk eq "R2" or $risk eq "R3" or $risk eq "R9") {
-				LOGDIE "Line $_->{__LineNumber}: Risk \"$risk\" is not a valid value";
-			}
-			
-			$item{Risk} = "R".$_->{Risk};
-		}
-		else {
-			$item{Risk} = 'R9';
-		}
+		$item{Risk} = '9' unless (defined $risk and "$risk" ne "");
+		
+		$risk = "R".$risk;
+		LOGDIE "Line $_->{__LineNumber}: Risk \"$risk\" is not a valid value" unless ($risk eq "R0" or $risk eq "R1" or $risk eq "R2" or $risk eq "R3" or $risk eq "R9");
+		$statistics{+RISKS}{Sum}++;
+		$statistics{+RISKS}{List}{$risk}++;
+		$item{Risk} = $risk;
 		
 		$item{Link_Key} = sprintf($key_link."_%04d", $_->{__LineNumber});
 		$hist_item{Link_Key} = $item{Link_Key};
@@ -176,16 +183,72 @@ sub joinRequirements {
 		push(@{$list{$_->{$key_ref}}}, \%item);
 	}
 	
+
 	foreach my $ref (keys %$list_reference) {
+		$errors{REF_USED}{$ref}++;
 		$errors{REF_UNUSED}{$ref}++ unless $analysis_table{LIST_REF}{$ref};
 	}
 	
+	$statistics{+COVERAGE}{Name} = 'Contractual covering';
+	$statistics{+COVERAGE}{Sum} = scalar keys %{$errors{REF_USED}};
+	$statistics{+COVERAGE}{List}{'Uncovered contractual requirements'} = scalar keys %{$errors{REF_UNUSED}};
+	$statistics{+COVERAGE}{List}{'Contractual requirements covered'} =  $statistics{+COVERAGE}{Sum} - scalar keys %{$errors{REF_UNUSED}};
+	
 	foreach my $ref (keys %$list_to_link) {
+		$statistics{+MISSING_REQS}{Sum}++;
+		$errors{TO_LINK_USED}{$ref}++;
 		$errors{TO_LINK_UNUSED}{$ref}++ unless $analysis_table{LIST_TO_LINK}->{$ref};
 	}
 	
-	return (\%list, \%errors, \@history);
+	$statistics{+MISSING_REQS}{Name} = 'Requirements not referenced by contractual side';
+	$statistics{+MISSING_REQS}{Sum} = scalar keys %{$errors{TO_LINK_USED}};
+	$statistics{+MISSING_REQS}{List}{'Covered requirements'} = $statistics{+MISSING_REQS}{Sum} - scalar keys %{$errors{TO_LINK_UNUSED}};
+	$statistics{+MISSING_REQS}{List}{'Uncovered requirements'} = scalar keys %{$errors{TO_LINK_UNUSED}};
 	
+	#my $sum = scalar keys %{$errors{REF_UNUSED}};
+	#$statistics{REF_UNUSED} = scalar keys %{$errors{REF_UNUSED}};
+	#$statistics{TO_LINK_UNUSED} = scalar keys %{$errors{TO_LINK_UNUSED}};
+
+	my @statistics = buildStatistics(%statistics);
+	
+	return (\%list, \%errors, \@history, \@statistics);
+}
+
+sub buildStatEntry {
+	my ($name, $value, $total) = @_;
+	my %item;
+	$item{NAME} = $name;
+	$item{VALUE} = $value;
+	$item{PERCENTAGE} = sprintf(("%.1f", $value*100/$total));
+	return \%item;
+}
+
+sub buildStatistics {
+	my %statistics = @_;
+	my @statistics;
+
+	################################################################################
+	
+	foreach my $category (sort keys %statistics) {
+		my %item = %{$statistics{$category}};
+		my %category;
+		$category{NAME} = $item{Name};
+		$category{COUNT_LIST} = scalar(keys %{$item{List}}) + 1;
+		$category{VALUE_TOTAL} = $item{Sum};
+		
+		my @list;
+		foreach my $key (sort keys %{$item{List}}) {
+			push(@list, buildStatEntry($key,$item{List}{$key},$category{VALUE_TOTAL}));
+		}
+		
+		$category{LIST} = \@list;
+		DEBUG "Nothing was set for category \"$category\"" and next unless scalar(@list);
+		push(@statistics, \%category);
+	}
+	
+	################################################################################
+	
+	return @statistics;
 }
 
 sub loadExcel {
@@ -232,6 +295,7 @@ sub loadExcel {
 		$line{__LineNumber} = $iR;
 		push(@elements, \%line);
     }
+	
 	return \@elements;
 	
 }

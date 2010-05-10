@@ -1,7 +1,7 @@
 <td>
 	<div class="header-cell">
-		<div class='req_id'><TMPL_VAR name=REQ_ID><div class='<TMPL_VAR name=RISK>'><a href='#h_<TMPL_VAR name=link_key>' name='e_<TMPL_VAR name=link_key>' title="View History of this requirement"><TMPL_VAR name=RISK></a></div></div>
-		<TMPL_IF name=CLASSIFICATION><div class='<TMPL_VAR name=CLASSIFICATION>'>&nbsp;</div></TMPL_IF>
+		<div class='req_id'><TMPL_VAR name=REQ_ID><TMPL_IF name=RISK><div class='<TMPL_VAR name=RISK>'><a href='#h_<TMPL_VAR name=link_key>' name='e_<TMPL_VAR name=link_key>' title="View History of this requirement"><TMPL_VAR name=RISK></a></div></TMPL_IF>
+		<TMPL_IF name=CLASSIFICATION><div class='<TMPL_VAR name=CLASSIFICATION>'>&nbsp;</div></TMPL_IF></div>
 	</div>
 	<div class='text'><TMPL_VAR name=TEXTE></div>
 </td>

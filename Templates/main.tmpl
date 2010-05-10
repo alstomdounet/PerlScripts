@@ -112,7 +112,7 @@ td > table.subrequirements {
 
 	a:hover {
 	text-decoration:none;
-	background-color: orange;
+	background-color: IndianRed;
 	color: black;
 	}
   
@@ -122,51 +122,36 @@ td > table.subrequirements {
 	width: 100%;
 	}
 
-  .color_risk_0 { background-color: green; font-weight:bold; }
-  .color_risk_1 { background-color: yellow; font-weight:bold; }
-  .color_risk_2 { background-color: orange; font-weight:bold; }
-  .color_risk_3 { background-color: red; font-weight:bold; }
-  .color_risk_9 { background-color: grey; color:white; font-weight:bold; }
+  .color_risk_R0 { background-color: green; font-weight:bold; }
+  .color_risk_R1 { background-color: yellow; font-weight:bold; }
+  .color_risk_R2 { background-color: orange; font-weight:bold; }
+  .color_risk_R3 { background-color: red; font-weight:bold; }
+  .color_risk_R9 { background-color: grey; color:white; font-weight:bold; }
   .R0 { height:100%; width:2em; float:right; 	margin-left:4px; background-color: green; font-weight:bold;	 }
   .R1 { height:100%; width:2em; float:right; margin-left:4px;background-color: yellow; font-weight:bold;	 }
   .R2 { height:100%; width:2em; float:right; margin-left:4px;background-color: orange;font-weight:bold;  }
   .R3 { height:100%; width:2em; float:right; margin-left:4px;background-color: red;font-weight:bold;  }
   .R9 { height:100%; width:2em; float:right;margin-left:4px; background-color: grey; color:white; font-weight:bold;}
+  .total { background-color: #F8F8F8; color: #B0B0B0; font-weight:bold; }
   </style>
 </head>
 <body>
 
-<h1>Generic informations</h1>
+<h1>Statistics</h1>
 
-<h3>File generated on <TMPL_VAR name=DATE></h3>
+<p>File generated on <TMPL_VAR name=DATE></p>
 
-<table class='main' summary="Colors meaning">
-    <caption>Colors meaning</caption>
-	<tr>
-		<th>Color</th>
-		<th>Meaning</th>
-	</tr>
-	<tr>
-		<td class="color_risk_0">R0: No risks</td>
-		<td>Requirement is meaningfull, and requires no specific action.</td>
-	</tr>
-	<tr>
-		<td class="color_risk_1">R1: Small risk</td>
-		<td>Requirements needs some actions in order to explain/describe meaning or scope.</td>	
-	</tr>
-	<tr>
-		<td class="color_risk_2">R2: High risk</td>
-		<td>L'exigence n'est pas sous contrle, mais une action est en cours pour tenter d'en abaisser le risque.</td>
-	</tr>
-	<tr>
-		<td class="color_risk_3">R3: Major risk</td>
-		<td>L'exigence n'est pas sous contrle : Il est ncessaire d'accomplir des actions afin d'en abaisser le risque (accord, claircissement, etc).</td>
-	</tr>
-	<tr>
-		<td class="color_risk_9">R9: No analysis</td>
-		<td>Requirement has not been analysed yet.</td>
-	</tr>
-</table>
+<TMPL_LOOP name=STATISTICS>
+<h2><TMPL_VAR name=TITLE></h2>
+
+<TMPL_INCLUDE NAME="_statistics.tmpl">
+</TMPL_LOOP>
+
+
+
+
+
+
 
 <h1>Details of requirements covering</h1>
 
@@ -177,5 +162,38 @@ td > table.subrequirements {
 
 <TMPL_INCLUDE NAME="_history.tmpl">
 </TMPL_LOOP>
+
+<h1></h1>
+
+<h2>Risks color meaning</h2>
+
+<table class='main' summary="Colors meaning">
+    <caption>Colors meaning</caption>
+	<tr>
+		<th>Color</th>
+		<th>Meaning</th>
+	</tr>
+	<tr>
+		<td class="color_risk_R0">R0: No risks</td>
+		<td>Requirement is meaningfull, and requires no specific action.</td>
+	</tr>
+	<tr>
+		<td class="color_risk_R1">R1: Small risk</td>
+		<td>Requirements needs some actions in order to explain/describe meaning or scope.</td>	
+	</tr>
+	<tr>
+		<td class="color_risk_R2">R2: High risk</td>
+		<td>L'exigence n'est pas sous contrle, mais une action est en cours pour tenter d'en abaisser le risque.</td>
+	</tr>
+	<tr>
+		<td class="color_risk_R3">R3: Major risk</td>
+		<td>L'exigence n'est pas sous contrle : Il est ncessaire d'accomplir des actions afin d'en abaisser le risque (accord, claircissement, etc).</td>
+	</tr>
+	<tr>
+		<td class="color_risk_R9">R9: No analysis</td>
+		<td>Requirement has not been analysed yet.</td>
+	</tr>
+</table>
+
 </body>
 </html>
