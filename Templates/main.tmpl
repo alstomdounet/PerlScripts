@@ -64,7 +64,7 @@ td > table.subrequirements {
   th { border: 0.1em solid rgb(255, 255, 255);
     padding: 0.5em;
     font-size: 1.2em;
-    background-color: rgb(255, 204, 153);
+    background-color: SlateGray;
     }
 	
   td.CodeDoc { 
@@ -115,6 +115,14 @@ td > table.subrequirements {
 	background-color: IndianRed;
 	color: black;
 	}
+	
+  .applicable_YES {
+	background-color: YellowGreen;
+  }
+  
+  .applicable_NO {
+	background-color: IndianRed;
+  }
   
   .header-cell { 
 	margin: auto;
@@ -132,7 +140,7 @@ td > table.subrequirements {
   .R2 { height:100%; width:2em; float:right; margin-left:4px;background-color: orange;font-weight:bold;  }
   .R3 { height:100%; width:2em; float:right; margin-left:4px;background-color: red;font-weight:bold;  }
   .R9 { height:100%; width:2em; float:right;margin-left:4px; background-color: grey; color:white; font-weight:bold;}
-  .total { background-color: #F8F8F8; color: #B0B0B0; font-weight:bold; }
+  .total { background-color: #F8F8F8; color: SlateGray; font-weight:bold; }
   </style>
 </head>
 <body>
@@ -146,12 +154,6 @@ td > table.subrequirements {
 
 <TMPL_INCLUDE NAME="_statistics.tmpl">
 </TMPL_LOOP>
-
-
-
-
-
-
 
 <h1>Details of requirements covering</h1>
 

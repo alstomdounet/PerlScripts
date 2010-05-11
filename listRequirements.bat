@@ -45,16 +45,6 @@ my %fields;
 
 INFO "generating list of requirements compliant for REI side";
 
-# my %list_CDC1 = ( 'REQ-CDC-01' => 1, 'REQ-CDC-02' => 2, 'REQ-CDC-03' => 3, 'REQ-CDC-04' => 4);
-# my %list_REI1 = ( 'REQ-REI-01' => 1, 'REQ-REI-02' => 2, 'REQ-REI-03' => 3, 'REQ-REI-04' => 4);
-# my @list3;
-# push(@list3, {'Exigence_REI' => 'REQ-REI-12', 'Exigence_CDC' => 'REQ-CDC-02', __LineNumber => 3});
-# push(@list3, {'Exigence_REI' => 'REQ-REI-01', 'Exigence_CDC' => 'REQ-CDC-04', __LineNumber => 6});
-# push(@list3, {'Exigence_REI' => 'REQ-REI-01', 'Exigence_CDC' => 'REQ-CDC-12', __LineNumber => 9});
-
-# my %list_VBN_CDC1 = joinRequirements(\%list_CDC1, \%list_REI1, \@list3, 'Exigence_CDC', 'Exigence_REI');
-# exit;
-
 if (not DEBUG_MODE or not -r "Requirements_image.db") {
 	%fields = ('Exigence_CDC' => 0, 'Texte' => 1);
 	$source{CDC_LIST} = loadExcel($config->{documents}->{ClauseByClause}->{FileName}, $config->{documents}->{ClauseByClause}->{Sheet}, \%fields);
@@ -144,7 +134,13 @@ sub joinRequirements {
 		$analysis_table{LIST_REF}->{$_->{$key_ref}}++;
 		$analysis_table{LIST_TO_LINK}->{$_->{$key_link}}++;
 
-		unless ($list_to_link->{$_->{$key_link}}) {
+		my $valid_ref_required = 1;
+		
+		if($_->{$key_link} eq "" and $_->{Applicabilite} =~ /Non/) {
+			$valid_ref_required = 0;
+		}
+		
+		if (not $list_to_link->{$_->{$key_link}} and $valid_ref_required) {
 			next if $errors{TO_LINK_UNMATCHED}->{$_->{$key_link}};
 			
 			DEBUG "Line $_->{__LineNumber}: No equivalent found for LINKS key called \"$_->{$key_link}\"";
@@ -163,8 +159,19 @@ sub joinRequirements {
 		my %item;
 		my %hist_item;
 		
-		my $orig_item = $list_to_link->{$_->{$key_link}};
-		$item{Texte} = $orig_item->{Texte};
+		if($valid_ref_required) {
+			my $orig_item = $list_to_link->{$_->{$key_link}};
+			$item{Texte} = $orig_item->{Texte};
+			$item{Req_ID} = $_->{$key_link};
+			$item{Applicabilite} = 'YES';
+		}
+		else {
+			$item{Texte} = $_->{History};
+			$item{Texte} = 'Justification is not yet written...' unless $item{Texte};
+			$item{Req_ID} = 'No reference';
+			$item{Applicabilite} = 'NO';
+		}
+		
 		my $risk = $_->{Risk};
 		$item{Risk} = '9' unless (defined $risk and "$risk" ne "");
 		
@@ -178,7 +185,7 @@ sub joinRequirements {
 		$hist_item{Link_Key} = $item{Link_Key};
 		$hist_item{History} = $_->{History};
 		
-		$item{Req_ID} = $_->{$key_link};
+
 		push(@history, \%hist_item);
 		push(@{$list{$_->{$key_ref}}}, \%item);
 	}
@@ -205,9 +212,6 @@ sub joinRequirements {
 	$statistics{+MISSING_REQS}{List}{'Covered requirements'} = $statistics{+MISSING_REQS}{Sum} - scalar keys %{$errors{TO_LINK_UNUSED}};
 	$statistics{+MISSING_REQS}{List}{'Uncovered requirements'} = scalar keys %{$errors{TO_LINK_UNUSED}};
 	
-	#my $sum = scalar keys %{$errors{REF_UNUSED}};
-	#$statistics{REF_UNUSED} = scalar keys %{$errors{REF_UNUSED}};
-	#$statistics{TO_LINK_UNUSED} = scalar keys %{$errors{TO_LINK_UNUSED}};
 
 	my @statistics = buildStatistics(%statistics);
 	
