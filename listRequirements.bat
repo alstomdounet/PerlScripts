@@ -25,7 +25,7 @@ use open ':encoding(utf8)';
 use constant {
 	PROGRAM_VERSION => '0.2',
 	TEMPLATE_DIRECTORY => './Templates/',
-	DEBUG_MODE => 1,
+	DEBUG_MODE => 0,
 	RISKS => '1_Risks',
 	COVERAGE => '2_Coverage',
 	MISSING_REQS => '2_mreq',
