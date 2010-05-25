@@ -25,7 +25,6 @@ use open ':encoding(utf8)';
 use constant {
 	PROGRAM_VERSION => '0.2',
 	TEMPLATE_DIRECTORY => './Templates/',
-	DEBUG_MODE => 0,
 	RISKS => '1_Risks',
 	COVERAGE => '2_Coverage',
 	MISSING_REQS => '2_mreq',
@@ -45,7 +44,7 @@ my %fields;
 
 INFO "generating list of requirements compliant for REI side";
 
-if (not DEBUG_MODE or not -r "Requirements_image.db") {
+if (not $config->{DebugMode} or not -r "Requirements_image.db") {
 	%fields = ('Exigence_CDC' => 0, 'Texte' => 1);
 	$source{CDC_LIST} = loadExcel($config->{documents}->{ClauseByClause}->{FileName}, $config->{documents}->{ClauseByClause}->{Sheet}, \%fields);
 
@@ -60,9 +59,14 @@ if (not DEBUG_MODE or not -r "Requirements_image.db") {
 
 	%fields = ('Exigence_CDC' => 0, 'Exigence_REI' => 1, 'Applicabilite' => 2, 'Risk' => 3, 'History' => 4);
 	$source{REI_CDC_List} = loadExcel($config->{documents}->{Requirements_REI_CBC}->{FileName}, $config->{documents}->{Requirements_REI_CBC}->{Sheet}, \%fields);
+	
+	%fields = ('Exigence_TGC' => 0, 'Lot' => 6, 'Statut' => 7, 'Livrable' => 8);
+	$source{TGC_List} = loadExcel($config->{documents}->{Assigned_REQ_TGC}->{FileName}, $config->{documents}->{Assigned_REQ_TGC}->{Sheet}, \%fields);
+	
 	store(\%source, "Requirements_image.db");
 }
 else {
+	WARN "Using DEBUG MODE. You have to delete \"Requirements_image.db\" to force refresh.";
 	%source = %{retrieve("Requirements_image.db")};
 }
 
@@ -71,6 +75,7 @@ WARN "Missing analysis for source requirements";
 my %list_CDC = map { $_->{Exigence_CDC} => $_ } @{$source{CDC_LIST}};
 my %list_VBN = map { $_->{Exigence_VBN} => $_ } @{$source{VBN_LIST}};
 my %list_REI = map { $_->{Exigence_REI} => $_ } @{$source{REI_LIST}};
+my %list_TGC = map { $_->{Exigence_TGC} => $_ } @{$source{TGC_List}};
 
 INFO "generating list of requirements compliant for REI side";
 my ($list_REI_CDC, $errors_REI_CDC, $history_REI_CDC, $stats_REI_CDC) = joinRequirements(\%list_CDC, \%list_REI, $source{REI_CDC_List}, 'Exigence_CDC', 'Exigence_REI');
@@ -87,6 +92,12 @@ foreach (sort @{$source{CDC_LIST}}) {
 	$requirement{Req_ID} = $reference;
 	$requirement{REQUIREMENTS_VBN} = $list_VBN_CDC->{$reference} if $list_VBN_CDC->{$reference};
 	$requirement{REQUIREMENTS_REI} = $list_REI_CDC->{$reference} if $list_REI_CDC->{$reference};
+	
+	$requirement{APPLICABILITE} = 'NA';
+	$list_TGC{$reference}{Lot} = 'Inconnu' unless $list_TGC{$reference}{Lot};
+	$list_TGC{$reference}{Livrable} = 'Inconnu' unless $list_TGC{$reference}{Livrable};
+	$requirement{REF_DOC} = $list_TGC{$reference}{Lot}." / ". $list_TGC{$reference}{Livrable};
+	$requirement{APPLICABILITE} = 'YES' if ($list_TGC{$reference}{Livrable} =~ /DID0000170295/) or ($list_TGC{$reference}{Lot} =~ /TCM3/);
 
 	push(@final_report, \%requirement);
 }

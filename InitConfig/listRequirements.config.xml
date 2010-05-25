@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='ISO-8859-1'?>
 <config>
+	<DebugMode>0</DebugMode>
 	<documents>
 		<ClauseByClause>
 			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\SyRB_PP_contractuel_iw.xls</FileName>
@@ -21,5 +22,9 @@
 			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\Couverture_RSAD_CdC_iw.xls</FileName>
 			<Sheet>Couverture</Sheet>
 		</Requirements_REI_CBC>
+		<Assigned_REQ_TGC>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\25_TCMS\02_Projet\01_Management_TCMS\12_Gestion des exigences\Maitrise_Exigences_Techniques_TCM.xls</FileName>
+			<Sheet>Exigences</Sheet>
+		</Assigned_REQ_TGC>
 	</documents>
 </config>
