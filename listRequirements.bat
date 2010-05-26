@@ -75,7 +75,12 @@ WARN "Missing analysis for source requirements";
 my ($list_CDC) = genList($source{CDC_LIST}, 'Exigence_CDC');
 my ($list_VBN) = genList($source{VBN_LIST}, 'Exigence_VBN');
 my ($list_REI) = genList($source{REI_LIST}, 'Exigence_REI');
-my ($list_TGC) = genList($source{TGC_List}, 'Exigence_CDC');
+my ($unfiltered_list_TGC) = genList($source{TGC_List}, 'Exigence_CDC');
+
+my $list_TGC;
+while (my ($key, $value) = each %$unfiltered_list_TGC) {
+	$list_TGC->{$key} = $value if applicable_TGC_Requirement($value);
+}
 
 INFO "Generating exhaustive list for contractual requirements";
 my %Contractual_List;
@@ -106,7 +111,7 @@ my @sortedList = sort { $Contractual_List{$a}{__SORT_KEY} cmp $Contractual_List{
 foreach my $sorted_key (@sortedList) {
 	my ($requirement) = fillCdCRequirement($Contractual_List{$sorted_key});
 
-	push(@final_report, $requirement);
+	push(@final_report, $requirement) if $requirement;
 }
 
 
@@ -188,11 +193,14 @@ sub fillCdCRequirement {
 	$requirement{REQUIREMENTS_VBN} = $list_VBN_CDC->{$reference} if $list_VBN_CDC->{$reference};
 	$requirement{REQUIREMENTS_REI} = $list_REI_CDC->{$reference} if $list_REI_CDC->{$reference};
 	
-	$requirement{APPLICABILITE} = 'NA';
+
+	$list_TGC->{$reference}{Lot} = $unfiltered_list_TGC->{$reference}{Lot} if $unfiltered_list_TGC->{$reference}{Lot};
+	$list_TGC->{$reference}{Livrable} = $unfiltered_list_TGC->{$reference}{Livrable} unless $unfiltered_list_TGC->{$reference}{Livrable};
 	$list_TGC->{$reference}{Lot} = 'Inconnu' unless $list_TGC->{$reference}{Lot};
 	$list_TGC->{$reference}{Livrable} = 'Inconnu' unless $list_TGC->{$reference}{Livrable};
 	$requirement{REF_DOC} = $list_TGC->{$reference}{Lot}." / ". $list_TGC->{$reference}{Livrable};
-	$requirement{APPLICABILITE} = 'YES' if applicable_TGC_Requirement($list_TGC->{$reference});
+	$requirement{ORIGIN} = 'VBN';
+	$requirement{ORIGIN} = 'REI' if applicable_TGC_Requirement($list_TGC->{$reference});
 	return \%requirement;
 }
 
