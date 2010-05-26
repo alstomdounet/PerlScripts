@@ -60,8 +60,8 @@ if (not $config->{DebugMode} or not -r "Requirements_image.db") {
 	%fields = ('Exigence_CDC' => 0, 'Exigence_REI' => 1, 'Applicabilite' => 2, 'Risk' => 3, 'History' => 4);
 	$source{REI_CDC_List} = loadExcel($config->{documents}->{Requirements_REI_CBC}->{FileName}, $config->{documents}->{Requirements_REI_CBC}->{Sheet}, \%fields);
 	
-	%fields = ('Exigence_TGC' => 0, 'Lot' => 6, 'Statut' => 7, 'Livrable' => 8);
-	$source{TGC_List} = loadExcel($config->{documents}->{Assigned_REQ_TGC}->{FileName}, $config->{documents}->{Assigned_REQ_TGC}->{Sheet}, \%fields);
+	%fields = ('Exigence_CDC' => 0, 'Texte' => 2, 'Lot' => 6, 'Statut' => 7, 'Livrable' => 8);
+	$source{TGC_List} = loadExcel($config->{documents}->{Assigned_REQ_TGC}->{FileName}, $config->{documents}->{Assigned_REQ_TGC}->{Sheet}, \%fields, 2);
 	
 	store(\%source, "Requirements_image.db");
 }
@@ -72,35 +72,43 @@ else {
 
 INFO "Preprocessing source files";
 WARN "Missing analysis for source requirements";
-my %list_CDC = map { $_->{Exigence_CDC} => $_ } @{$source{CDC_LIST}};
-my %list_VBN = map { $_->{Exigence_VBN} => $_ } @{$source{VBN_LIST}};
-my %list_REI = map { $_->{Exigence_REI} => $_ } @{$source{REI_LIST}};
-my %list_TGC = map { $_->{Exigence_TGC} => $_ } @{$source{TGC_List}};
+my ($list_CDC) = genList($source{CDC_LIST}, 'Exigence_CDC');
+my ($list_VBN) = genList($source{VBN_LIST}, 'Exigence_VBN');
+my ($list_REI) = genList($source{REI_LIST}, 'Exigence_REI');
+my ($list_TGC) = genList($source{TGC_List}, 'Exigence_CDC');
+
+INFO "Generating exhaustive list for contractual requirements";
+my %Contractual_List;
+my %uniqueKeys = map { $_ => 1 } (keys %$list_CDC, keys %$list_TGC);
+
+foreach my $sortable_key (keys %uniqueKeys) {
+	if($list_CDC->{$sortable_key}) {
+		$Contractual_List{$sortable_key} = $list_CDC->{$sortable_key};
+	}
+	else {
+		$Contractual_List{$sortable_key} = $list_TGC->{$sortable_key};
+	}
+}
+
+DEBUG "Contractual requirements have ".scalar(keys %Contractual_List)." occurences";
 
 INFO "generating list of requirements compliant for REI side";
-my ($list_REI_CDC, $errors_REI_CDC, $history_REI_CDC, $stats_REI_CDC) = joinRequirements(\%list_CDC, \%list_REI, $source{REI_CDC_List}, 'Exigence_CDC', 'Exigence_REI');
+my ($list_REI_CDC, $errors_REI_CDC, $history_REI_CDC, $stats_REI_CDC) = joinRequirements(\%Contractual_List, $list_REI, $source{REI_CDC_List}, 'Exigence_CDC', 'Exigence_REI');
 
 INFO "generating list of requirements compliant for VBN side";
-my ($list_VBN_CDC, $errors_VBN_CDC, $history_VBN_CDC, $stats_VBN_CDC) = joinRequirements(\%list_CDC, \%list_VBN, $source{VBN_CDC_List}, 'Exigence_CDC', 'Exigence_VBN');
+my ($list_VBN_CDC, $errors_VBN_CDC, $history_VBN_CDC, $stats_VBN_CDC) = joinRequirements(\%Contractual_List, $list_VBN, $source{VBN_CDC_List}, 'Exigence_CDC', 'Exigence_VBN');
 
 INFO "Generating final mapping";
 my @final_report;
-foreach (sort @{$source{CDC_LIST}}) {
-	my $reference = $_->{Exigence_CDC};
-	my %requirement;
-	$requirement{Texte} = $_->{Texte};
-	$requirement{Req_ID} = $reference;
-	$requirement{REQUIREMENTS_VBN} = $list_VBN_CDC->{$reference} if $list_VBN_CDC->{$reference};
-	$requirement{REQUIREMENTS_REI} = $list_REI_CDC->{$reference} if $list_REI_CDC->{$reference};
-	
-	$requirement{APPLICABILITE} = 'NA';
-	$list_TGC{$reference}{Lot} = 'Inconnu' unless $list_TGC{$reference}{Lot};
-	$list_TGC{$reference}{Livrable} = 'Inconnu' unless $list_TGC{$reference}{Livrable};
-	$requirement{REF_DOC} = $list_TGC{$reference}{Lot}." / ". $list_TGC{$reference}{Livrable};
-	$requirement{APPLICABILITE} = 'YES' if ($list_TGC{$reference}{Livrable} =~ /DID0000170295/) or ($list_TGC{$reference}{Lot} =~ /TCM3/);
 
-	push(@final_report, \%requirement);
+my @sortedList = sort { $Contractual_List{$a}{__SORT_KEY} cmp $Contractual_List{$b}{__SORT_KEY} } keys %Contractual_List;
+
+foreach my $sorted_key (@sortedList) {
+	my ($requirement) = fillCdCRequirement($Contractual_List{$sorted_key});
+
+	push(@final_report, $requirement);
 }
+
 
 # Building history lists
 my @history;
@@ -125,6 +133,74 @@ $t->param(DATE => $tm);
 
 print FILE $t->output;
 close(FILE);
+
+sub genList {
+	my ($list, $key, $otherList) = @_;
+	my @list = @$list;
+	my %errors;
+	my %finalList;
+	%finalList = %$otherList if $otherList;
+	foreach my $req (@list) {
+		my $req_id = $req->{$key};
+		my $sort_key = $req_id;
+		if($req_id =~ /^REQ-(\d{6})-PY-(\w{13})$/) {
+			$sort_key = "A-$2-PY-$1";
+		}
+		elsif($req_id =~ /^REQ-(\w{13})-(\d{4})$/) {
+			$sort_key = "B-$2-$1";
+		}
+		elsif($req_id =~ /^REQ-RTS_(\d+)-(\d{4})$/) {
+			$sort_key = "C-$2-$1";
+		}
+		elsif($req_id =~ /^REQ-VBN-(\d{4})$/) {
+			$sort_key = "Z-$1";
+		}
+		elsif($req_id =~ /^TLMAIN_SyRB_PP_(\d{4})$/) {
+			$sort_key = "A-$1";
+		}
+		elsif($req_id =~ /^RSAD(MR|)_TGC_(\d{3})$/) {
+			$sort_key = "A-$1";
+		}
+		else {
+			ERROR "\"$req_id\" is not sortable. It will be ignored";
+			print Dumper $req;
+			<>;
+			next;
+		}
+		
+		if ($finalList{$req_id}) {
+			$errors{$req_id}++;
+		}
+		else {
+			$req->{__SORT_KEY} = $sort_key;
+			$finalList{$req_id} = $req;
+		}
+	}
+	return (\%finalList, \%errors);
+}
+
+sub fillCdCRequirement {
+	my ($req) = @_;
+	my %requirement;
+	my $reference = $req->{Exigence_CDC};
+	$requirement{Texte} = $req->{Texte};
+	$requirement{Req_ID} = $reference;
+	$requirement{REQUIREMENTS_VBN} = $list_VBN_CDC->{$reference} if $list_VBN_CDC->{$reference};
+	$requirement{REQUIREMENTS_REI} = $list_REI_CDC->{$reference} if $list_REI_CDC->{$reference};
+	
+	$requirement{APPLICABILITE} = 'NA';
+	$list_TGC->{$reference}{Lot} = 'Inconnu' unless $list_TGC->{$reference}{Lot};
+	$list_TGC->{$reference}{Livrable} = 'Inconnu' unless $list_TGC->{$reference}{Livrable};
+	$requirement{REF_DOC} = $list_TGC->{$reference}{Lot}." / ". $list_TGC->{$reference}{Livrable};
+	$requirement{APPLICABILITE} = 'YES' if applicable_TGC_Requirement($list_TGC->{$reference});
+	return \%requirement;
+}
+
+sub applicable_TGC_Requirement {
+	my ($item) = @_;
+	return 1 if ($item->{Livrable} =~ /DID0000170295/) or ($item->{Lot} =~ /TCM3/);
+	return 0;
+}
 
 sub joinRequirements {
 	my($list_reference, $list_to_link, $list_links, $key_ref, $key_link) = @_;
@@ -267,7 +343,7 @@ sub buildStatistics {
 }
 
 sub loadExcel {
-	my ($filename, $sheet, $header) = @_;
+	my ($filename, $sheet, $header, $beginLine) = @_;
 
 	my $oExcel = new Spreadsheet::ParseExcel;
 
@@ -291,8 +367,10 @@ sub loadExcel {
 		}
 	}
 	
-    for(my $iR = 1 ; defined $oWkS->{MaxRow} && $iR <= $oWkS->{MaxRow} ; $iR++) {
+	$beginLine = 1 unless $beginLine;
+    for(my $iR = $beginLine ; defined $oWkS->{MaxRow} && $iR <= $oWkS->{MaxRow} ; $iR++) {
 		my %line;
+		my $emptyRow = 1;
 		
 		foreach my $key (keys(%$header)) {
 			my $iC = $header->{$key};
@@ -302,13 +380,14 @@ sub loadExcel {
 			}
 			else {
 				$oWkC = "".$oWkS->{Cells}[$iR][$iC]->Value."";
+				$emptyRow = 0 if $oWkC;
 			}
 			
-			$line{$key} = $oWkC;
+			$line{$key} = $oWkC ;
         }
 		
 		$line{__LineNumber} = $iR;
-		push(@elements, \%line);
+		push(@elements, \%line) unless $emptyRow;
     }
 	
 	return \@elements;
