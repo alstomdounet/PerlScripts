@@ -230,7 +230,7 @@ sub joinRequirements {
 
 		my $valid_ref_required = 1;
 		
-		if($_->{$key_link} eq "" and $_->{Applicabilite} =~ /Non/) {
+		if($_->{$key_link} eq "" and ($_->{Applicabilite} =~ /Non/ or $_->{Applicabilite} =~ /Suiveur/)) {
 			$valid_ref_required = 0;
 		}
 		
@@ -252,20 +252,21 @@ sub joinRequirements {
 		
 		my %item;
 		my %hist_item;
+		my $applicability = 'YES';
+		$applicability = 'NO' if $_->{Applicabilite} and $_->{Applicabilite} =~ /Non/;
+		$applicability = 'FOLLOWER' if $_->{Applicabilite} and $_->{Applicabilite} =~ /Suiveur/;
 		
 		if($valid_ref_required) {
 			my $orig_item = $list_to_link->{$_->{$key_link}};
 			$item{Texte} = $orig_item->{Texte};
-			$item{Req_ID} = $_->{$key_link};
-			$item{Applicabilite} = 'YES';
 		}
 		else {
 			$item{Texte} = $_->{History};
 			$item{Texte} = 'Justification is not yet written...' unless $item{Texte};
-			$item{Req_ID} = 'No reference';
-			$item{Applicabilite} = 'NO';
 		}
 		
+		$item{Applicabilite} = $applicability;
+		$item{Req_ID} = (defined ($_->{$key_link}) and "$_->{$key_link}" ne '') ? $_->{$key_link} : 'Not referenced';
 		my $risk = $_->{Risk};
 		$item{Risk} = '9' unless (defined $risk and "$risk" ne "");
 		
