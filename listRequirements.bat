@@ -152,10 +152,10 @@ sub genList {
 			$sort_key = "A-$2-PY-$1";
 		}
 		elsif($req_id =~ /^REQ-(\w{13})-(\d{4})$/) {
-			$sort_key = "B-$2-$1";
+			$sort_key = "B-$1-$2";
 		}
 		elsif($req_id =~ /^REQ-RTS_(\d+)-(\d{4})$/) {
-			$sort_key = "C-$2-$1";
+			$sort_key = "C-$1-$2";
 		}
 		elsif($req_id =~ /^REQ-VBN-(\d{4})$/) {
 			$sort_key = "Z-$1";
@@ -199,8 +199,7 @@ sub fillCdCRequirement {
 	$list_TGC->{$reference}{Lot} = 'Inconnu' unless $list_TGC->{$reference}{Lot};
 	$list_TGC->{$reference}{Livrable} = 'Inconnu' unless $list_TGC->{$reference}{Livrable};
 	$requirement{REF_DOC} = $list_TGC->{$reference}{Lot}." / ". $list_TGC->{$reference}{Livrable};
-	$requirement{ORIGIN} = 'VBN';
-	$requirement{ORIGIN} = 'REI' if applicable_TGC_Requirement($list_TGC->{$reference});
+	$requirement{ORIGIN} = (applicable_TGC_Requirement($list_TGC->{$reference}))? 'REI' : 'VBN';
 	return \%requirement;
 }
 
