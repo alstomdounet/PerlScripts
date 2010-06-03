@@ -23,7 +23,7 @@ use XML::Simple;
 use open ':encoding(utf8)';
 
 use constant {
-	PROGRAM_VERSION => '0.2',
+	PROGRAM_VERSION => '0.3',
 	TEMPLATE_DIRECTORY => './Templates/',
 	RISKS => '1_Risks',
 	COVERAGE => '2_Coverage',
@@ -74,7 +74,8 @@ INFO "Preprocessing source files";
 WARN "Missing analysis for source requirements";
 my ($list_CDC) = genList($source{CDC_LIST}, 'Exigence_CDC');
 my ($list_VBN) = genList($source{VBN_LIST}, 'Exigence_VBN');
-my ($list_REI) = genList($source{REI_LIST}, 'Exigence_REI');
+my ($list_REI, $stats) = genList($source{REI_LIST}, 'Exigence_REI');
+DEBUG Dumper $stats;
 my ($unfiltered_list_TGC) = genList($source{TGC_List}, 'Exigence_CDC');
 
 my $list_TGC;
@@ -142,29 +143,37 @@ close(FILE);
 sub genList {
 	my ($list, $key, $otherList) = @_;
 	my @list = @$list;
-	my %errors;
+	my %tmp;
+	my %stats;
 	my %finalList;
 	%finalList = %$otherList if $otherList;
+	
 	foreach my $req (@list) {
 		my $req_id = $req->{$key};
 		my $sort_key = $req_id;
 		if($req_id =~ /^REQ-(\d{6})-PY-(\w{13})$/) {
 			$sort_key = "A-$2-PY-$1";
+			$tmp{TYPE_1}{"$1"}++;
 		}
 		elsif($req_id =~ /^REQ-(\w{13})-(\d{4})$/) {
 			$sort_key = "B-$1-$2";
+			$tmp{TYPE_2}{"$2"}++;
 		}
 		elsif($req_id =~ /^REQ-RTS_(\d+)-(\d{4})$/) {
 			$sort_key = "C-$1-$2";
+			$tmp{TYPE_3}{"$1"}++;
 		}
 		elsif($req_id =~ /^REQ-VBN-(\d{4})$/) {
 			$sort_key = "Z-$1";
+			$tmp{TYPE_4}{"$1"}++;
 		}
 		elsif($req_id =~ /^TLMAIN_SyRB_PP_(\d{4})$/) {
 			$sort_key = "A-$1";
+			$tmp{TYPE_5}{"$1"}++;
 		}
-		elsif($req_id =~ /^RSAD(MR|)_TGC_(\d{3})$/) {
+		elsif($req_id =~ /^RSAD(?:MR|)_TGC_(\d{3})$/) {
 			$sort_key = "A-$1";
+			$tmp{TYPE_6}{"$1"}++;
 		}
 		else {
 			ERROR "\"$req_id\" is not sortable. It will be ignored";
@@ -174,14 +183,30 @@ sub genList {
 		}
 		
 		if ($finalList{$req_id}) {
-			$errors{$req_id}++;
+			$stats{errors}{$req_id}++;
+			ERROR "This requirement has been defined several times : \"$req_id\"";
+			print Dumper $req;
+			<>;
 		}
 		else {
 			$req->{__SORT_KEY} = $sort_key;
 			$finalList{$req_id} = $req;
 		}
 	}
-	return (\%finalList, \%errors);
+	
+
+	foreach my $type (keys %tmp) {
+		my @rev_sorted_list = reverse sort keys %{$tmp{$type}};
+		my $last_value = shift @rev_sorted_list;
+		$stats{$type}{highest} = "$last_value";
+		while (my $value = shift @rev_sorted_list) {
+			if($last_value - $value > 1) {
+				$stats{$type}{gaps} = "GAP between \"$value\" and \"$last_value\"";
+			}
+			$last_value = $value;
+		}
+	}
+	return (\%finalList, \%stats);
 }
 
 sub fillCdCRequirement {
