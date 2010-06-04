@@ -28,6 +28,7 @@ use constant {
 	RISKS => '1_Risks',
 	COVERAGE => '2_Coverage',
 	MISSING_REQS => '2_mreq',
+	NOT_REFERENCED => 'NOT_REFERENCED',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
@@ -104,10 +105,14 @@ my ($list_REI_CDC, $errors_REI_CDC, $history_REI_CDC, $stats_REI_CDC) = joinRequ
 INFO "generating list of requirements compliant for VBN side";
 my ($list_VBN_CDC, $errors_VBN_CDC, $history_VBN_CDC, $stats_VBN_CDC) = joinRequirements(\%Contractual_List, $list_VBN, $source{VBN_CDC_List}, 'Exigence_CDC', 'Exigence_VBN');
 
+my @sortedList = sort { $Contractual_List{$a}{__SORT_KEY} cmp $Contractual_List{$b}{__SORT_KEY} } keys %Contractual_List;
+INFO "Building prospective table";
+my ($prosp_table) = buildProspectiveTable(\%Contractual_List);
+
 INFO "Generating final mapping";
 my @final_report;
 
-my @sortedList = sort { $Contractual_List{$a}{__SORT_KEY} cmp $Contractual_List{$b}{__SORT_KEY} } keys %Contractual_List;
+
 
 foreach my $sorted_key (@sortedList) {
 	my ($requirement) = fillCdCRequirement($Contractual_List{$sorted_key});
@@ -139,6 +144,30 @@ $t->param(DATE => $tm);
 
 print FILE $t->output;
 close(FILE);
+
+sub buildProspectiveTable {
+	my($list_reference) = @_;
+
+	my %equiv_list;
+	
+	foreach my $reference (keys %{$list_reference}) {
+		my $req = $list_reference->{$reference};
+		if ($list_VBN_CDC->{$reference} and $list_REI_CDC->{$reference}) {
+			foreach my $VBN_item (@{$list_VBN_CDC->{$reference}}) {
+				foreach my $REI_item (@{$list_REI_CDC->{$reference}}) {
+					next unless($VBN_item->{Req_ID} ne NOT_REFERENCED and $REI_item->{Req_ID} ne NOT_REFERENCED);
+					$equiv_list{VBN_SIDE}{$VBN_item->{Req_ID}}{$REI_item->{Req_ID}}{List} = $REI_item;
+					push(@{$equiv_list{VBN_SIDE}{$VBN_item->{Req_ID}}{$REI_item->{Req_ID}}{References}}, $reference);
+					
+					$equiv_list{REI_SIDE}{$REI_item->{Req_ID}}{$VBN_item->{Req_ID}}{List} = $VBN_item;
+					push(@{$equiv_list{REI_SIDE}{$REI_item->{Req_ID}}{$VBN_item->{Req_ID}}{References}}, $reference);
+				}
+			}
+		}
+	}
+	
+	return \%equiv_list;
+}
 
 sub genList {
 	my ($list, $key, $otherList) = @_;
@@ -217,7 +246,6 @@ sub fillCdCRequirement {
 	$requirement{Req_ID} = $reference;
 	$requirement{REQUIREMENTS_VBN} = $list_VBN_CDC->{$reference} if $list_VBN_CDC->{$reference};
 	$requirement{REQUIREMENTS_REI} = $list_REI_CDC->{$reference} if $list_REI_CDC->{$reference};
-	
 
 	$list_TGC->{$reference}{Lot} = $unfiltered_list_TGC->{$reference}{Lot} if $unfiltered_list_TGC->{$reference}{Lot};
 	$list_TGC->{$reference}{Livrable} = $unfiltered_list_TGC->{$reference}{Livrable} unless $unfiltered_list_TGC->{$reference}{Livrable};
@@ -291,7 +319,7 @@ sub joinRequirements {
 		}
 		
 		$item{Applicabilite} = $applicability;
-		$item{Req_ID} = (defined ($_->{$key_link}) and "$_->{$key_link}" ne '') ? $_->{$key_link} : 'Not referenced';
+		$item{Req_ID} = (defined ($_->{$key_link}) and "$_->{$key_link}" ne '') ? $_->{$key_link} : NOT_REFERENCED;
 		my $risk = $_->{Risk};
 		$item{Risk} = '9' unless (defined $risk and "$risk" ne "");
 		
