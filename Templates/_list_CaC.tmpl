@@ -10,6 +10,7 @@
 		<td>
 			<TMPL_IF name=REQUIREMENTS_VBN>
 			<table class='subrequirements'>
+				<tr><th>Found requirement(s)</th></tr>
 				<TMPL_LOOP name=REQUIREMENTS_VBN>
 				<tr>
 					<TMPL_INCLUDE NAME="_req_cell.tmpl">
@@ -19,11 +20,22 @@
 			<TMPL_ELSE>
 			No VBN requirements found
 			</TMPL_IF>
+			<TMPL_IF name=PROSPECTIVES_VBN>
+			<table class='subrequirements'>
+				<tr><th>Potential match(es)</th></tr>
+				<TMPL_LOOP name=PROSPECTIVES_VBN>
+				<tr>
+					<TMPL_INCLUDE NAME="_potential_req_cell.tmpl">
+				</tr>
+				</TMPL_LOOP>
+			</table>
+			</TMPL_IF>
 		</td>
 		<TMPL_INCLUDE NAME="_req_cell.tmpl">
 		<td>
 			<TMPL_IF name=REQUIREMENTS_REI>
 			<table class='subrequirements'>
+				<tr><th>Found requirement(s)</th></tr>
 				<TMPL_LOOP name=REQUIREMENTS_REI>
 				<tr>
 					<TMPL_INCLUDE NAME="_req_cell.tmpl">
@@ -32,6 +44,16 @@
 			</table>
 			<TMPL_ELSE>
 			No REI requirements found
+			</TMPL_IF>
+			<TMPL_IF name=PROSPECTIVES_REI>
+			<table class='subrequirements'>
+				<tr><th>Potential match(es)</th></tr>
+				<TMPL_LOOP name=PROSPECTIVES_REI>
+				<tr>
+					<TMPL_INCLUDE NAME="_potential_req_cell.tmpl">
+				</tr>
+				</TMPL_LOOP>
+			</table>
 			</TMPL_IF>
 		</td>
 	</tr>

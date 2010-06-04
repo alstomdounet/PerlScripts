@@ -28,7 +28,7 @@ use constant {
 	RISKS => '1_Risks',
 	COVERAGE => '2_Coverage',
 	MISSING_REQS => '2_mreq',
-	NOT_REFERENCED => 'NOT_REFERENCED',
+	NOT_REFERENCED => 'Not referenced',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
@@ -105,6 +105,8 @@ my ($list_REI_CDC, $errors_REI_CDC, $history_REI_CDC, $stats_REI_CDC) = joinRequ
 INFO "generating list of requirements compliant for VBN side";
 my ($list_VBN_CDC, $errors_VBN_CDC, $history_VBN_CDC, $stats_VBN_CDC) = joinRequirements(\%Contractual_List, $list_VBN, $source{VBN_CDC_List}, 'Exigence_CDC', 'Exigence_VBN');
 
+my %completeList = (REI => $list_REI_CDC, VBN => $list_VBN_CDC);
+
 my @sortedList = sort { $Contractual_List{$a}{__SORT_KEY} cmp $Contractual_List{$b}{__SORT_KEY} } keys %Contractual_List;
 INFO "Building prospective table";
 my ($prosp_table) = buildProspectiveTable(\%Contractual_List);
@@ -115,7 +117,7 @@ my @final_report;
 
 
 foreach my $sorted_key (@sortedList) {
-	my ($requirement) = fillCdCRequirement($Contractual_List{$sorted_key});
+	my ($requirement) = fillCdCRequirement($Contractual_List{$sorted_key}, $prosp_table);
 
 	push(@final_report, $requirement) if $requirement;
 }
@@ -150,23 +152,40 @@ sub buildProspectiveTable {
 
 	my %equiv_list;
 	
+	DEBUG "Building intermediate prospective table";
 	foreach my $reference (keys %{$list_reference}) {
 		my $req = $list_reference->{$reference};
 		if ($list_VBN_CDC->{$reference} and $list_REI_CDC->{$reference}) {
 			foreach my $VBN_item (@{$list_VBN_CDC->{$reference}}) {
 				foreach my $REI_item (@{$list_REI_CDC->{$reference}}) {
 					next unless($VBN_item->{Req_ID} ne NOT_REFERENCED and $REI_item->{Req_ID} ne NOT_REFERENCED);
-					$equiv_list{VBN_SIDE}{$VBN_item->{Req_ID}}{$REI_item->{Req_ID}}{List} = $REI_item;
+					$equiv_list{VBN_SIDE}{$VBN_item->{Req_ID}}{$REI_item->{Req_ID}}{List} = $VBN_item;
 					push(@{$equiv_list{VBN_SIDE}{$VBN_item->{Req_ID}}{$REI_item->{Req_ID}}{References}}, $reference);
 					
-					$equiv_list{REI_SIDE}{$REI_item->{Req_ID}}{$VBN_item->{Req_ID}}{List} = $VBN_item;
+					$equiv_list{REI_SIDE}{$REI_item->{Req_ID}}{$VBN_item->{Req_ID}}{List} = $REI_item;
 					push(@{$equiv_list{REI_SIDE}{$REI_item->{Req_ID}}{$VBN_item->{Req_ID}}{References}}, $reference);
 				}
 			}
 		}
 	}
 	
-	return \%equiv_list;
+	DEBUG "Building final prospective table";
+	my %final_list;
+	foreach my $side_key (keys %equiv_list) {
+		my %side = %{$equiv_list{$side_key}};
+		foreach my $main_level_key (keys %side) {
+			my %main_level = %{$side{$main_level_key}};
+			foreach my $sub_level_key (keys %main_level) {
+				my %sub_level = %{$main_level{$sub_level_key}};
+				my %final_item;
+				$final_item{TEXTE} = $sub_level{List}{Texte};
+				$final_item{REQ_ID} = $sub_level{List}{Req_ID};
+				$final_item{REFERENCES} = join(', ', @{$sub_level{References}});
+				$final_list{$side_key}{$sub_level_key}{$main_level_key} = \%final_item;
+			}
+		}
+	}
+	return \%final_list;
 }
 
 sub genList {
@@ -239,13 +258,40 @@ sub genList {
 }
 
 sub fillCdCRequirement {
-	my ($req) = @_;
+	my ($req, $prospect_table) = @_;
 	my %requirement;
 	my $reference = $req->{Exigence_CDC};
 	$requirement{Texte} = $req->{Texte};
 	$requirement{Req_ID} = $reference;
-	$requirement{REQUIREMENTS_VBN} = $list_VBN_CDC->{$reference} if $list_VBN_CDC->{$reference};
-	$requirement{REQUIREMENTS_REI} = $list_REI_CDC->{$reference} if $list_REI_CDC->{$reference};
+	
+	my @list = ({ THIS_SIDE => 'REI', OTHER_SIDE => 'VBN'}, { THIS_SIDE => 'VBN', OTHER_SIDE => 'REI'});
+	
+	foreach my $item (@list) {
+		if($completeList{$item->{THIS_SIDE}}{$reference}) {
+			$requirement{'REQUIREMENTS_'.$item->{THIS_SIDE}} = $completeList{$item->{THIS_SIDE}}{$reference};
+			
+			my @list_reqs;
+			foreach my $REI_REQ (@{$completeList{$item->{THIS_SIDE}}{$reference}}) {
+				push(@list_reqs, $REI_REQ->{Req_ID});
+			}
+			
+			my @list_missing_reqs;
+			foreach my $VBN_REQ (@{$completeList{$item->{OTHER_SIDE}}{$reference}}) {
+				my $VBN_REQ_ID = $VBN_REQ->{Req_ID};
+				next if $VBN_REQ_ID eq NOT_REFERENCED;
+
+				if(exists $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}) {
+					foreach my $REI_REQ_ID (keys %{$prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}}) {
+						unless(grep(/^$REI_REQ_ID$/, @list_reqs)) {
+							push(@list_missing_reqs, $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}{$REI_REQ_ID});
+						}
+					}
+				}
+			}
+
+			$requirement{'PROSPECTIVES_'.$item->{THIS_SIDE}} = \@list_missing_reqs;
+		}
+	}
 
 	$list_TGC->{$reference}{Lot} = $unfiltered_list_TGC->{$reference}{Lot} if $unfiltered_list_TGC->{$reference}{Lot};
 	$list_TGC->{$reference}{Livrable} = $unfiltered_list_TGC->{$reference}{Livrable} unless $unfiltered_list_TGC->{$reference}{Livrable};
