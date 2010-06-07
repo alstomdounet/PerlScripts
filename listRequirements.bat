@@ -267,6 +267,8 @@ sub fillCdCRequirement {
 	my @list = ({ THIS_SIDE => 'REI', OTHER_SIDE => 'VBN'}, { THIS_SIDE => 'VBN', OTHER_SIDE => 'REI'});
 	
 	foreach my $item (@list) {
+		my @list_reqs;
+		
 		if($completeList{$item->{THIS_SIDE}}{$reference}) {
 			$requirement{'REQUIREMENTS_'.$item->{THIS_SIDE}} = $completeList{$item->{THIS_SIDE}}{$reference};
 			
@@ -274,23 +276,23 @@ sub fillCdCRequirement {
 			foreach my $REI_REQ (@{$completeList{$item->{THIS_SIDE}}{$reference}}) {
 				push(@list_reqs, $REI_REQ->{Req_ID});
 			}
-			
-			my @list_missing_reqs;
-			foreach my $VBN_REQ (@{$completeList{$item->{OTHER_SIDE}}{$reference}}) {
-				my $VBN_REQ_ID = $VBN_REQ->{Req_ID};
-				next if $VBN_REQ_ID eq NOT_REFERENCED;
+		}
+		
+		my @list_missing_reqs;
+		foreach my $VBN_REQ (@{$completeList{$item->{OTHER_SIDE}}{$reference}}) {
+			my $VBN_REQ_ID = $VBN_REQ->{Req_ID};
+			next if $VBN_REQ_ID eq NOT_REFERENCED;
 
-				if(exists $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}) {
-					foreach my $REI_REQ_ID (keys %{$prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}}) {
-						unless(grep(/^$REI_REQ_ID$/, @list_reqs)) {
-							push(@list_missing_reqs, $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}{$REI_REQ_ID});
-						}
+			if(exists $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}) {
+				foreach my $REI_REQ_ID (keys %{$prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}}) {
+					unless(grep(/^$REI_REQ_ID$/, @list_reqs)) {
+						push(@list_missing_reqs, $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}{$REI_REQ_ID});
 					}
 				}
 			}
-
-			$requirement{'PROSPECTIVES_'.$item->{THIS_SIDE}} = \@list_missing_reqs;
 		}
+
+		$requirement{'PROSPECTIVES_'.$item->{THIS_SIDE}} = \@list_missing_reqs;
 	}
 
 	$list_TGC->{$reference}{Lot} = $unfiltered_list_TGC->{$reference}{Lot} if $unfiltered_list_TGC->{$reference}{Lot};
