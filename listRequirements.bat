@@ -53,7 +53,7 @@ if (not $config->{DebugMode} or not -r "Requirements_image.db") {
 	$source{VBN_LIST} = loadExcel($config->{documents}->{Requirements_VBN}->{FileName}, $config->{documents}->{Requirements_VBN}->{Sheet}, \%fields);
 
 	%fields = ('Exigence_REI' => 0, 'Texte' => 1);
-	$source{REI_LIST} = loadExcel($config->{documents}->{Requirements_REI}->{FileName}, $config->{documents}->{Requirements_REI}->{Sheet}, \%fields);
+	$source{REI_LIST} = loadExcel($config->{documents}->{Requirements_REI}->{FileName}, $config->{documents}->{Requirements_REI}->{Sheet}, \%fields, 2);
 
 	%fields = ('Exigence_CDC' => 0, 'Exigence_VBN' => 1, 'Risk' => 4, 'History' => 5);
 	$source{VBN_CDC_List} = loadExcel($config->{documents}->{Requirements_VBN_CBC}->{FileName}, $config->{documents}->{Requirements_VBN_CBC}->{Sheet}, \%fields);
@@ -113,13 +113,13 @@ my ($prosp_table) = buildProspectiveTable(\%Contractual_List);
 
 INFO "Generating final mapping";
 my @final_report;
-
-
+my @partiallyCoveredReq;
 
 foreach my $sorted_key (@sortedList) {
-	my ($requirement) = fillCdCRequirement($Contractual_List{$sorted_key}, $prosp_table);
+	my ($requirement, $incompleteReq) = fillCdCRequirement($Contractual_List{$sorted_key}, $prosp_table);
 
 	push(@final_report, $requirement) if $requirement;
+	push(@partiallyCoveredReq, $incompleteReq) if $incompleteReq and $config->{genPartiallyCoveredReqDocument};
 }
 
 
@@ -146,6 +146,14 @@ $t->param(DATE => $tm);
 
 print FILE $t->output;
 close(FILE);
+
+if($config->{genPartiallyCoveredReqDocument}) {
+	INFO "Generating HTML for incomplete requirements report";
+	open (FILE, ">".$SCRIPT_DIRECTORY.'Results-incomplete.html');
+	$t->param(REQUIREMENTS_CDC => \@partiallyCoveredReq);
+	print FILE $t->output;
+	close(FILE);
+}
 
 sub buildProspectiveTable {
 	my($list_reference) = @_;
@@ -249,7 +257,7 @@ sub genList {
 		$stats{$type}{highest} = "$last_value";
 		while (my $value = shift @rev_sorted_list) {
 			if($last_value - $value > 1) {
-				$stats{$type}{gaps} = "GAP between \"$value\" and \"$last_value\"";
+				push(@{$stats{$type}{gaps}}, "GAP between \"$value\" and \"$last_value\"");
 			}
 			$last_value = $value;
 		}
@@ -266,27 +274,29 @@ sub fillCdCRequirement {
 	
 	my @list = ({ THIS_SIDE => 'REI', OTHER_SIDE => 'VBN'}, { THIS_SIDE => 'VBN', OTHER_SIDE => 'REI'});
 	
+	my %already_print_missing_item;
+	my $completeItem = 1;
 	foreach my $item (@list) {
-		my @list_reqs;
 		
 		if($completeList{$item->{THIS_SIDE}}{$reference}) {
 			$requirement{'REQUIREMENTS_'.$item->{THIS_SIDE}} = $completeList{$item->{THIS_SIDE}}{$reference};
 			
-			my @list_reqs;
-			foreach my $REI_REQ (@{$completeList{$item->{THIS_SIDE}}{$reference}}) {
-				push(@list_reqs, $REI_REQ->{Req_ID});
+			foreach my $THIS_REQ (@{$completeList{$item->{THIS_SIDE}}{$reference}}) {
+				$already_print_missing_item{$THIS_REQ->{Req_ID}}++;
 			}
 		}
+		else { $completeItem = 0; }
 		
 		my @list_missing_reqs;
-		foreach my $VBN_REQ (@{$completeList{$item->{OTHER_SIDE}}{$reference}}) {
-			my $VBN_REQ_ID = $VBN_REQ->{Req_ID};
-			next if $VBN_REQ_ID eq NOT_REFERENCED;
+		foreach my $OTHER_REQ (@{$completeList{$item->{OTHER_SIDE}}{$reference}}) {
+			my $OTHER_REQ_ID = $OTHER_REQ->{Req_ID};
+			next if $OTHER_REQ_ID eq NOT_REFERENCED;
 
-			if(exists $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}) {
-				foreach my $REI_REQ_ID (keys %{$prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}}) {
-					unless(grep(/^$REI_REQ_ID$/, @list_reqs)) {
-						push(@list_missing_reqs, $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$VBN_REQ_ID}{$REI_REQ_ID});
+			if(exists $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$OTHER_REQ_ID}) {
+				foreach my $THIS_REQ_ID (keys %{$prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$OTHER_REQ_ID}}) {
+					unless($already_print_missing_item{$THIS_REQ_ID}) {
+						push(@list_missing_reqs, $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$OTHER_REQ_ID}{$THIS_REQ_ID});
+						$already_print_missing_item{$THIS_REQ_ID}++;
 					}
 				}
 			}
@@ -301,7 +311,8 @@ sub fillCdCRequirement {
 	$list_TGC->{$reference}{Livrable} = 'Inconnu' unless $list_TGC->{$reference}{Livrable};
 	$requirement{REF_DOC} = $list_TGC->{$reference}{Lot}." / ". $list_TGC->{$reference}{Livrable};
 	$requirement{ORIGIN} = (applicable_TGC_Requirement($list_TGC->{$reference}))? 'REI' : 'VBN';
-	return \%requirement;
+	my $incompleteReq = \%requirement unless $completeItem;
+	return \%requirement, $incompleteReq;
 }
 
 sub applicable_TGC_Requirement {
@@ -372,7 +383,7 @@ sub joinRequirements {
 		$item{Risk} = '9' unless (defined $risk and "$risk" ne "");
 		
 		$risk = "R".$risk;
-		LOGDIE "Line $_->{__LineNumber}: Risk \"$risk\" is not a valid value" unless ($risk eq "R0" or $risk eq "R1" or $risk eq "R2" or $risk eq "R3" or $risk eq "R9");
+		LOGDIE "Line $_->{__LineNumber}: Risk \"$risk\" is not a valid value :\n".Dumper($_) unless ($risk eq "R0" or $risk eq "R1" or $risk eq "R2" or $risk eq "R3" or $risk eq "R9");
 		$statistics{+RISKS}{Sum}++;
 		$statistics{+RISKS}{List}{$risk}++;
 		$item{Risk} = $risk;
@@ -454,6 +465,8 @@ sub buildStatistics {
 sub loadExcel {
 	my ($filename, $sheet, $header, $beginLine) = @_;
 
+	LOGDIE "File doesn't exists or is not readable : \"$filename\"" unless -r $filename;
+	
 	my $oExcel = new Spreadsheet::ParseExcel;
 
     my $oBook = $oExcel->Parse($filename);

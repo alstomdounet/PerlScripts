@@ -1,6 +1,7 @@
 <?xml version='1.0' encoding='ISO-8859-1'?>
 <config>
 	<DebugMode>0</DebugMode>
+	<genPartiallyCoveredReqDocument>0</genPartiallyCoveredReqDocument>
 	<documents>
 		<ClauseByClause>
 			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\SyRB_PP_contractuel_iw.xls</FileName>
