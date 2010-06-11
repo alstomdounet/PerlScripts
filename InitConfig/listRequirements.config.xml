@@ -2,6 +2,8 @@
 <config>
 	<DebugMode>0</DebugMode>
 	<genPartiallyCoveredReqDocument>0</genPartiallyCoveredReqDocument>
+	<genRiskfullReqDocument>0</genRiskfullReqDocument>
+	<genAnalysisTable>0</genAnalysisTable>
 	<documents>
 		<ClauseByClause>
 			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\SyRB_PP_contractuel_iw.xls</FileName>

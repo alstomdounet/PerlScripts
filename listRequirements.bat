@@ -113,15 +113,22 @@ my ($prosp_table) = buildProspectiveTable(\%Contractual_List);
 
 INFO "Generating final mapping";
 my @final_report;
-my @partiallyCoveredReq;
+my @partiallyCoveredReqs;
+my %RiskfullReqs;
 
 foreach my $sorted_key (@sortedList) {
-	my ($requirement, $incompleteReq) = fillCdCRequirement($Contractual_List{$sorted_key}, $prosp_table);
+	my ($requirement, $incompleteReq, $riskLevel) = fillCdCRequirement($Contractual_List{$sorted_key}, $prosp_table);
 
 	push(@final_report, $requirement) if $requirement;
-	push(@partiallyCoveredReq, $incompleteReq) if $incompleteReq and $config->{genPartiallyCoveredReqDocument};
+	push(@partiallyCoveredReqs, $incompleteReq) if $incompleteReq and $config->{genPartiallyCoveredReqDocument};
+	push(@{$RiskfullReqs{$riskLevel}}, $requirement);
 }
 
+my @RiskfullReqs;
+foreach my $level (reverse sort keys %RiskfullReqs) {
+	next unless $level;
+	push(@RiskfullReqs, @{$RiskfullReqs{$level}});
+}
 
 # Building history lists
 my @history;
@@ -150,7 +157,15 @@ close(FILE);
 if($config->{genPartiallyCoveredReqDocument}) {
 	INFO "Generating HTML for incomplete requirements report";
 	open (FILE, ">".$SCRIPT_DIRECTORY.'Results-incomplete.html');
-	$t->param(REQUIREMENTS_CDC => \@partiallyCoveredReq);
+	$t->param(REQUIREMENTS_CDC => \@partiallyCoveredReqs);
+	print FILE $t->output;
+	close(FILE);
+}
+
+if($config->{genRiskfullReqDocument}) {
+	INFO "Generating HTML for risky requirements report";
+	open (FILE, ">".$SCRIPT_DIRECTORY.'Results-riskfull.html');
+	$t->param(REQUIREMENTS_CDC => \@RiskfullReqs);
 	print FILE $t->output;
 	close(FILE);
 }
@@ -268,6 +283,7 @@ sub genList {
 sub fillCdCRequirement {
 	my ($req, $prospect_table) = @_;
 	my %requirement;
+	my %lightRequirement;
 	my $reference = $req->{Exigence_CDC};
 	$requirement{Texte} = $req->{Texte};
 	$requirement{Req_ID} = $reference;
@@ -276,6 +292,7 @@ sub fillCdCRequirement {
 	
 	my %already_print_missing_item;
 	my $completeItem = 1;
+	my $risk = 0;
 	foreach my $item (@list) {
 		
 		if($completeList{$item->{THIS_SIDE}}{$reference}) {
@@ -283,26 +300,31 @@ sub fillCdCRequirement {
 			
 			foreach my $THIS_REQ (@{$completeList{$item->{THIS_SIDE}}{$reference}}) {
 				$already_print_missing_item{$THIS_REQ->{Req_ID}}++;
+				if($THIS_REQ->{Risk} =~ /^R(\d)$/) {
+					$risk = $1 if $1 > $risk;
+				}
 			}
 		}
 		else { $completeItem = 0; }
 		
-		my @list_missing_reqs;
-		foreach my $OTHER_REQ (@{$completeList{$item->{OTHER_SIDE}}{$reference}}) {
-			my $OTHER_REQ_ID = $OTHER_REQ->{Req_ID};
-			next if $OTHER_REQ_ID eq NOT_REFERENCED;
+		if($config->{genAnalysisTable}) {
+			my @list_missing_reqs;
+			foreach my $OTHER_REQ (@{$completeList{$item->{OTHER_SIDE}}{$reference}}) {
+				my $OTHER_REQ_ID = $OTHER_REQ->{Req_ID};
+				next if $OTHER_REQ_ID eq NOT_REFERENCED;
 
-			if(exists $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$OTHER_REQ_ID}) {
-				foreach my $THIS_REQ_ID (keys %{$prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$OTHER_REQ_ID}}) {
-					unless($already_print_missing_item{$THIS_REQ_ID}) {
-						push(@list_missing_reqs, $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$OTHER_REQ_ID}{$THIS_REQ_ID});
-						$already_print_missing_item{$THIS_REQ_ID}++;
+				if(exists $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$OTHER_REQ_ID}) {
+					foreach my $THIS_REQ_ID (keys %{$prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$OTHER_REQ_ID}}) {
+						unless($already_print_missing_item{$THIS_REQ_ID}) {
+							push(@list_missing_reqs, $prospect_table->{$item->{THIS_SIDE}.'_SIDE'}{$OTHER_REQ_ID}{$THIS_REQ_ID});
+							$already_print_missing_item{$THIS_REQ_ID}++;
+						}
 					}
 				}
 			}
-		}
 
-		$requirement{'PROSPECTIVES_'.$item->{THIS_SIDE}} = \@list_missing_reqs;
+			$requirement{'PROSPECTIVES_'.$item->{THIS_SIDE}} = \@list_missing_reqs;
+		}
 	}
 
 	$list_TGC->{$reference}{Lot} = $unfiltered_list_TGC->{$reference}{Lot} if $unfiltered_list_TGC->{$reference}{Lot};
@@ -312,7 +334,7 @@ sub fillCdCRequirement {
 	$requirement{REF_DOC} = $list_TGC->{$reference}{Lot}." / ". $list_TGC->{$reference}{Livrable};
 	$requirement{ORIGIN} = (applicable_TGC_Requirement($list_TGC->{$reference}))? 'REI' : 'VBN';
 	my $incompleteReq = \%requirement unless $completeItem;
-	return \%requirement, $incompleteReq;
+	return \%requirement, $incompleteReq, $risk;
 }
 
 sub applicable_TGC_Requirement {
