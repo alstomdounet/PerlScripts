@@ -49,7 +49,7 @@ if (not $config->{DebugMode} or not -r "Requirements_image.db") {
 	%fields = ('Exigence_CDC' => 0, 'Texte' => 1);
 	$source{CDC_LIST} = loadExcel($config->{documents}->{ClauseByClause}->{FileName}, $config->{documents}->{ClauseByClause}->{Sheet}, \%fields);
 
-	%fields = ('Exigence_VBN' => 0, 'Texte' => 1);
+	%fields = ('Exigence_VBN' => 0, 'Texte' => 1, 'Comment_1' => 9, 'Comment_2' => 10);
 	$source{VBN_LIST} = loadExcel($config->{documents}->{Requirements_VBN}->{FileName}, $config->{documents}->{Requirements_VBN}->{Sheet}, \%fields);
 
 	%fields = ('Exigence_REI' => 0, 'Texte' => 1);
@@ -393,6 +393,11 @@ sub joinRequirements {
 		if($valid_ref_required) {
 			my $orig_item = $list_to_link->{$_->{$key_link}};
 			$item{Texte} = $orig_item->{Texte};
+			$item{Comment_1} = $orig_item->{Comment_1} if $orig_item->{Comment_1};
+			$item{Comment_2} = $orig_item->{Comment_2} if $orig_item->{Comment_2};
+			
+			#LOGDIE "Test concluant :".Dumper($orig_item) if $orig_item->{$key_link} eq 'TLMAIN_SyRB_PP_0035';
+
 		}
 		else {
 			$item{Texte} = $_->{History};
@@ -400,6 +405,8 @@ sub joinRequirements {
 		}
 		
 		$item{Applicabilite} = $applicability;
+
+
 		$item{Req_ID} = (defined ($_->{$key_link}) and "$_->{$key_link}" ne '') ? $_->{$key_link} : NOT_REFERENCED;
 		my $risk = $_->{Risk};
 		$item{Risk} = '9' unless (defined $risk and "$risk" ne "");

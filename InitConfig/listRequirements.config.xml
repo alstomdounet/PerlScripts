@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='ISO-8859-1'?>
 <config>
-	<DebugMode>0</DebugMode>
+	<DebugMode></DebugMode>
 	<genPartiallyCoveredReqDocument>0</genPartiallyCoveredReqDocument>
 	<genRiskfullReqDocument>0</genRiskfullReqDocument>
 	<genAnalysisTable>0</genAnalysisTable>
