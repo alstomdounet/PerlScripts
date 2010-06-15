@@ -60,7 +60,7 @@ case OPERATION_RECURSIVE_UNCHECKOUT {
 } 
 case OPERATION_RECURSIVE_ADD {
 	chdir($currentDirectory);
-	if isPrivateElement(".") {
+	if (isPrivateElement(".")) {
 		chdir("..");
 		DEBUG "Root directory needs to be checked out." and checkoutElement(".",$comment) unless isCheckedoutElement(".");
 	}
