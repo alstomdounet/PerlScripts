@@ -328,7 +328,7 @@ sub fillCdCRequirement {
 	}
 
 	$list_TGC->{$reference}{Lot} = $unfiltered_list_TGC->{$reference}{Lot} if $unfiltered_list_TGC->{$reference}{Lot};
-	$list_TGC->{$reference}{Livrable} = $unfiltered_list_TGC->{$reference}{Livrable} unless $unfiltered_list_TGC->{$reference}{Livrable};
+	$list_TGC->{$reference}{Livrable} = $unfiltered_list_TGC->{$reference}{Livrable} if $unfiltered_list_TGC->{$reference}{Livrable};
 	$list_TGC->{$reference}{Lot} = 'Inconnu' unless $list_TGC->{$reference}{Lot};
 	$list_TGC->{$reference}{Livrable} = 'Inconnu' unless $list_TGC->{$reference}{Livrable};
 	$requirement{REF_DOC} = $list_TGC->{$reference}{Lot}." / ". $list_TGC->{$reference}{Livrable};
