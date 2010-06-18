@@ -26,17 +26,8 @@
 			<Sheet>Couverture</Sheet>
 		</Requirements_REI_CBC>
 		<Assigned_REQ_TGC>
-			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\Exigences_synthese_14juin2010.xls</FileName>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\25_TCMS\02_Projet\01_Management_TCMS\12_Gestion des exigences\Maitrise_Exigences_Techniques_TCM.xls</FileName>
 			<Sheet>Exigences</Sheet>
 		</Assigned_REQ_TGC>
 	</documents>
-	<Owners>
-		<Owner name='dbracali'>
-			<FileName>AC00000090211</FileName>
-			<FileName>TestDocument</FileName>
-		</Owner>
-		<Owner name='gmanciet'>
-			<FileName>DID0000170295</FileName>
-		</Owner>	
-	</Owners>
 </config>
