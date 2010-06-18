@@ -77,7 +77,7 @@ my ($list_CDC) = genList($source{CDC_LIST}, 'Exigence_CDC');
 my ($list_VBN) = genList($source{VBN_LIST}, 'Exigence_VBN');
 my ($list_REI, $stats) = genList($source{REI_LIST}, 'Exigence_REI');
 DEBUG Dumper $stats;
-my ($unfiltered_list_TGC) = genList($source{TGC_List}, 'Exigence_CDC');
+my ($unfiltered_list_TGC) = genList($source{TGC_List}, 'Exigence_CDC', undef, 1);
 
 my $list_TGC;
 while (my ($key, $value) = each %$unfiltered_list_TGC) {
@@ -212,7 +212,7 @@ sub buildProspectiveTable {
 }
 
 sub genList {
-	my ($list, $key, $otherList) = @_;
+	my ($list, $key, $otherList, $ignoreErrors) = @_;
 	my @list = @$list;
 	my %tmp;
 	my %stats;
@@ -245,6 +245,9 @@ sub genList {
 		elsif($req_id =~ /^RSAD(?:MR|)_TGC_(\d{3})$/) {
 			$sort_key = "A-$1";
 			$tmp{TYPE_6}{"$1"}++;
+		}
+		elsif ($ignoreErrors) {
+			next;
 		}
 		else {
 			ERROR "\"$req_id\" is not sortable. It will be ignored";
