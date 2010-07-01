@@ -18,7 +18,7 @@ use GraphicalCommon;
 
 
 use constant {
-	PROGRAM_VERSION => '0.4'
+	PROGRAM_VERSION => '0.5'
 };
 
 use constant {
@@ -197,7 +197,13 @@ if($response eq "Yes") {
 	
 	if (keys(%alreadyPrintItems) > 0) {
 		my $foundItemsFile = getScriptDirectory().'MissingReleases.txt';
-		ERROR "Release list needs to be updated with ".scalar(keys(%alreadyPrintItems))." new release definitions";
+		ERROR "Release list needs to be updated with ".scalar(keys(%alreadyPrintItems))." new release definitions (on file called \"".getScriptDirectory().'ReleasesList.txt". It has to be ordered by date (newer on top))';
+		unless(-e getScriptDirectory().'ReleasesList.txt') {
+			open FILE, ">".getScriptDirectory().'ReleasesList.txt';
+			print FILE "";
+			close FILE;
+		}
+	
 	
 		open FILE, ">$foundItemsFile";
 		print FILE join "\n", reverse sort keys %alreadyPrintItems;
