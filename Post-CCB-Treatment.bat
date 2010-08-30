@@ -18,7 +18,7 @@ use GraphicalCommon;
 
 
 use constant {
-	PROGRAM_VERSION => '0.5'
+	PROGRAM_VERSION => '0.6'
 };
 
 use constant {

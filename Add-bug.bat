@@ -20,13 +20,13 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.4',
+	PROGRAM_VERSION => '2.5',
 	DATABASE_VERSION => '2.2',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
 my $Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
-my $localConfig = loadLocalConfig("config.xml"); # Loading / preprocessing of the configuration file
+my $localConfig = loadLocalConfig("Add-bug.config.xml", "config.xml"); # Loading / preprocessing of the configuration file
 
 #################################
 # Global variables
