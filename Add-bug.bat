@@ -20,7 +20,7 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.6',
+	PROGRAM_VERSION => '2.6 beta 1',
 	DATABASE_VERSION => '2.2',
 	OPTIONAL_FIELD_TEXT => 'Optional',
 };
