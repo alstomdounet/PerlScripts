@@ -20,11 +20,13 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.5',
+	PROGRAM_VERSION => '2.6',
 	DATABASE_VERSION => '2.2',
+	OPTIONAL_FIELD_TEXT => 'Optional',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
+INFO "Required database version is V ".DATABASE_VERSION."";
 my $Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
 my $localConfig = loadLocalConfig("Add-bug.config.xml", "config.xml"); # Loading / preprocessing of the configuration file
 
@@ -103,45 +105,49 @@ sub SubProcessesThread {
 use Tk;
 use Tk::JComboBox;
 use Tk::Balloon;
-use CQPerlExt; 
+#use CQPerlExt; 
 
-my $Clearquest_login = $Config->{clearquest_shared}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
-my $crypted_string = $Clearquest_login;
-$crypted_string =~ s/./*/g;
-DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
+my $CONNECTION_TO_CQ_DISABLED;
+if (not $localConfig->{scriptInfos}->{offlineMode} and $localConfig->{clearquest}->{userHasLogin}) {
+	DEBUG "Utilisation of this program requires a login / password pair.";
+	my $Clearquest_login = $Config->{clearquest_shared}->{login} or LOGDIE("Clearquest login is not defined properly. Check your configuration file");
+	my $crypted_string = $Clearquest_login;
+	$crypted_string =~ s/./*/g;
+	DEBUG "Using \$Clearquest_login = \"$crypted_string\"";
 
+	if (ref($Config->{clearquest_shared}->{password})) {
+		DEBUG "No credential given. Asking one for current session.";
+		
+		$| = 1;
+		
+		print "Insert hereafter password for user \'$Config->{clearquest_shared}->{login}\' : ";
+		use Term::ReadKey;
+		my $key;
+		$Clearquest_password = '';
+		#ReadMode 5; # Turn off controls keys
+		ReadMode('noecho');
+		$Clearquest_password = ReadLine(0);
+		chomp $Clearquest_password;
+		print "\n";
+		ReadMode 'normal';
 
+		INFO("Clearquest password was defined for current session.");
+		$Config->{clearquest_shared}->{password} = $Clearquest_password;
+	}
+	else {
+		$Clearquest_password = $Config->{clearquest_shared}->{password};	
+	}
 
-
-if (ref($Config->{clearquest_shared}->{password})) {
-	DEBUG "No credential given. Asking one for current session.";
+	$crypted_string = $Clearquest_password;
+	$crypted_string =~ s/./*/g;
+	DEBUG "Using \$Clearquest_password = \"$crypted_string\"";
 	
-	$| = 1;
-	
-	print "Insert hereafter password for user \'$Config->{clearquest_shared}->{login}\' : ";
-	use Term::ReadKey;
-	my $key;
-	$Clearquest_password = '';
-	#ReadMode 5; # Turn off controls keys
-	ReadMode('noecho');
-	$Clearquest_password = ReadLine(0);
-	chomp $Clearquest_password;
-	print "\n";
-	ReadMode 'normal';
-
-	INFO("Clearquest password was defined for current session.");
-	$Config->{clearquest_shared}->{password} = $Clearquest_password;
+	my $Clearquest_database = $Config->{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
+	DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
+} else {
+	WARN "Script is used without login, or in OFFLINE MODE. It is not possible to connect directly to Clearquest.";
+	$CONNECTION_TO_CQ_DISABLED = 1;
 }
-else {
-	$Clearquest_password = $Config->{clearquest_shared}->{password};	
-}
-
-$crypted_string = $Clearquest_password;
-$crypted_string =~ s/./*/g;
-DEBUG "Using \$Clearquest_password = \"$crypted_string\"";
-
-my $Clearquest_database = $Config->{clearquest_shared}->{database} or LOGDIE("Clearquest database is not defined properly. Check your configuration file");
-DEBUG "Using \$Clearquest_database = \"$Clearquest_database\"";
 
 my $windowSizeX = 640;
 my $windowSizeY = 480;
@@ -155,12 +161,11 @@ if (-r $CqDatabase) {
 	my $storedData = retrieve($CqDatabase);
 	%CqFieldsDesc = %$storedData;
 	$syncNeeded = (time() - $CqFieldsDesc{lastUpdate} - $localConfig->{scriptInfos}->{refreshDatabase}) > 0;
-	$syncNeeded = (DATABASE_VERSION ne $CqFieldsDesc{scriptVersion}) unless $syncNeeded;
+	$syncNeeded = (DATABASE_VERSION ne $CqFieldsDesc{databaseVersion}) unless $syncNeeded;
 }
 else { $syncNeeded = 1; }
 
-
-if($syncNeeded) {
+if($syncNeeded and not $CONNECTION_TO_CQ_DISABLED) {
 	syncFieldsWithClearQuest(\%CqFieldsDesc);
 } else { DEBUG "Using all Clearquest data stored in database."; }
 LOGDIE "You have a database at V.$CqFieldsDesc{databaseVersion}. You have to upgrade it because program is now at V.".DATABASE_VERSION if (DATABASE_VERSION ne $CqFieldsDesc{databaseVersion});
@@ -286,9 +291,9 @@ my $currentBugIndex = 0;
 # Building listboxes
 my @mandatoryFields;
 
-my $listZones = addListBox($mw, 'Project', 'zone', 'Mandatory', 'Select hereafter if anomaly will be project specific or affects the whole product line', $CqFieldsDesc{zone}{shortDesc});
+my $listZones = addListBox($mw, 'Project', 'zone', OPTIONAL_FIELD_TEXT, 'Select hereafter if anomaly will be project specific or affects the whole product line', $CqFieldsDesc{zone}{shortDesc});
 my $listSubsystems = addListBox($mw, 'Subsystem', 'sub_system', 'Mandatory', 'Enter hereafter the subsystem',\@listSubSystems);
-my $listComponents = addSearchableListBox($mw, 'Component', 'component', 'Mandatory', "Select the component affected.\nIf more components are affected, please make on CR per affected component.");
+my $listComponents = addSearchableListBox($mw, 'Component', 'component', OPTIONAL_FIELD_TEXT, "Select the component affected.\nIf more components are affected, please make on CR per affected component.");
 my $listVersions = addListBox($mw, 'Product version', 'product_version', 'Mandatory', "Select the version affected bu the CR.",  $CqFieldsDesc{product_version}{shortDesc});
 my $listCriticities = addListBox($mw, 'Severity', 'submitter_severity', 'Mandatory', "Select Severity level, from \"bypassing\" (problems with no impact on functional)\nto \"blocking\" (issues which doesn't allow a step to complete).", $CqFieldsDesc{submitter_severity}{shortDesc});
 my $listPriorities = addListBox($mw, 'Priority', 'submitter_priority', 'Mandatory', "Select Priority level, from Low to High", $CqFieldsDesc{submitter_priority}{shortDesc});
@@ -297,7 +302,7 @@ my $listOrigins = addListBox($mw, 'Origin', 'submitter_CR_origin', 'Mandatory', 
 my $listSites = addListBox($mw, 'Site', 'site', 'Mandatory', "Determine who will process the issue.", $CqFieldsDesc{site}{shortDesc});
 my $listDetPhasis = addListBox($mw, 'Detection phase', 'defect_detection_phase', 'Mandatory', "Determine when was the problem detected.", $CqFieldsDesc{defect_detection_phase}{shortDesc});
 my $listTypes = addListBox($mw, 'Type', 'submitter_CR_type', 'Mandatory', "Type of modification:\n - defect for non-compliance of a requirement (specification, etc.)\n - enhancement is for various improvements (functionality, reliability, speed, etc.)", $CqFieldsDesc{submitter_CR_type}{shortDesc});
-my $listAnalyser = addSearchableListBox($mw, 'Analyst', 'analyst', 'Mandatory', "Determine who will analyse the issue.", $CqFieldsDesc{analyst}{shortDesc});
+my $listAnalyser = addSearchableListBox($mw, 'Analyst', 'analyst', OPTIONAL_FIELD_TEXT, "Determine who will analyse the issue.", $CqFieldsDesc{analyst}{shortDesc});
 my $listCROrigin = addListBox($mw, 'Category', 'CR_category', 'Mandatory', "TBD", $CqFieldsDesc{CR_category}{shortDesc});
 
 
@@ -699,7 +704,7 @@ sub addListBox {
 	my $newElement = $parentElement->JComboBox(-label => $labelName, -labelWidth => 15, -labelPack=>[-side=>'left'], -textvariable => \$bugDescription{$CQ_Field}, -choices => $listToInsert, -browsecmd => [\&analyseListboxes])->pack(-fill => 'x', -side => 'top', -anchor => 'center'); # -> pack(-fill => 'both', -expand => 1)
 	$newElement->setSelected($bugDescription{$CQ_Field}) if $bugDescription{$CQ_Field};
 	$balloon->attach($newElement, -msg => "<$necessityText> $labelDescription");
-	push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field});
+	push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field}) if "$necessityText" ne OPTIONAL_FIELD_TEXT;
 	
 	return $newElement;
 }
@@ -769,7 +774,7 @@ sub addSearchableListBox {
 
 	changeList(\%item, \%completeList, $oldValue) if %completeList;
 	$balloon->attach($item{listbox}, -msg => "<$necessityText> $labelDescription");
-	push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field});
+	push(@mandatoryFields, {Text => $labelName, CQ_Field => $CQ_Field}) if "$necessityText" ne OPTIONAL_FIELD_TEXT;
 
 	return \%item;
 }
