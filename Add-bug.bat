@@ -20,8 +20,8 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.6 beta 1',
-	DATABASE_VERSION => '2.2',
+	PROGRAM_VERSION => '2.6 beta 2',
+	DATABASE_VERSION => '2.4',
 	OPTIONAL_FIELD_TEXT => 'Optional',
 };
 
@@ -36,6 +36,7 @@ my $localConfig = loadLocalConfig("Add-bug.config.xml", "config.xml"); # Loading
 
 my $CqDatabase = getSharedDirectory().'ClearquestFieldsImage.db';
 my $bugsDatabase = getScriptDirectory().'bugsDatabase.db';
+my $failedBugsDatabase = getScriptDirectory().'FailedBugsDatabase.db';
 my $encryptedDatabase = getScriptDirectory().'bugsDatabase.edb';
 
 my %results;
@@ -184,21 +185,26 @@ sub syncFieldsWithClearQuest {
 	my $session = connectCQ($Config->{clearquest_shared}->{login}, $Config->{clearquest_shared}->{password}, $Config->{clearquest_shared}->{database});
 	return unless $session;
 	
+	# Trying to get list of components dynamically from Clearquest database, with associated comments. 
+	# It is get through makeQuery function (see hereafter) because we need to get comment (and it is not accessible otherwise)
 	my @fieldList = ('sub_system', 'sub_system.component', 'sub_system.component.comment');
 	
 	my %filters = ('name' => $Config->{clearquest_shared}->{product});
 	my $results = makeQuery('Product', \@fieldList , \%filters);
 	
+	# Trying to get list of components dynamically from Clearquest database, with associated comments. 
 	my %results;
 	foreach my $item (@$results) {
 		$results{$item->{'sub_system'}}{$item->{'sub_system.component'}} = $item->{'sub_system.component.comment'};
 	}
 	
+	# Trying to get list of sub-systems dynamically from Clearquest database, with associated comments. 
+	# They have to be selected separately because they require selecting first other fields.
 	my @listS;
 	foreach my $sub_system (sort keys %results) {
 		my %sub_system  = %{$results{$sub_system}};
 		my ($sub_system, $simple_sub_system)  = extractComplexField($sub_system);
-		$data->{sub_system}{equivTable}{$simple_sub_system} = $sub_system;
+		$data->{sub_system}{equivTable}{$simple_sub_system} = $sub_system; # selecting sub-system, so we can get associated components
 		foreach my $component (sort keys %sub_system) {
 			my ($component, $simple_component)  = extractComplexField($component);
 			$data->{component}{equivTable}{$simple_sub_system}{$simple_component} = $component;
@@ -209,18 +215,23 @@ sub syncFieldsWithClearQuest {
 	$data->{sub_system}{shortDesc} = \@listS;
 	
 
-	
-	my @fields = qw(submitter_CR_origin submitter_CR_type submitter_priority submitter_severity frequency product_version site defect_detection_phase zone analyst CR_category);
+	# Trying to get all others fields. They can be selected easily without preselecting first other fields
+	my @fields = qw(submitter_CR_origin submitter_CR_type submitter_priority submitter_severity frequency product_version site defect_detection_phase zone analyst CR_category write_arrival_state);
 	
 	my $rec = $session->BuildEntity("ChangeRequest");
 
 	$data->{product} = $Config->{clearquest_shared}->{product};
 	$rec->SetFieldValue('product', $data->{product});
-	$rec->SetFieldValue('write_arrival_state', 'Recorded');
+	$rec->SetFieldValue('write_arrival_state', 'Submitted - new');
 	
 	foreach my $key (@fields) {
 		DEBUG "Extracting field '$key'";
 		my @shortDesc;
+		
+		# Added a default value
+		push(@shortDesc, "No selection");
+		$data->{$key}{equivTable}{"No selection"} = undef;
+		
 		foreach my $item (@{$rec->GetFieldChoiceList($key)}) {
 			my ($text, $simpleText)  = extractComplexField($item);
 			push(@shortDesc, $simpleText);
@@ -302,6 +313,7 @@ my $listOrigins = addListBox($mw, 'Origin', 'submitter_CR_origin', 'Mandatory', 
 my $listSites = addListBox($mw, 'Site', 'site', 'Mandatory', "Determine who will process the issue.", $CqFieldsDesc{site}{shortDesc});
 my $listDetPhasis = addListBox($mw, 'Detection phase', 'defect_detection_phase', 'Mandatory', "Determine when was the problem detected.", $CqFieldsDesc{defect_detection_phase}{shortDesc});
 my $listTypes = addListBox($mw, 'Type', 'submitter_CR_type', 'Mandatory', "Type of modification:\n - defect for non-compliance of a requirement (specification, etc.)\n - enhancement is for various improvements (functionality, reliability, speed, etc.)", $CqFieldsDesc{submitter_CR_type}{shortDesc});
+my $recordingMode = addListBox($mw, 'Recording mode', 'write_arrival_state', 'Mandatory', "Mode in which this CR will be recorded", $CqFieldsDesc{write_arrival_state}{shortDesc});
 my $listAnalyser = addSearchableListBox($mw, 'Analyst', 'analyst', OPTIONAL_FIELD_TEXT, "Determine who will analyse the issue.", $CqFieldsDesc{analyst}{shortDesc});
 my $listCROrigin = addListBox($mw, 'Category', 'CR_category', 'Mandatory', "TBD", $CqFieldsDesc{CR_category}{shortDesc});
 
@@ -437,48 +449,87 @@ sub sendCrToCQ {
 		DEBUG "Skipped equivalence" and $bug_trans{$field} = $bug{$field} and next if($field eq "headline" or $field eq "description" or $field eq "product");
 		my $newText = $CQFields->{$field}{equivTable}{$bug{$field}};
 		$newText = $CQFields->{component}{equivTable}{$bug{sub_system}}{$bug{component}} if $field eq "component";
-		DEBUG "Value '$bug{$field}' has been associated with '$newText'";
+		if($newText) {
+			DEBUG "Value '$bug{$field}' has been associated with '$newText'";
+		}
+		else {
+			DEBUG "Value '$bug{$field}' has been associated with NULL value";
+		}
 		$bug_trans{$field} = $newText;
 	}
 	####################################
 	
 	DEBUG "Building session";
 	$session = CQSession::Build() unless $session; 
-	DEBUG "Connecting to database.";
-	$session->UserLogon ($cfg->{clearquest_shared}->{login}, $Clearquest_password, "atvcm", "");
+	DEBUG "Connecting to database '$cfg->{clearquest_shared}->{database}'";
+	$session->UserLogon ($cfg->{clearquest_shared}->{login}, $Clearquest_password, $cfg->{clearquest_shared}->{database}, "");
 	DEBUG "Building entity";	
 	my $rec = $session->BuildEntity("ChangeRequest");
 	DEBUG "Retrieving identifier.";	
 	my $identifier = $rec->GetDisplayName();
+	
+	DEBUG "Setting \"product\" to \"$bug_trans{product}\"";
 	$rec->SetFieldValue('product', $bug_trans{product});
+	
+	DEBUG "Setting \"sub_system\" to \"$bug_trans{sub_system}\"";
 	$rec->SetFieldValue('sub_system', $bug_trans{sub_system});
-	$rec->SetFieldValue('write_arrival_state', 'Recorded');
+	
+	my $final_state = 'Submitted - new';
+	$final_state = $bug_trans{write_arrival_state} if($bug_trans{write_arrival_state});
+	
+	DEBUG "Setting \"write_arrival_state\" to \"$final_state\"";
+	$rec->SetFieldValue('write_arrival_state', $final_state);
 	
 	while(my($field, $value) = each(%bug_trans)) {
-		next if ($field eq 'product' or $field eq 'sub_system'); # We can skip those because it is already selected
+		next if ($field eq 'product' or $field eq 'sub_system' or $field eq 'write_arrival_state'); # We can skip those because it is already selected
+		$value = '' unless ($value); # If field is not defined, then it is equal to an empty string to avoid errors by Clearquest.
+		DEBUG "Setting \"$field\" to \"$value\"";
 		$rec->SetFieldValue($field, $value);
 	}
 	
+	DEBUG "Request to validate filled fields";
 	my $result = makeCQValidation($rec);
+	
+	DEBUG "Request to commit changes";
 	$result = makeCQCommit($rec) if($result);
 		
 	if($result > 0) {
 		INFO "Issue was inserted with identifier : $identifier";
+		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+		$year += 1900;
+		$mon++;
+		insertTextIntoLogfile('successfullBugs.txt', "$year/$mon/$mday - $hour:$min:$sec\t$identifier\t$bug_trans{headline}\n");
+		store ($data, $bugsDatabase) unless $externalParams;
 	}
 	else {
-		ERROR("Insertion of bug has failed");
-		open FILE, ">>FailedBugs.txt";
-		print FILE "---------------------------------\n";
+		ERROR("Insertion of bug has failed for reason: $result");
+		
+		my $failedData = retrieve($failedBugsDatabase) if -r $failedBugsDatabase;
+		push(@{$failedData->{bugList}}, $bug);
+		
+		my $write_result = store ($failedData, $failedBugsDatabase);
+		store ($data, $bugsDatabase) if $write_result and not $externalParams;
+	
+		my $filename = 'failedBugs.txt';
+		insertTextIntoLogfile($filename, "---------------------------------\nResult of insert: $result\n");
 		while(my($field, $value) = each(%bug)) {
 			DEBUG "$field : $value";
-			print FILE "$field : $value\n";
+			insertTextIntoLogfile($filename, "$field : $value\n");
 		}
 		close FILE;
 	}
-	
-	store ($data, $bugsDatabase) unless $externalParams;
-
 	return $result;
+}
+
+sub insertTextIntoLogfile {
+	my ($file, $text) = @_;
+	if(open FILE, ">>$file") {
+		print FILE "$text";
+		close FILE;
+	}
+	else {
+		ERROR "Opening of file $file failed in append mode";
+	}
 }
 
 sub makeCQValidation {
@@ -531,7 +582,11 @@ sub fillInterfaceWithBug {
 
 	my %tmpBug = %{$data{bugList}[$bugToRetrieve]};
 	
-	foreach my $key(keys(%tmpBug)) {
+	foreach my $key (keys(%bugDescription)) {
+		$bugDescription{$key} = undef;
+	}
+	
+	foreach my $key (keys(%tmpBug)) {
 		$bugDescription{$key} = $tmpBug{$key};
 	}
 	
