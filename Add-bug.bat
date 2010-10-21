@@ -165,6 +165,8 @@ if (-r $CqDatabase) {
 	%CqFieldsDesc = %$storedData;
 	$syncNeeded = (time() - $CqFieldsDesc{lastUpdate} - $localConfig->{scriptInfos}->{refreshDatabase}) > 0;
 	$syncNeeded = (DATABASE_VERSION ne $CqFieldsDesc{databaseVersion}) unless $syncNeeded;
+	$syncNeeded = ($Config->{clearquest_shared}->{database} ne $CqFieldsDesc{CQDatabase}) unless $syncNeeded;
+	$syncNeeded = ($Config->{clearquest_shared}->{product} ne $CqFieldsDesc{product}) unless $syncNeeded;
 }
 else { $syncNeeded = 1; }
 
@@ -223,6 +225,7 @@ sub syncFieldsWithClearQuest {
 	my $rec = $session->BuildEntity("ChangeRequest");
 
 	$data->{product} = $Config->{clearquest_shared}->{product};
+	$data->{CQDatabase} = $Config->{clearquest_shared}->{database};
 	$rec->SetFieldValue('product', $data->{product});
 	$rec->SetFieldValue('write_arrival_state', 'Submitted - new');
 	
