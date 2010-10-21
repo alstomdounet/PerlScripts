@@ -38,6 +38,8 @@ my $CqDatabase = getSharedDirectory().'ClearquestFieldsImage.db';
 my $bugsDatabase = getScriptDirectory().'bugsDatabase.db';
 my $failedBugsDatabase = getScriptDirectory().'FailedBugsDatabase.db';
 my $encryptedDatabase = getScriptDirectory().'bugsDatabase.edb';
+my $failedTextFile = getScriptDirectory().'FailedBugs.log.txt';
+my $successTextFile = getScriptDirectory().'SuccessBugs.log.txt';
 
 my %results;
 
@@ -498,7 +500,7 @@ sub sendCrToCQ {
 		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 		$year += 1900;
 		$mon++;
-		insertTextIntoLogfile('successfullBugs.txt', "$year/$mon/$mday - $hour:$min:$sec\t$identifier\t$bug_trans{headline}\n");
+		insertTextIntoLogfile($successTextFile, "$year/$mon/$mday - $hour:$min:$sec\t$identifier\t$bug_trans{headline}\n");
 		store ($data, $bugsDatabase) unless $externalParams;
 	}
 	else {
@@ -510,11 +512,10 @@ sub sendCrToCQ {
 		my $write_result = store ($failedData, $failedBugsDatabase);
 		store ($data, $bugsDatabase) if $write_result and not $externalParams;
 	
-		my $filename = 'failedBugs.txt';
-		insertTextIntoLogfile($filename, "---------------------------------\nResult of insert: $result\n");
+		insertTextIntoLogfile($failedTextFile, "---------------------------------\nResult of insert: $result\n");
 		while(my($field, $value) = each(%bug)) {
 			DEBUG "$field : $value";
-			insertTextIntoLogfile($filename, "$field : $value\n");
+			insertTextIntoLogfile($failedTextFile, "$field : $value\n");
 		}
 		close FILE;
 	}
