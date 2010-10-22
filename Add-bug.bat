@@ -20,13 +20,13 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.6 beta 2',
+	PROGRAM_VERSION => '2.6 beta 3',
 	DATABASE_VERSION => '2.4',
 	OPTIONAL_FIELD_TEXT => 'Optional',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
-INFO "Required database version is V ".DATABASE_VERSION."";
+DEBUG "Required database version is V ".DATABASE_VERSION."";
 my $Config = loadSharedConfig("Clearquest-config.xml"); # Loading / preprocessing of the configuration file
 my $localConfig = loadLocalConfig("Add-bug.config.xml", "config.xml"); # Loading / preprocessing of the configuration file
 
@@ -173,7 +173,7 @@ else { $syncNeeded = 1; }
 if($syncNeeded and not $CONNECTION_TO_CQ_DISABLED) {
 	syncFieldsWithClearQuest(\%CqFieldsDesc);
 } else { DEBUG "Using all Clearquest data stored in database."; }
-LOGDIE "You have a database at V.$CqFieldsDesc{databaseVersion}. You have to upgrade it because program is now at V.".DATABASE_VERSION if (DATABASE_VERSION ne $CqFieldsDesc{databaseVersion});
+LOGDIE "You have a database at V $CqFieldsDesc{databaseVersion}. You have to upgrade it because program is now at V ".DATABASE_VERSION if (DATABASE_VERSION ne $CqFieldsDesc{databaseVersion});
 
 
 $frozenCQFields = freeze(\%CqFieldsDesc);
@@ -187,7 +187,15 @@ sub syncFieldsWithClearQuest {
 	
 	INFO "Connecting to Clearquest database";
 	my $session = connectCQ($Config->{clearquest_shared}->{login}, $Config->{clearquest_shared}->{password}, $Config->{clearquest_shared}->{database});
-	return unless $session;
+	
+	if($session) {
+		INFO "Connection established - Refreshing fields...";
+	}
+	else {
+		WARN "Connection failed";
+		return;
+	}
+
 	
 	# Trying to get list of components dynamically from Clearquest database, with associated comments. 
 	# It is get through makeQuery function (see hereafter) because we need to get comment (and it is not accessible otherwise)
@@ -208,9 +216,16 @@ sub syncFieldsWithClearQuest {
 	foreach my $sub_system (sort keys %results) {
 		my %sub_system  = %{$results{$sub_system}};
 		my ($sub_system, $simple_sub_system)  = extractComplexField($sub_system);
+		DEBUG "Processing sub_system '$sub_system'";
+		
 		$data->{sub_system}{equivTable}{$simple_sub_system} = $sub_system; # selecting sub-system, so we can get associated components
 		foreach my $component (sort keys %sub_system) {
 			my ($component, $simple_component)  = extractComplexField($component);
+			DEBUG "Processing component '$sub_system'";
+			if ($simple_component =~ /^\s*$/) {
+				DEBUG "Skipping empty component";
+				next;
+			}
 			$data->{component}{equivTable}{$simple_sub_system}{$simple_component} = $component;
 			$data->{component}{commentTable}{$simple_sub_system}{$simple_component} = $sub_system{$component};
 		}
