@@ -16,6 +16,7 @@ use Common;
 use Data::Dumper;
 use ClearcaseMgt qw(getDirectoryStructure getAttribute);
 use ClearquestMgt qw(connectCQ makeQuery);
+use ClearquestCommon qw(checkPasswordAndAskIfIncorrect getAnswer);
 use Storable qw(store retrieve thaw freeze);
 use HTML::Template;
 use Time::localtime;
@@ -24,16 +25,31 @@ use Text::CSV;
 use XML::Simple;
 
 use constant {
-	PROGRAM_VERSION => '0.2',
+	PROGRAM_VERSION => '0.3',
 	TEMPLATE_DIRECTORY => './Templates/',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
 
-my $config = loadLocalConfig(getScriptName().'.config.xml', 'config.xml', ForceArray => qr/^(document|table)$/);
+my $config = loadLocalConfig("genBULTEC.config.xml", 'config.xml', ForceArray => qr/^(document|table)$/);
 my $CQConfig = loadSharedConfig('Clearquest-config.xml');
 
-backCopy('config.xml', getScriptName().'.config.xml');
+my %GENERIC_FIELDS;
+
+while (my ($key, $value) = each(%{$config->{genericFields}})) {
+	LOGDIE("Key \"$key\" is not defined properly. Check your .xml file.") unless (ref($value) eq '' and $value ne '');
+	
+	if($value =~ /^\*\*ASK: (.*)\*\*$/) {
+		DEBUG "Found dynamic field for \"$key\"";
+		$GENERIC_FIELDS{$key} = getAnswer($1);
+	}
+	else {
+		DEBUG "Found static field for \"$key\" > '$value'";
+		$GENERIC_FIELDS{$key} = $value;
+	}
+}
+
+my $Clearquest_password = checkPasswordAndAskIfIncorrect($CQConfig->{clearquest_shared}->{password});
 
 my $SCRIPT_DIRECTORY = getScriptDirectory();
 
@@ -43,7 +59,7 @@ my $ANALYSED_DIRECTORY =  $config->{defaultParams}->{analysedDirectory};
 my $EQUIV_TABLE = loadCSV($config->{defaultParams}->{equivTable}) if $config->{defaultParams}->{equivTable};
 
 INFO "Connecting to Clearquest with login $CQConfig->{clearquest_shared}->{login}";
-connectCQ($CQConfig->{clearquest_shared}->{login}, $CQConfig->{clearquest_shared}->{password}, $CQConfig->{clearquest_shared}->{database});
+connectCQ($CQConfig->{clearquest_shared}->{login}, $Clearquest_password, $CQConfig->{clearquest_shared}->{database});
 
 foreach my $document (@{$config->{documents}->{document}}) {
 	INFO "Processing document \"$document->{title}\"";
@@ -104,7 +120,7 @@ sub genDocumentTable {
 	LOGDIE "This table is not available at the moment";
 	
 	my @fields = split(/\s*,\s*/, $config->{CQ_Queries}->{listCR}->{fieldsToRetrieve});
-	my $listCR = makeQuery("ChangeRequest", \@fields, $config->{CQ_Queries}->{listCR});
+	my $listCR = makeQuery("ChangeRequest", \@fields, $config->{CQ_Queries}->{listCR}, -GENERIC_VALUES => \%GENERIC_FIELDS);
 	
 	my $docBiasis = getListOfBiases($listCR);
 	my $results = compareLabels($table->{analysedDirectory}, $table->{references}->{reference}, $table->{references}->{target});
@@ -168,6 +184,7 @@ sub isADocumentBias {
 sub buildTable {
 	my ($equivTable, $results, $biasList) = @_;
 	my @results;
+	my $number = 0;
 	foreach my $key (keys %$results) {
 		my %document;
 		$document{DOCUMENT} = $key;
@@ -201,7 +218,8 @@ sub buildTable {
 		$document{STATUS} = $status if $status;
 		$document{BEFORE_TEXT} = formatVersion($fields[0]);
 		$document{AFTER_TEXT} = formatVersion($fields[1]);
-
+		$document{IS_ODD} = $number % 2;
+		$number++;
 		
 		push @results, \%document;
 	}
@@ -220,32 +238,31 @@ sub buildTable {
 sub genClassicTable {
 	my ($table) = @_;
 	
-	my (@fieldsSort, @listFields);
-	$table->{fieldsToRetrieve} = lc($table->{fieldsToRetrieve});
-	@fieldsSort = split(/,\s*/, $table->{fieldsSorting}) if $table->{fieldsSorting};
-	@listFields = split(/,\s*/, $table->{fieldsToRetrieve}) if $table->{fieldsToRetrieve};
-	DEBUG "Field id was missing (it is required)." and unshift(@listFields, 'id') unless grep(/^id$/, @listFields);
-	DEBUG "Field dbid was missing (it is required)." and unshift(@listFields, 'dbid') unless grep(/^dbid$/, @listFields);
-
-	my $results = makeQuery("ChangeRequest", \@listFields, $table->{filtering}, \@fieldsSort);
+	my @fieldsSort = genFilterFields($table->{fieldsSorting});
+	my ($listFields, $listAliases) = genFieldNames($table->{fieldsToRetrieve});
+	DEBUG "Field id was missing (it is required)." and unshift(@$listFields, 'id') unless grep(/^id$/, @$listFields);
+	DEBUG "Field dbid was missing (it is required)." and unshift(@$listFields, 'dbid') unless grep(/^dbid$/, @$listFields);
 
 	my @headerToPrint;
-	foreach my $field (@listFields) {
+	foreach my $field (@$listAliases) {
 		next if $field eq 'dbid' or $field eq 'id';
 		push(@headerToPrint, { FIELD => ucfirst($field)});
 	}
+
 	
+	my $results = makeQuery("ChangeRequest", \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);
+
 	my @resultsToPrint;
 	my $number = 0;
 	foreach my $result (@$results) {
 		my @resultToPrint;
-		foreach my $field (@listFields) {
+		foreach my $field (@$listFields) {
 			next if ($field eq 'dbid' or $field eq 'id');
 			my $field = $result->{$field};
 			$field =~ s/\n/<br \/>\n/g;
 			push(@resultToPrint, { CONTENT => $field});
 		}
-		push(@resultsToPrint, { NUMBER => ++$number, DBID => $result->{'dbid'}, ID => $result->{'id'}, RESULT => \@resultToPrint });
+		push(@resultsToPrint, { NUMBER => ++$number, DBID => $result->{'dbid'}, ID => $result->{'id'}, RESULT => \@resultToPrint, IS_ODD => $number % 2 });
 	}
 	
 	my %tableProperties = (HEADER => \@headerToPrint, RESULTS => \@resultsToPrint);
@@ -255,32 +272,74 @@ sub genClassicTable {
 sub genGenericTable {
 	my ($table) = @_;
 	
-	my (@fieldsSort, @listFields);
-	$table->{fieldsToRetrieve} = lc($table->{fieldsToRetrieve});
-	@fieldsSort = split(/,\s*/, $table->{fieldsSorting}) if $table->{fieldsSorting};
-	@listFields = split(/,\s*/, $table->{fieldsToRetrieve}) if $table->{fieldsToRetrieve};
+	my @fieldsSort = genFilterFields($table->{fieldsSorting});
+	my ($listFields, $listAliases) = genFieldNames($table->{fieldsToRetrieve});
 
-	my $results = makeQuery($table->{clearquestType}, \@listFields, $table->{filtering}, \@fieldsSort);	
+	my $results = makeQuery($table->{clearquestType}, \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);	
 	
 	my @headerToPrint;
-	foreach my $field (@listFields) {
-		push(@headerToPrint, { FIELD => ucfirst($field)});
+	foreach my $field (@$listAliases) {
+		push(@headerToPrint, { FIELD => $field});
 	}
 	
 	my @resultsToPrint;
 	my $number = 0;
 	foreach my $result (@$results) {
 		my @resultToPrint;
-		foreach my $field (@listFields) {
+		foreach my $field (@$listFields) {
 			my $field = $result->{$field};
 			$field =~ s/\n/<br \/>\n/g;
 			push(@resultToPrint, { CONTENT => $field});
 		}
-		push(@resultsToPrint, { NUMBER => ++$number, RESULT => \@resultToPrint });
+		push(@resultsToPrint, { NUMBER => ++$number, RESULT => \@resultToPrint, IS_ODD => $number % 2  });
 	}
 	
 	my %tableProperties = (HEADER => \@headerToPrint, RESULTS => \@resultsToPrint);
 	return \%tableProperties;
+}
+
+sub genFieldNames {
+	my ($inputString) = @_;
+
+	
+	my @listFields;
+	my @listAliases;
+	
+	my @tmplistFields = split(/\s*,\s*/, $inputString) if $inputString;
+	
+	foreach my $field (@tmplistFields) {
+		my $alias = $field;
+		if($field =~ /(\S+)\s+AS\s+'([^']+)'/i) {
+			
+			$field = $1;
+			$alias = $2;
+		}
+		elsif($field =~ /(\S+)\s+AS\s+(\S+)/i) {
+			$field = $1;
+			$alias = $2;
+		}
+		elsif(!($field =~ /\s/)) {
+			$alias = $field;
+		}
+		else {
+			ERROR "Field \"$field\" is not syntaxically correct.";
+			next;
+		}
+		
+		DEBUG "Found equivalence for column names : \"$field\" => \"$alias\"" if "$field" ne "$alias";
+		push(@listFields, lc($field));
+		push(@listAliases, $alias);
+	}
+	
+	return (\@listFields, \@listAliases);
+	
+}
+
+sub genFilterFields {
+	my ($inputString) = @_;
+	$inputString = lc($inputString);
+	my @list = split(/,\s*/, $inputString) if $inputString;
+	return @list;
 }
 
 sub localizeVariable {

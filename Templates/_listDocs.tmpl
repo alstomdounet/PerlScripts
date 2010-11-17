@@ -8,7 +8,11 @@
 	  <th>Ecart<br />documentaire</th>
     </tr>
 	<TMPL_LOOP name=RESULTS>
-	<tr>
+	<TMPL_IF name=IS_ODD>
+	<tr class='odd_line'>
+	<TMPL_ELSE>
+	<tr class='even_line'>
+	</TMPL_IF>
 	<TMPL_IF name=CODE_DOC>
 		<td class='CodeDoc'><TMPL_VAR name=CODE_DOC></td>
 		<td><TMPL_VAR name=DOCUMENT></td>

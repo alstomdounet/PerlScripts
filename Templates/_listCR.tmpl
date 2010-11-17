@@ -9,7 +9,11 @@
     </TMPL_LOOP>
     </tr>
 	<TMPL_LOOP name=RESULTS>
-	<tr>
+	<TMPL_IF name=IS_ODD>
+	<tr class='odd_line'>
+	<TMPL_ELSE>
+	<tr class='even_line'>
+	</TMPL_IF>
 		<td><TMPL_VAR name=NUMBER></td>
 		<td><a target="_blank" href="http://iww.cquest.villeurbanne.transport.alstom.com/cqweb/main?command=GenerateMainFrame&service=CQ&schema=CQatv&contextid=atvcm&entityID=<TMPL_VAR name=DBID>&entityDefName=ChangeRequest"><TMPL_VAR name=ID></a></td><TMPL_LOOP name=RESULT>
 		<td><TMPL_VAR name=CONTENT></td>

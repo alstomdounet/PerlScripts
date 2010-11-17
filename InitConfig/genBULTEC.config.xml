@@ -1,0 +1,68 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<config version='0.1'>
+	<genericFields>
+		<LAST_CCB_DATE>**ASK: When occured Last CCB (for instance 2010-04-22): **</LAST_CCB_DATE>
+		<PRODUCT>TCMS CoradiaP</PRODUCT>
+	</genericFields>
+	<documents>
+		<document>
+			<title>Liste des CR Pour le SwCCB</title>
+			<filename>SwCCB_Preparation.html</filename>
+			<tables>
+				<table>
+					<title>CR à traiter au SwCCB</title><!-- Ceci est le titre de la table -->
+					<fieldsToRetrieve>id, CR_reference AS Ref, State AS État, priority AS Priorité, CR_type AS Type, CR_category AS Categorie, headline AS Titre, description AS Description, proposed_change AS 'Changement Proposé'</fieldsToRetrieve><!-- Liste des champs qui doivent être récupérés. Les champs apparaîtront dans l'ordre -->
+					<fieldsSorting>product, State AS État, subState AS État, priority, CR_type</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
+						<node operator="OR">
+							<state>Duplicated, Postponed, Updated</state>
+							<node operator="AND">
+								<state>Analysed</state>
+								<substate>complete</substate>
+							</node>
+						</node>
+					</filtering>
+				</table>			
+				<table>
+					<title>CR ouverts depuis le dernier SwCCB</title>
+					<fieldsToRetrieve>id, CR_reference AS Ref, State AS État, subState AS État, headline AS Titre, priority AS Priorité, CR_type AS Type, CR_category AS Categorie, submitter_date AS 'Date de soumission'</fieldsToRetrieve><!-- Liste des champs qui doivent être récupérés. Les champs apparaîtront dans l'ordre -->
+					<fieldsSorting>submitter_date, State, substate</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product>
+						<submitter_date operator="GTE">**LAST_CCB_DATE**</submitter_date>
+					</filtering>
+				</table>			
+				<table>
+					<title>CR Clos depuis le dernier SwCCB</title>
+					<fieldsToRetrieve>id, CR_reference AS Ref, State AS État, subState AS État, headline AS Titre, priority AS Priorité, CR_type AS Type, CR_category AS Categorie, closure_date AS 'Date de clôture'</fieldsToRetrieve>
+					<fieldsSorting>closure_date, State, substate</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product>
+						<state>Closed</state>
+						<closure_date operator="GTE">**LAST_CCB_DATE**</closure_date>
+					</filtering>
+				</table>
+				<table>
+					<title>CR en cours</title>
+					<fieldsToRetrieve>id, CR_reference AS Ref, State AS État, subState AS État, headline AS Titre, priority AS Priorité, CR_type AS Type, CR_category AS Categorie, last_change_state_date AS 'Date de modification'</fieldsToRetrieve>
+					<fieldsSorting>State, substate</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product>
+						<state operator="NEQ">Closed</state>
+						<substate operator="NEQ">draft</substate>
+					</filtering>
+				</table>
+				<table type='generic'>
+					<title>Liste des version dans Régiolis</title>
+					<clearquestType>product_version</clearquestType>
+					<fieldsToRetrieve>name AS Nom, comment AS Commentaire, date, effective_date AS 'Date réelle", scheduled_date AS 'Date planifiée', software_version AS 'Version'</fieldsToRetrieve>
+					<fieldsSorting>name</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product>
+					</filtering>
+				</table>
+			</tables>
+		</document>		
+	</documents>
+</config>
