@@ -13,10 +13,13 @@ use lib qw(lib);
 use strict;
 use warnings;
 use Common;
+use DisplayMgt qw(displayBox);
+use File::Copy;
 use Data::Dumper;
 use ClearcaseMgt qw(getDirectoryStructure getAttribute);
 use ClearquestMgt qw(connectCQ makeQuery);
 use ClearquestCommon qw(checkPasswordAndAskIfIncorrect getAnswer);
+
 use Storable qw(store retrieve thaw freeze);
 use HTML::Template;
 use Time::localtime;
@@ -25,17 +28,44 @@ use Text::CSV;
 use XML::Simple;
 
 use constant {
-	PROGRAM_VERSION => '0.3',
-	TEMPLATE_DIRECTORY => './Templates/',
+	PROGRAM_VERSION => '0.2',
+	TEMPLATE_ROOT_DIR => 'Templates',
+	DEFAULT_TEMPLATE_DIR => '.',
+	DEFAULT_TEMPLATE => 'Default',
+	MAIN_TEMPLATE_NAME => 'main.tmpl',
 };
 
-INFO "Starting program (V ".PROGRAM_VERSION.")";
+INFO("Starting program (V ".PROGRAM_VERSION.")");
 
+#########################################################
+# loading of Configuration files
+#########################################################
 my $config = loadLocalConfig("genBULTEC.config.xml", 'config.xml', ForceArray => qr/^(document|table)$/);
 my $CQConfig = loadSharedConfig('Clearquest-config.xml');
 
-my %GENERIC_FIELDS;
+#########################################################
+# Using template files
+#########################################################
+my $SCRIPT_DIRECTORY = getScriptDirectory();
+my $rootTemplateDirectory = "./";
 
+my $defaultTemplateDir = DEFAULT_TEMPLATE_DIR.DEFAULT_TEMPLATE;
+my $userTemplateDir = $SCRIPT_DIRECTORY.TEMPLATE_ROOT_DIR;
+
+if (not -d $userTemplateDir) {
+	mkdir($userTemplateDir);
+	INFO("Creating user template directory ".TEMPLATE_ROOT_DIR);
+	open FILE,">".$userTemplateDir."/readme.txt";
+	printf FILE 'Templates files for current user has to be put in this directory';
+	close FILE;
+}
+
+my $Clearquest_password = checkPasswordAndAskIfIncorrect($CQConfig->{clearquest_shared}->{password});
+
+#########################################################
+# Generic fields customisation / replacing
+#########################################################
+my %GENERIC_FIELDS;
 while (my ($key, $value) = each(%{$config->{genericFields}})) {
 	LOGDIE("Key \"$key\" is not defined properly. Check your .xml file.") unless (ref($value) eq '' and $value ne '');
 	
@@ -49,10 +79,6 @@ while (my ($key, $value) = each(%{$config->{genericFields}})) {
 	}
 }
 
-my $Clearquest_password = checkPasswordAndAskIfIncorrect($CQConfig->{clearquest_shared}->{password});
-
-my $SCRIPT_DIRECTORY = getScriptDirectory();
-
 my $BEFORE_REF = $config->{defaultParams}->{references}->{reference};
 my $AFTER_REF = $config->{defaultParams}->{references}->{target};
 my $ANALYSED_DIRECTORY =  $config->{defaultParams}->{analysedDirectory};
@@ -64,15 +90,39 @@ connectCQ($CQConfig->{clearquest_shared}->{login}, $Clearquest_password, $CQConf
 foreach my $document (@{$config->{documents}->{document}}) {
 	INFO "Processing document \"$document->{title}\"";
 	$document->{title} = 'Titre manquant' unless $document->{title};
+	while(my($key, $value) = each(%GENERIC_FIELDS)) {
+		$document->{title} =~ s/\*\*$key\*\*/$value/; 
+	}
 	$document->{defaultParams}->{references}->{reference} = localizeVariable($BEFORE_REF, $document->{defaultParams}->{references}->{reference});
 	$document->{defaultParams}->{references}->{target} = localizeVariable($AFTER_REF, $document->{defaultParams}->{references}->{target});
 	$document->{defaultParams}->{analysedDirectory} = localizeVariable($ANALYSED_DIRECTORY, $document->{defaultParams}->{analysedDirectory});
+	
+	my $currentTemplate = DEFAULT_TEMPLATE;
+	
+	if($document->{template}) {
+		$currentTemplate = $document->{template};
+		INFO "Document \"$document->{title}\" requests template called \"$currentTemplate\"";
+	}
+	
+	my $currentTemplateDir = DEFAULT_TEMPLATE_DIR;
+	if(-d $userTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate) {
+		$currentTemplateDir = $userTemplateDir;
+		INFO "Using user-defined template scheme unstead of one used by default";
+	}
+	
+	my $currentTemplateWithEntryPoint = $currentTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate.'\\'.MAIN_TEMPLATE_NAME;
+	DEBUG "template entry point used is \"$currentTemplateWithEntryPoint\"";
+	LOGDIE "Request template scheme \"$currentTemplate\" in directory \"$currentTemplateDir\" is not defined" unless -d $currentTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate;
+	LOGDIE "Request template scheme \"$currentTemplate\" in directory \"$currentTemplateDir\" is not defined correctly" unless -r $currentTemplateWithEntryPoint;
 	
 	my @tables;
 	
 	foreach my $table (@{$document->{tables}->{table}}) {
 		INFO "Processing table \"$table->{title}\"";	
 		$table->{title} = 'Titre manquant' unless $table->{title};
+		while(my($key, $value) = each(%GENERIC_FIELDS)) {
+			$table->{title} =~ s/\*\*$key\*\*/$value/; 
+		}
 		
 		my %tableElements;
 		if(not $table->{type}) {
@@ -103,11 +153,12 @@ foreach my $document (@{$config->{documents}->{document}}) {
 	
 	open (FILE, ">".$SCRIPT_DIRECTORY.$document->{filename});
 		
-	my $t = HTML::Template -> new( filename => TEMPLATE_DIRECTORY."main.tmpl" );
+	my $t = HTML::Template -> new( filename => $currentTemplateWithEntryPoint );
 
 	$t->param(TABLES => \@tables);
 	my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
 	$t->param(DATE => $tm);
+	$t->param(TITLE => $document->{title});
 
 	print FILE $t->output;
 	close(FILE);
