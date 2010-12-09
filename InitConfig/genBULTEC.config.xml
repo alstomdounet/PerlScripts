@@ -25,7 +25,7 @@
 					</filtering>
 				</table>			
 				<table>
-					<title>CR ouverts depuis le dernier SwCCB</title>
+					<title>CR ouverts depuis le dernier SwCCB (**LAST_CCB_DATE**)</title>
 					<fieldsToRetrieve>id, CR_reference AS Ref, State AS État, subState AS État, headline AS Titre, priority AS Priorité, CR_type AS Type, CR_category AS Categorie, submitter_date AS 'Date de soumission'</fieldsToRetrieve><!-- Liste des champs qui doivent être récupérés. Les champs apparaîtront dans l'ordre -->
 					<fieldsSorting>submitter_date, State, substate</fieldsSorting>
 					<filtering>

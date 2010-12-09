@@ -13,10 +13,13 @@ use lib qw(lib);
 use strict;
 use warnings;
 use Common;
+use DisplayMgt qw(displayBox);
+use File::Copy;
 use Data::Dumper;
 use ClearcaseMgt qw(getDirectoryStructure getAttribute);
 use ClearquestMgt qw(connectCQ makeQuery);
 use ClearquestCommon qw(checkPasswordAndAskIfIncorrect getAnswer);
+
 use Storable qw(store retrieve thaw freeze);
 use HTML::Template;
 use Time::localtime;
@@ -25,17 +28,50 @@ use Text::CSV;
 use XML::Simple;
 
 use constant {
-	PROGRAM_VERSION => '0.3',
-	TEMPLATE_DIRECTORY => './Templates/',
+	PROGRAM_VERSION => '0.2',
+	TEMPLATE_ROOT_DIR => 'Templates',
+	DEFAULT_TEMPLATE_DIR => '.',
+	DEFAULT_TEMPLATE => 'Default',
+	MAIN_TEMPLATE_NAME => 'main.tmpl',
+	DEBUG_DATABASE => 'DebugDatabase.db',
 };
 
-INFO "Starting program (V ".PROGRAM_VERSION.")";
+INFO("Starting program (V ".PROGRAM_VERSION.")");
 
+#########################################################
+# loading of Configuration files
+#########################################################
 my $config = loadLocalConfig("genBULTEC.config.xml", 'config.xml', ForceArray => qr/^(document|table)$/);
 my $CQConfig = loadSharedConfig('Clearquest-config.xml');
 
-my %GENERIC_FIELDS;
+#########################################################
+# Using template files
+#########################################################
+my $SCRIPT_DIRECTORY = getScriptDirectory();
+my $rootTemplateDirectory = "./";
 
+my $defaultTemplateDir = DEFAULT_TEMPLATE_DIR.DEFAULT_TEMPLATE;
+my $userTemplateDir = $SCRIPT_DIRECTORY.TEMPLATE_ROOT_DIR;
+
+if (not -d $userTemplateDir) {
+	mkdir($userTemplateDir);
+	INFO("Creating user template directory ".TEMPLATE_ROOT_DIR);
+	open FILE,">".$userTemplateDir."/readme.txt";
+	printf FILE 'Templates files for current user has to be put in this directory';
+	close FILE;
+}
+
+my $debugMode = $config->{debugMode};
+my $databaseGenNeeded = !($debugMode and -r DEBUG_DATABASE);
+WARN "DEBUG mode is activated" if $debugMode;
+WARN "results won't be updated (DEBUG mode and a DEBUG database)" unless $databaseGenNeeded;
+
+my $Clearquest_password = checkPasswordAndAskIfIncorrect($CQConfig->{clearquest_shared}->{password}) if $databaseGenNeeded;
+
+#########################################################
+# Generic fields customisation / replacing
+#########################################################
+my %GENERIC_FIELDS;
 while (my ($key, $value) = each(%{$config->{genericFields}})) {
 	LOGDIE("Key \"$key\" is not defined properly. Check your .xml file.") unless (ref($value) eq '' and $value ne '');
 	
@@ -49,68 +85,144 @@ while (my ($key, $value) = each(%{$config->{genericFields}})) {
 	}
 }
 
-my $Clearquest_password = checkPasswordAndAskIfIncorrect($CQConfig->{clearquest_shared}->{password});
-
-my $SCRIPT_DIRECTORY = getScriptDirectory();
-
 my $BEFORE_REF = $config->{defaultParams}->{references}->{reference};
 my $AFTER_REF = $config->{defaultParams}->{references}->{target};
 my $ANALYSED_DIRECTORY =  $config->{defaultParams}->{analysedDirectory};
 my $EQUIV_TABLE = loadCSV($config->{defaultParams}->{equivTable}) if $config->{defaultParams}->{equivTable};
 
 INFO "Connecting to Clearquest with login $CQConfig->{clearquest_shared}->{login}";
-connectCQ($CQConfig->{clearquest_shared}->{login}, $Clearquest_password, $CQConfig->{clearquest_shared}->{database});
+connectCQ($CQConfig->{clearquest_shared}->{login}, $Clearquest_password, $CQConfig->{clearquest_shared}->{database}) if $databaseGenNeeded;
+
 
 foreach my $document (@{$config->{documents}->{document}}) {
 	INFO "Processing document \"$document->{title}\"";
 	$document->{title} = 'Titre manquant' unless $document->{title};
+	while(my($key, $value) = each(%GENERIC_FIELDS)) {
+		$document->{title} =~ s/\*\*$key\*\*/$value/; 
+	}
 	$document->{defaultParams}->{references}->{reference} = localizeVariable($BEFORE_REF, $document->{defaultParams}->{references}->{reference});
 	$document->{defaultParams}->{references}->{target} = localizeVariable($AFTER_REF, $document->{defaultParams}->{references}->{target});
 	$document->{defaultParams}->{analysedDirectory} = localizeVariable($ANALYSED_DIRECTORY, $document->{defaultParams}->{analysedDirectory});
 	
 	my @tables;
-	
-	foreach my $table (@{$document->{tables}->{table}}) {
-		INFO "Processing table \"$table->{title}\"";	
-		$table->{title} = 'Titre manquant' unless $table->{title};
-		
-		my %tableElements;
-		if(not $table->{type}) {
-			DEBUG "Requesting classic template";
-			%tableElements = %{genClassicTable($table)};
-		}
-		elsif($table->{type} =~ /^generic$/) {
-			DEBUG "Requesting generic template";
-			%tableElements = %{genGenericTable($table)};
-			$tableElements{GENERICLIST} = 1;
-		}
-		elsif ($table->{type} =~ /^documentation$/) {
-			DEBUG "Requesting documentation template";
-			$table->{references}->{reference} = localizeVariable($document->{defaultParams}->{references}->{reference}, $table->{references}->{reference});
-			$table->{references}->{target} = localizeVariable($document->{defaultParams}->{references}->{target}, $table->{references}->{target});
-			$table->{analysedDirectory} = localizeVariable($document->{defaultParams}->{analysedDirectory}, $table->{analysedDirectory});
+	if($databaseGenNeeded) {
+		foreach my $table (@{$document->{tables}->{table}}) {
+			INFO "Processing table \"$table->{title}\"";	
+			$table->{title} = 'Titre manquant' unless $table->{title};
+			while(my($key, $value) = each(%GENERIC_FIELDS)) {
+				$table->{title} =~ s/\*\*$key\*\*/$value/; 
+			}
+			
+			my %tableElements;
+			if(not $table->{type}) {
+				DEBUG "Requesting classic template";
+				%tableElements = %{genClassicTable($table)};
+			}
+			elsif($table->{type} =~ /^generic$/) {
+				DEBUG "Requesting generic template";
+				%tableElements = %{genGenericTable($table)};
+				$tableElements{GENERICLIST} = 1;
+			}
+			elsif ($table->{type} =~ /^documentation$/) {
+				DEBUG "Requesting documentation template";
+				$table->{references}->{reference} = localizeVariable($document->{defaultParams}->{references}->{reference}, $table->{references}->{reference});
+				$table->{references}->{target} = localizeVariable($document->{defaultParams}->{references}->{target}, $table->{references}->{target});
+				$table->{analysedDirectory} = localizeVariable($document->{defaultParams}->{analysedDirectory}, $table->{analysedDirectory});
 
-			%tableElements = %{genDocumentTable($table)};
-			$tableElements{DOCLIST} = 1;
+				%tableElements = %{genDocumentTable($table)};
+				$tableElements{DOCLIST} = 1;
+			}
+			else {
+				LOGDIE "Type $table->{type} is unknown";
+			}
+			
+			$tableElements{TABLE_NAME} = $table->{title};
+			push(@tables, \%tableElements);
 		}
-		else {
-			LOGDIE "Type $table->{type} is unknown";
-		}
-		
-		$tableElements{TABLE_NAME} = $table->{title};
-		push(@tables, \%tableElements);
+		store(\@tables, DEBUG_DATABASE);
+	}
+	else {
+		my $results = retrieve(DEBUG_DATABASE);
+		@tables = @$results;
 	}
 	
-	open (FILE, ">".$SCRIPT_DIRECTORY.$document->{filename});
+	####################################################################
+	# This section  manage templates
+	####################################################################
+	my $currentTemplate = DEFAULT_TEMPLATE;
+	
+	if($document->{templateDir}) {
+		$currentTemplate = $document->{templateDir};
+		INFO "Document \"$document->{title}\" requests template called \"$currentTemplate\"";
+	}
+	
+	my $currentTemplateDir = DEFAULT_TEMPLATE_DIR;
+	if(-d $userTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate) {
+		$currentTemplateDir = $userTemplateDir;
+		INFO "Using user-defined template scheme unstead of one used by default";
+	}
+	
+	$currentTemplateDir = $currentTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate.'\\';
+	my $currentTemplateWithEntryPoint = $currentTemplateDir.MAIN_TEMPLATE_NAME;
+	
+	DEBUG "template entry point used is \"$currentTemplateWithEntryPoint\"";
+	LOGDIE "Template dir not found: \"$currentTemplateDir\" is not defined" unless -d $currentTemplateDir;
+	LOGDIE "Template entry point not found: \"$currentTemplateWithEntryPoint\"" unless -r $currentTemplateWithEntryPoint;
+	
+	####################################################################
+	# This section  manage templates
+	####################################################################
+	
+
+	
+	####################################################################
+	# This section  manage complex documents
+	####################################################################
+	open (MAINFILE, ">".$SCRIPT_DIRECTORY.$document->{filename});
+	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $currentTemplateWithEntryPoint );
+	
+	my @finalTables;
+	if($document->{indexedDocument}) {	
+		DEBUG "This is a complex document";
+		my $outputSubDir = $SCRIPT_DIRECTORY.$document->{indexedDocument}->{subDirectory}."\\";
+		my $relativeSubDir = "./".$document->{indexedDocument}->{subDirectory}."/";
+		mkdir $outputSubDir unless -d $outputSubDir;
+		my $indexDocument = 1;
 		
-	my $t = HTML::Template -> new( filename => TEMPLATE_DIRECTORY."main.tmpl" );
+		foreach (@tables) {
+			my $table = $_;
+			$table->{LINK} = $relativeSubDir."table$indexDocument.html";
+			
+			DEBUG "Generating ".$relativeSubDir."table$indexDocument.html";
+			open (SUBFILE, ">".$outputSubDir."table$indexDocument.html");
+			
+			my $subTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $currentTemplateDir.$document->{indexedDocument}->{template} );
+			
+			my @tmpTable;
+			push(@tmpTable, $table);
+			
+			$subTemplate->param(TABLE => \@tmpTable);
+			my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
+			$subTemplate->param(DATE => $tm);
+			$subTemplate->param(TITLE => $document->{title});
+			
+			print SUBFILE $subTemplate->output;
+			close SUBFILE;
+			$indexDocument++;
+			push(@finalTables, $table);
+		} 
+	}
+	else {
+		@finalTables = @tables;
+	}
 
-	$t->param(TABLES => \@tables);
+	$mainTemplate->param(TABLES => \@finalTables);
 	my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
-	$t->param(DATE => $tm);
-
-	print FILE $t->output;
-	close(FILE);
+	$mainTemplate->param(DATE => $tm);
+	$mainTemplate->param(TITLE => $document->{title});
+	
+	print MAINFILE $mainTemplate->output;
+	close(MAINFILE);
 }
 
 INFO "Processing results. It can take some time.";
@@ -236,7 +348,7 @@ sub buildTable {
 }
 
 sub genClassicTable {
-	my ($table) = @_;
+	my ($table, $debugStore) = @_;
 	
 	my @fieldsSort = genFilterFields($table->{fieldsSorting});
 	my ($listFields, $listAliases) = genFieldNames($table->{fieldsToRetrieve});
