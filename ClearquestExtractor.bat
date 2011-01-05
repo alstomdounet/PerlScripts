@@ -28,7 +28,7 @@ use Text::CSV;
 use XML::Simple;
 
 use constant {
-	PROGRAM_VERSION => '0.2',
+	PROGRAM_VERSION => '0.4',
 	TEMPLATE_ROOT_DIR => 'Templates',
 	DEFAULT_TEMPLATE_DIR => '.',
 	DEFAULT_TEMPLATE => 'Default',
@@ -41,7 +41,7 @@ INFO("Starting program (V ".PROGRAM_VERSION.")");
 #########################################################
 # loading of Configuration files
 #########################################################
-my $config = loadLocalConfig("genBULTEC.config.xml", 'config.xml', ForceArray => qr/^(document|table)$/);
+my $config = loadLocalConfig("ClearquestExtractor.config.xml", 'config.xml', ForceArray => qr/^(document|table)$/);
 my $CQConfig = loadSharedConfig('Clearquest-config.xml');
 
 #########################################################
@@ -93,6 +93,7 @@ my $EQUIV_TABLE = loadCSV($config->{defaultParams}->{equivTable}) if $config->{d
 INFO "Connecting to Clearquest with login $CQConfig->{clearquest_shared}->{login}";
 connectCQ($CQConfig->{clearquest_shared}->{login}, $Clearquest_password, $CQConfig->{clearquest_shared}->{database}) if $databaseGenNeeded;
 
+
 foreach my $document (@{$config->{documents}->{document}}) {
 	INFO "Processing document \"$document->{title}\"";
 	$document->{title} = 'Titre manquant' unless $document->{title};
@@ -102,24 +103,6 @@ foreach my $document (@{$config->{documents}->{document}}) {
 	$document->{defaultParams}->{references}->{reference} = localizeVariable($BEFORE_REF, $document->{defaultParams}->{references}->{reference});
 	$document->{defaultParams}->{references}->{target} = localizeVariable($AFTER_REF, $document->{defaultParams}->{references}->{target});
 	$document->{defaultParams}->{analysedDirectory} = localizeVariable($ANALYSED_DIRECTORY, $document->{defaultParams}->{analysedDirectory});
-	
-	my $currentTemplate = DEFAULT_TEMPLATE;
-	
-	if($document->{template}) {
-		$currentTemplate = $document->{template};
-		INFO "Document \"$document->{title}\" requests template called \"$currentTemplate\"";
-	}
-	
-	my $currentTemplateDir = DEFAULT_TEMPLATE_DIR;
-	if(-d $userTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate) {
-		$currentTemplateDir = $userTemplateDir;
-		INFO "Using user-defined template scheme unstead of one used by default";
-	}
-	
-	my $currentTemplateWithEntryPoint = $currentTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate.'\\'.MAIN_TEMPLATE_NAME;
-	DEBUG "template entry point used is \"$currentTemplateWithEntryPoint\"";
-	LOGDIE "Request template scheme \"$currentTemplate\" in directory \"$currentTemplateDir\" is not defined" unless -d $currentTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate;
-	LOGDIE "Request template scheme \"$currentTemplate\" in directory \"$currentTemplateDir\" is not defined correctly" unless -r $currentTemplateWithEntryPoint;
 	
 	my @tables;
 	if($databaseGenNeeded) {
@@ -163,17 +146,83 @@ foreach my $document (@{$config->{documents}->{document}}) {
 		@tables = @$results;
 	}
 	
-	open (FILE, ">".$SCRIPT_DIRECTORY.$document->{filename});
+	####################################################################
+	# This section  manage templates
+	####################################################################
+	my $currentTemplate = DEFAULT_TEMPLATE;
+	
+	if($document->{templateDir}) {
+		$currentTemplate = $document->{templateDir};
+		INFO "Document \"$document->{title}\" requests template called \"$currentTemplate\"";
+	}
+	
+	my $currentTemplateDir = DEFAULT_TEMPLATE_DIR;
+	if(-d $userTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate) {
+		$currentTemplateDir = $userTemplateDir;
+		INFO "Using user-defined template scheme unstead of one used by default";
+	}
+	
+	$currentTemplateDir = $currentTemplateDir.'\\'.TEMPLATE_ROOT_DIR.'\\'.$currentTemplate.'\\';
+	my $currentTemplateWithEntryPoint = $currentTemplateDir.MAIN_TEMPLATE_NAME;
+	
+	DEBUG "template entry point used is \"$currentTemplateWithEntryPoint\"";
+	LOGDIE "Template dir not found: \"$currentTemplateDir\" is not defined" unless -d $currentTemplateDir;
+	LOGDIE "Template entry point not found: \"$currentTemplateWithEntryPoint\"" unless -r $currentTemplateWithEntryPoint;
+	
+	####################################################################
+	# This section  manage templates
+	####################################################################
+	
+
+	
+	####################################################################
+	# This section  manage complex documents
+	####################################################################
+	open (MAINFILE, ">".$SCRIPT_DIRECTORY.$document->{filename});
+	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $currentTemplateWithEntryPoint );
+	
+	my @finalTables;
+	if($document->{indexedDocument}) {	
+		DEBUG "This is a complex document";
+		my $outputSubDir = $SCRIPT_DIRECTORY.$document->{indexedDocument}->{subDirectory}."\\";
+		my $relativeSubDir = "./".$document->{indexedDocument}->{subDirectory}."/";
+		mkdir $outputSubDir unless -d $outputSubDir;
+		my $indexDocument = 1;
 		
-	my $t = HTML::Template -> new( filename => $currentTemplateWithEntryPoint );
+		foreach (@tables) {
+			my $table = $_;
+			$table->{LINK} = $relativeSubDir."table$indexDocument.html";
+			
+			DEBUG "Generating ".$relativeSubDir."table$indexDocument.html";
+			open (SUBFILE, ">".$outputSubDir."table$indexDocument.html");
+			
+			my $subTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $currentTemplateDir.$document->{indexedDocument}->{template} );
+			
+			my @tmpTable;
+			push(@tmpTable, $table);
+			
+			$subTemplate->param(TABLE => \@tmpTable);
+			my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
+			$subTemplate->param(DATE => $tm);
+			$subTemplate->param(TITLE => $document->{title});
+			
+			print SUBFILE $subTemplate->output;
+			close SUBFILE;
+			$indexDocument++;
+			push(@finalTables, $table);
+		} 
+	}
+	else {
+		@finalTables = @tables;
+	}
 
-	$t->param(TABLES => \@tables);
+	$mainTemplate->param(TABLES => \@finalTables);
 	my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
-	$t->param(DATE => $tm);
-	$t->param(TITLE => $document->{title});
-
-	print FILE $t->output;
-	close(FILE);
+	$mainTemplate->param(DATE => $tm);
+	$mainTemplate->param(TITLE => $document->{title});
+	
+	print MAINFILE $mainTemplate->output;
+	close(MAINFILE);
 }
 
 INFO "Processing results. It can take some time.";
