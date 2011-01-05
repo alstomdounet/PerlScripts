@@ -20,8 +20,7 @@
 		<dataTypes />
 		<pous>
 			<pou name="hvs.<TMPL_VAR name=MODULE_NAME>" pouType="program">
-				<interface><TMPL_LOOP name=INTERF_VARS_IN><TMPL_INCLUDE NAME="_interfaceVarsIn.tmpl"></TMPL_LOOP><TMPL_LOOP name=INTERF_VARS_OUT><TMPL_INCLUDE NAME="_interfaceVarsOut.tmpl"></TMPL_LOOP><TMPL_LOOP name=GROUPS><TMPL_INCLUDE NAME="_groups.tmpl"></TMPL_LOOP>				
-				</interface>
+				<interface><TMPL_VAR name=INTERFACES></interface>
 				<actions>
 				</actions>
 				<body>

@@ -58,6 +58,7 @@ foreach my $component (@{$config->{components}->{component}}) {
 	INFO "Processing Component \"$component->{name}\"";
 
 	my %modulesDescriptors;
+	my $extracted_interfaces = "";
 
 	my $_start_offset_X = 408;
 	my $_start_offset_Y = 144;
@@ -87,18 +88,30 @@ foreach my $component (@{$config->{components}->{component}}) {
 	
 	my %variablesList;
 	my @tab;
+	my $lineNumber = 0;
 	foreach my $line (<IN_FILE>) {
-		my @line = split(/\s+/, $line);
+		chomp($line);
+		my @line = split(/\t/, $line);
 		
 		my $module = $line[0];
-		push(@tab, \@line);
+		$lineNumber++;
 		
 		#########################################################
 		# Loading model description if it is not already done
 		#########################################################
 		unless($modulesDescriptors{$module}) {
 			DEBUG "Adding informations for module $module";
-			$modulesDescriptors{$module} = loadModule($module);
+			if(my $comp = loadModule($module)) {
+
+				$modulesDescriptors{$module} = $comp;
+				push(@tab, \@line);
+			}
+			else {
+				ERROR "Line $lineNumber will be ignored";
+			}
+		}
+		else {
+			push(@tab, \@line);
 		}
 	}
 	
@@ -131,41 +144,43 @@ foreach my $component (@{$config->{components}->{component}}) {
 		$current_base_offset_Y += $currModuleChars{MODULE_HEIGHT} + $space_between_comps;
 		$current_local_id++;
 		
-		#<inVariable localId="<TMPL_VAR name=LOCAL_ID>">
-		#					<position x="<TMPL_VAR name=POS_X>" y="<TMPL_VAR name=POS_Y>" />
-		#					<expression><TMPL_VAR name=EXPRESSION></expression>
-		#				</inVariable>
-		
 		my @module_inputs;
 		my @module_outputs;
 		
 		my $offset = 0;
+		my $var_position_y = 0;
 		foreach my $input (@{$moduleCharacteristics->{interface}->{inputs}->{pin}}) {
-			my %inputVariable;
-			$inputVariable{LOCAL_ID} = $current_local_id++;
-			$inputVariable{EXPRESSION} = $line->[$offset+2];
-			$inputVariable{VAR_POS_X} = $currModuleChars{MODULE_POS_X} + $start_position_input_X;
-			$inputVariable{VAR_POS_Y} = $currModuleChars{MODULE_POS_Y} + $start_position_input_Y + ($space_between_vars * $offset);
-			push(@list_connections_in, \%inputVariable);
-			
-			my %moduleInputVar;
-			$moduleInputVar{LOCAL_ID} = $inputVariable{LOCAL_ID};
-			$moduleInputVar{FORMAL_NAME} = $input->{content};
-			push(@module_inputs, \%moduleInputVar);
+			if($line->[$offset+2]) {
+				my %inputVariable;
+				$inputVariable{LOCAL_ID} = $current_local_id++;
+				$inputVariable{EXPRESSION} = $line->[$offset+2];
+				$inputVariable{VAR_POS_X} = $currModuleChars{MODULE_POS_X} + $start_position_input_X;
+				$inputVariable{VAR_POS_Y} = $currModuleChars{MODULE_POS_Y} + $start_position_input_Y + ($space_between_vars * $var_position_y);
+				push(@list_connections_in, \%inputVariable);
+				
+				my %moduleInputVar;
+				$moduleInputVar{LOCAL_ID} = $inputVariable{LOCAL_ID};
+				$moduleInputVar{FORMAL_NAME} = $input->{content};
+				push(@module_inputs, \%moduleInputVar);
+			}
 			$offset++;
+			$var_position_y++;
 		}
 		
-		my $var_position_y = 0;
+		$var_position_y = 0;
 		foreach my $output (@{$moduleCharacteristics->{interface}->{outputs}->{pin}}) {
-			my %outputVariable;
-			$outputVariable{LOCAL_ID} = $current_local_id++;
-			$outputVariable{EXPRESSION} = $line->[$offset+2];
-			$outputVariable{MODULE_LOCAL_ID} = $currModuleChars{LOCAL_ID};
-			$outputVariable{FORMAL_NAME} = $output->{content};
-			
-			$outputVariable{VAR_POS_X} = $currModuleChars{MODULE_POS_X} + $currModuleChars{MODULE_WIDTH} + $start_position_output_X;
-			$outputVariable{VAR_POS_Y} = $currModuleChars{MODULE_POS_Y} + $start_position_output_Y + ($space_between_vars * $var_position_y);
-			push(@list_connections_out, \%outputVariable);
+			if($line->[$offset+2]) {
+				my %outputVariable;
+				$outputVariable{LOCAL_ID} = $current_local_id++;
+				$outputVariable{EXPRESSION} = $line->[$offset+2];
+				$outputVariable{MODULE_LOCAL_ID} = $currModuleChars{LOCAL_ID};
+				$outputVariable{FORMAL_NAME} = $output->{content};
+				
+				$outputVariable{VAR_POS_X} = $currModuleChars{MODULE_POS_X} + $currModuleChars{MODULE_WIDTH} + $start_position_output_X;
+				$outputVariable{VAR_POS_Y} = $currModuleChars{MODULE_POS_Y} + $start_position_output_Y + ($space_between_vars * $var_position_y);
+				push(@list_connections_out, \%outputVariable);
+				
+			}
 			$offset++;
 			$var_position_y++;
 		}
@@ -175,8 +190,6 @@ foreach my $component (@{$config->{components}->{component}}) {
 		
 		push(@list_modules, \%currModuleChars);
 	}
-	
-	print Dumper \@list_modules;
 	
 	#########################################################
 	# This part generates input / output files
@@ -190,6 +203,7 @@ foreach my $component (@{$config->{components}->{component}}) {
 			
 	$mainTemplate->param(MODULE_NAME => $component->{name});
 	
+	$mainTemplate->param(INTERFACES => $extracted_interfaces);
 	$mainTemplate->param(CONNECT_VARS_IN => \@list_connections_in);
 	$mainTemplate->param(CONNECT_VARS_OUT => \@list_connections_out);
 	$mainTemplate->param(MODULES => \@list_modules);
@@ -203,7 +217,10 @@ sub loadModule {
 	my ($module_name) = @_;
 
 	my $file = $SCRIPT_DIRECTORY.INPUT_DIR.'/model_'.$module_name.'.descr.xml';
-	LOGDIE("FileName of module \"$module_name\" has not been found on path \"$file\"") unless -r $file;
+	unless (-r $file) {
+		ERROR("FileName of module \"$module_name\" has not been found on path \"$file\"");
+		return;
+	}
 	my $component = XMLin($file, KeyAttr => {}, ForceArray => qr/^(pin)$/);
 	
 	return $component;
