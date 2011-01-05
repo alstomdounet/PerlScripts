@@ -13,7 +13,6 @@ use lib qw(lib);
 use strict;
 use warnings;
 use Common;
-use DisplayMgt qw(displayBox);
 use File::Copy;
 use Data::Dumper;
 use ClearcaseMgt qw(getDirectoryStructure getAttribute);
