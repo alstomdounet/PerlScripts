@@ -1,6 +1,6 @@
 @rem = ' PERL for Windows NT - ccperl must be in search path
 @echo off
-ccperl %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
+cqperl %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
 if ERRORLEVEL 1001 goto finishedCorrectly
 goto waitDueToErrors
 @rem ';
@@ -20,9 +20,10 @@ use Storable qw(store retrieve thaw freeze);
 use ClearquestMgt qw(connectCQ makeQuery);
 
 use constant {
-	PROGRAM_VERSION => '2.6 beta 3',
-	DATABASE_VERSION => '2.4',
+	PROGRAM_VERSION => '2.6 beta 4',
+	DATABASE_VERSION => '2.5',
 	OPTIONAL_FIELD_TEXT => 'Optional',
+	MANDATORY_FIELD_TEXT => 'Mandatory',
 };
 
 INFO "Starting program (V ".PROGRAM_VERSION.")";
@@ -235,7 +236,7 @@ sub syncFieldsWithClearQuest {
 	
 
 	# Trying to get all others fields. They can be selected easily without preselecting first other fields
-	my @fields = qw(submitter_CR_origin submitter_CR_type submitter_priority submitter_severity frequency product_version site defect_detection_phase zone analyst CR_category write_arrival_state);
+	my @fields = qw(submitter_CR_origin submitter_CR_type submitter_priority submitter_severity frequency product_version site defect_detection_phase zone analyst CR_category write_arrival_state symptom);
 	
 	my $rec = $session->BuildEntity("ChangeRequest");
 
@@ -322,20 +323,21 @@ my $currentBugIndex = 0;
 # Building listboxes
 my @mandatoryFields;
 
-my $listZones = addListBox($mw, 'Project', 'zone', OPTIONAL_FIELD_TEXT, 'Select hereafter if anomaly will be project specific or affects the whole product line', $CqFieldsDesc{zone}{shortDesc});
-my $listSubsystems = addListBox($mw, 'Subsystem', 'sub_system', 'Mandatory', 'Enter hereafter the subsystem',\@listSubSystems);
+my $listZones = addListBox($mw, 'Zone', 'zone', OPTIONAL_FIELD_TEXT, 'Select hereafter if anomaly will be project specific or affects the whole product line', $CqFieldsDesc{zone}{shortDesc});
+my $listSubsystems = addListBox($mw, 'Subsystem', 'sub_system', MANDATORY_FIELD_TEXT, 'Enter hereafter the subsystem',\@listSubSystems);
 my $listComponents = addSearchableListBox($mw, 'Component', 'component', OPTIONAL_FIELD_TEXT, "Select the component affected.\nIf more components are affected, please make on CR per affected component.");
-my $listVersions = addListBox($mw, 'Product version', 'product_version', 'Mandatory', "Select the version affected bu the CR.",  $CqFieldsDesc{product_version}{shortDesc});
-my $listCriticities = addListBox($mw, 'Severity', 'submitter_severity', 'Mandatory', "Select Severity level, from \"bypassing\" (problems with no impact on functional)\nto \"blocking\" (issues which doesn't allow a step to complete).", $CqFieldsDesc{submitter_severity}{shortDesc});
-my $listPriorities = addListBox($mw, 'Priority', 'submitter_priority', 'Mandatory', "Select Priority level, from Low to High", $CqFieldsDesc{submitter_priority}{shortDesc});
-my $listFrequencies = addListBox($mw, 'Frequency', 'frequency', 'Mandatory', "Determine if the problem is systematic (Every time) or occurs only sometimes.", $CqFieldsDesc{frequency}{shortDesc});
-my $listOrigins = addListBox($mw, 'Origin', 'submitter_CR_origin', 'Mandatory', "Determine where is located the issue.", $CqFieldsDesc{submitter_CR_origin}{shortDesc});
-my $listSites = addListBox($mw, 'Site', 'site', 'Mandatory', "Determine who will process the issue.", $CqFieldsDesc{site}{shortDesc});
-my $listDetPhasis = addListBox($mw, 'Detection phase', 'defect_detection_phase', 'Mandatory', "Determine when was the problem detected.", $CqFieldsDesc{defect_detection_phase}{shortDesc});
-my $listTypes = addListBox($mw, 'Type', 'submitter_CR_type', 'Mandatory', "Type of modification:\n - defect for non-compliance of a requirement (specification, etc.)\n - enhancement is for various improvements (functionality, reliability, speed, etc.)", $CqFieldsDesc{submitter_CR_type}{shortDesc});
-my $recordingMode = addListBox($mw, 'Recording mode', 'write_arrival_state', 'Mandatory', "Mode in which this CR will be recorded", $CqFieldsDesc{write_arrival_state}{shortDesc});
+my $listVersions = addListBox($mw, 'Product version', 'product_version', MANDATORY_FIELD_TEXT, "Select the version affected bu the CR.",  $CqFieldsDesc{product_version}{shortDesc});
+my $listCriticities = addListBox($mw, 'Severity', 'submitter_severity', MANDATORY_FIELD_TEXT, "Select Severity level, from \"bypassing\" (problems with no impact on functional)\nto \"blocking\" (issues which doesn't allow a step to complete).", $CqFieldsDesc{submitter_severity}{shortDesc});
+my $listPriorities = addListBox($mw, 'Priority', 'submitter_priority', MANDATORY_FIELD_TEXT, "Select Priority level, from Low to High", $CqFieldsDesc{submitter_priority}{shortDesc});
+my $listFrequencies = addListBox($mw, 'Frequency', 'frequency', MANDATORY_FIELD_TEXT, "Determine if the problem is systematic (Every time) or occurs only sometimes.", $CqFieldsDesc{frequency}{shortDesc});
+my $listOrigins = addListBox($mw, 'Origin', 'submitter_CR_origin', MANDATORY_FIELD_TEXT, "Determine where is located the issue.", $CqFieldsDesc{submitter_CR_origin}{shortDesc});
+my $listSites = addListBox($mw, 'Site', 'site', MANDATORY_FIELD_TEXT, "Determine who will process the issue.", $CqFieldsDesc{site}{shortDesc});
+my $listDetPhasis = addListBox($mw, 'Detection phase', 'defect_detection_phase', MANDATORY_FIELD_TEXT, "Determine when was the problem detected.", $CqFieldsDesc{defect_detection_phase}{shortDesc});
+my $listSymptoms = addListBox($mw, 'Symptom', 'symptom', OPTIONAL_FIELD_TEXT, "Problem which occurs because of this CR.", $CqFieldsDesc{symptom}{shortDesc});
+my $listTypes = addListBox($mw, 'Type', 'submitter_CR_type', MANDATORY_FIELD_TEXT, "Type of modification:\n - defect for non-compliance of a requirement (specification, etc.)\n - enhancement is for various improvements (functionality, reliability, speed, etc.)", $CqFieldsDesc{submitter_CR_type}{shortDesc});
+my $recordingMode = addListBox($mw, 'Recording mode', 'write_arrival_state', MANDATORY_FIELD_TEXT, "Mode in which this CR will be recorded", $CqFieldsDesc{write_arrival_state}{shortDesc});
 my $listAnalyser = addSearchableListBox($mw, 'Analyst', 'analyst', OPTIONAL_FIELD_TEXT, "Determine who will analyse the issue.", $CqFieldsDesc{analyst}{shortDesc});
-my $listCROrigin = addListBox($mw, 'Category', 'CR_category', 'Mandatory', "TBD", $CqFieldsDesc{CR_category}{shortDesc});
+my $listCROrigin = addListBox($mw, 'Category', 'CR_category', MANDATORY_FIELD_TEXT, "TBD", $CqFieldsDesc{CR_category}{shortDesc});
 
 
 # Building title / description
@@ -403,6 +405,7 @@ sub addBug {
 	$bug->{submitter_severity} = '';
 	$bug->{frequency} = '';
 	$bug->{submitter_CR_type} = '';
+	$bug->{symptom} = '';
 	$bug->{description} = '';
 	$description->Contents('');
 }
