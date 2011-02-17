@@ -123,6 +123,7 @@ foreach my $document (@{$config->{documents}->{document}}) {
 				$tableElements{GENERICLIST} = 1;
 			}
 			elsif($table->{type} =~ /^formattedByTemplate$/) {
+				DEBUG "Requesting Formatted template";
 				%tableElements = %{genFormattedByTemplateTable($table)};
 				$tableElements{FORMATTED_BY_TEMPLATE} = 1;
 			}
@@ -357,9 +358,6 @@ sub genFormattedByTemplateTable {
 	my ($listFields, $listAliases) = genFieldNames($table->{fieldsToRetrieve});
 	
 	my $results = makeQuery("ChangeRequest", \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);
-	store($results, DEBUG_DATABASE);
-	exit;
-	
 	
 	my @resultsToPrint;
 	my $number = 0;
@@ -369,11 +367,11 @@ sub genFormattedByTemplateTable {
 		
 		$transformedResult{NUMBER} = ++$number;
 		$transformedResult{IS_ODD} = $number % 2;
-		
+
 		for(my $index=0; $index < scalar(@$listAliases); $index++) {
-			$transformedResult{$listAliases->[$index]} = $result->[$index];
+			$transformedResult{$listAliases->[$index]} = $result->{$listFields->[$index]};
 		}
-		push(@resultsToPrint, { \%transformedResult });
+		push(@resultsToPrint, \%transformedResult);
 	}
 	
 	my %tableProperties = (RESULTS => \@resultsToPrint);
@@ -396,8 +394,6 @@ sub genClassicTable {
 
 	
 	my $results = makeQuery("ChangeRequest", \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);
-	store($results, DEBUG_DATABASE);
-	exit;
 	
 	
 	my @resultsToPrint;
