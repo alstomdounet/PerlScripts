@@ -1,6 +1,6 @@
 @rem = ' PERL for Windows NT - ccperl must be in search path
 @echo off
-ccperl %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
+cqperl %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto endofperl
 @rem ';
 
@@ -27,7 +27,7 @@ use Text::CSV;
 use XML::Simple;
 
 use constant {
-	PROGRAM_VERSION => '0.4',
+	PROGRAM_VERSION => '0.5',
 	TEMPLATE_ROOT_DIR => 'Templates',
 	DEFAULT_TEMPLATE_DIR => '.',
 	DEFAULT_TEMPLATE => 'Default',
@@ -122,6 +122,10 @@ foreach my $document (@{$config->{documents}->{document}}) {
 				%tableElements = %{genGenericTable($table)};
 				$tableElements{GENERICLIST} = 1;
 			}
+			elsif($table->{type} =~ /^formattedByTemplate$/) {
+				%tableElements = %{genFormattedByTemplateTable($table)};
+				$tableElements{FORMATTED_BY_TEMPLATE} = 1;
+			}
 			elsif ($table->{type} =~ /^documentation$/) {
 				DEBUG "Requesting documentation template";
 				$table->{references}->{reference} = localizeVariable($document->{defaultParams}->{references}->{reference}, $table->{references}->{reference});
@@ -138,7 +142,7 @@ foreach my $document (@{$config->{documents}->{document}}) {
 			$tableElements{TABLE_NAME} = $table->{title};
 			push(@tables, \%tableElements);
 		}
-		store(\@tables, DEBUG_DATABASE);
+		#store(\@tables, DEBUG_DATABASE);
 	}
 	else {
 		my $results = retrieve(DEBUG_DATABASE);
@@ -346,6 +350,36 @@ sub buildTable {
 	return \%results;
 }
 
+sub genFormattedByTemplateTable {
+	my ($table, $debugStore) = @_;
+	
+	my @fieldsSort = genFilterFields($table->{fieldsSorting});
+	my ($listFields, $listAliases) = genFieldNames($table->{fieldsToRetrieve});
+	
+	my $results = makeQuery("ChangeRequest", \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);
+	store($results, DEBUG_DATABASE);
+	exit;
+	
+	
+	my @resultsToPrint;
+	my $number = 0;
+	foreach my $result (@$results) {
+		my @resultToPrint;
+		my %transformedResult;
+		
+		$transformedResult{NUMBER} = ++$number;
+		$transformedResult{IS_ODD} = $number % 2;
+		
+		for(my $index=0; $index < scalar(@$listAliases); $index++) {
+			$transformedResult{$listAliases->[$index]} = $result->[$index];
+		}
+		push(@resultsToPrint, { \%transformedResult });
+	}
+	
+	my %tableProperties = (RESULTS => \@resultsToPrint);
+	return \%tableProperties;
+}
+
 sub genClassicTable {
 	my ($table, $debugStore) = @_;
 	
@@ -362,7 +396,10 @@ sub genClassicTable {
 
 	
 	my $results = makeQuery("ChangeRequest", \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);
-
+	store($results, DEBUG_DATABASE);
+	exit;
+	
+	
 	my @resultsToPrint;
 	my $number = 0;
 	foreach my $result (@$results) {
@@ -384,9 +421,11 @@ sub genGenericTable {
 	my ($table) = @_;
 	
 	my @fieldsSort = genFilterFields($table->{fieldsSorting});
+	my @fieldsGroup = genFilterFields($table->{fieldsGrouping});
 	my ($listFields, $listAliases) = genFieldNames($table->{fieldsToRetrieve});
 
-	my $results = makeQuery($table->{clearquestType}, \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);	
+	my $results = makeQuery($table->{clearquestType}, \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS, -GROUP_BY=> \@fieldsGroup);
+	
 	
 	my @headerToPrint;
 	foreach my $field (@$listAliases) {
