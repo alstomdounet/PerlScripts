@@ -1,0 +1,87 @@
+<TMPL_IF name=RESULTS>
+<p><TMPL_VAR name=TABLE_NAME></p>
+<table style="page-break-before: always;" border="1" cellpadding="2" cellspacing="0" summary="<TMPL_VAR name=TABLE_NAME>">
+	<thead>
+		<tr>
+			<td bgcolor="#cccccc" width="564">
+				<p class=BoldIta>Date de la réunion&nbsp;: <span class=Blue>&lt;dd/mm/yyyy&gt;</span></p>
+			</td>
+			<td colspan="2" bgcolor="#cccccc" width="135">
+				<p align="center" class=BoldIta><span class=Blue>Réf&nbsp;:</span></p>
+			</td>
+		</tr>
+		<tr>
+			<td bgcolor="#e6e6e6" width="564">
+				<p class="titre">SwCCB&nbsp;: ClearQuest</p>
+				<p>Ont été traitées &lt;nn&gt; CR</p>
+			</td>
+			<td bgcolor="#e6e6e6" width="84">
+				<p align="center">Action</p>
+			</td>
+			<td bgcolor="#e6e6e6" width="51">
+				<p align="center">Délai</p>
+			</td>
+		</tr>
+	</thead>
+	<tbody>
+<TMPL_LOOP name=RESULTS>
+		<tr>
+			<td width="564">
+				<p><TMPL_VAR name=CCB_MEETING_DATE></p>
+				<p><b><a target="_blank" href="http://iww.cquest.villeurbanne.transport.alstom.com/cqweb/restapi/CQatv/atvcm/RECORD/<TMPL_VAR name=ID>?format=HTML&noframes=true&recordType=ChangeRequest"><TMPL_VAR name=ID></a></b> </p>
+				<p>CR <TMPL_VAR name=CR_REFERENCE> : <b><TMPL_VAR name=HEADLINE></b> <span class="arrow">è</span>
+<TMPL_IF name=STATUS_ASSIGNED>
+					<span class="BoldGreen">Assignée</span>	</p>
+				<p><span class="arrow">è</span><TMPL_VAR name=SCHEDULED_VERSION_NAME></p>
+				<p><TMPL_VAR name=CCB_COMMENT></p>
+				<ul>
+					<li>Réalisation&nbsp;: <TMPL_VAR name=IMPLEMENTER_FULLNAME></li>
+					<li>Validation&nbsp;: <TMPL_VAR name=VALIDATOR_FULLNAME></li>
+				</ul>
+			</td>
+			<td>
+				<p align="center"><TMPL_VAR name=IMPLEMENTER></p>
+<TMPL_ELSE>
+<TMPL_IF name=STATUS_REJECTED>
+					<span class="BoldRed">Rejetée</span></p>
+				<p><TMPL_VAR name=CCB_COMMENT></p>
+			</td>
+			<td>
+				<p class="center"><TMPL_VAR name=SUBMITTER></p>
+				<p class="center"><TMPL_VAR name=ANALYST></p>
+<TMPL_ELSE>
+<TMPL_IF name=STATUS_POSTPONED>
+				<span class="BoldYellow">Ajournée</span></p>
+				<p><span class="arrow">è</span><TMPL_VAR name=SCHEDULED_VERSION_NAME></p>
+				<p><TMPL_VAR name=CCB_COMMENT></p>
+			</td>
+			<td>
+				<p class=center><span class=black>SwCCB</span></p>
+<TMPL_ELSE>
+<TMPL_IF name=STATUS_DUPLICATED>
+				<span class="BoldYellow">Dupliquée</span></p>
+				<p>CR Duplicat de la CR <TMPL_VAR name=ORIGINAL_ID></p>
+			</td>
+			<td>
+				<p class="center"><span class="black">SwCCB</span></p>
+				<p class="center"><TMPL_VAR name=SUBMITTER></p>
+<TMPL_ELSE>
+				<span class="BoldRed"><TMPL_VAR name=STATUS></span></p>
+			</td>
+			<td>
+				<p class="center"><TMPL_VAR name=SUBMITTER></p>
+				<p class="center"><TMPL_VAR name=IMPLEMENTER></p>
+				<p class="center"><TMPL_VAR name=ANALYST></p>
+</TMPL_IF>
+</TMPL_IF>
+</TMPL_IF>
+</TMPL_IF>
+			</td>
+			<td><br></td>
+		</tr>
+</TMPL_LOOP><!-- RESULTS -->
+	</tbody>
+</table>
+<TMPL_ELSE>
+<h2>La table "<TMPL_VAR name=TABLE_NAME>" ne donne pas de résultats</h2>
+</TMPL_IF>
