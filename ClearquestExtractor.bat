@@ -13,6 +13,7 @@ use lib qw(lib);
 use strict;
 use warnings;
 use Common;
+use Switch;
 use File::Copy;
 use Data::Dumper;
 use ClearcaseMgt qw(getDirectoryStructure getAttribute);
@@ -369,7 +370,22 @@ sub genFormattedByTemplateTable {
 		$transformedResult{IS_ODD} = $number % 2;
 
 		for(my $index=0; $index < scalar(@$listAliases); $index++) {
-			$transformedResult{$listAliases->[$index]} = $result->{$listFields->[$index]};
+		
+			my $Field_Value = $result->{$listFields->[$index]};
+			if ( $listAliases->[$index] =~ m/^\@(.*)\@$/)
+			{
+				my $Field_Name = $1;
+				DEBUG "Field : $Field_Name";
+				my $UC_Field_Content = uc($Field_Name . "_" . $Field_Value);
+				$transformedResult{$UC_Field_Content}   = 1;
+				DEBUG "Field : $UC_Field_Content";
+				$transformedResult{$Field_Name} = $Field_Value;
+
+			}
+			else
+			{
+				$transformedResult{$listAliases->[$index]} = $Field_Value;
+			}
 		}
 		push(@resultsToPrint, \%transformedResult);
 	}
