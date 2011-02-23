@@ -372,6 +372,7 @@ sub genFormattedByTemplateTable {
 		for(my $index=0; $index < scalar(@$listAliases); $index++) {
 		
 			my $Field_Value = $result->{$listFields->[$index]};
+			$Field_Value =~ s/\n/<br \/>\n/g;
 			if ( $listAliases->[$index] =~ m/^\@(.*)\@$/)
 			{
 				my $Field_Name = $1;
