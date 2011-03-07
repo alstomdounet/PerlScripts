@@ -33,7 +33,7 @@ use constant {
 	DEFAULT_TEMPLATE_DIR => '.',
 	DEFAULT_TEMPLATE => 'Default',
 	MAIN_TEMPLATE_NAME => 'main.tmpl',
-	DEBUG_DATABASE => 'DebugDatabase.db',
+	DEBUG_DATABASE_PREFIX => 'DebugDatabase',
 };
 
 INFO("Starting program (V ".PROGRAM_VERSION.")");
@@ -61,12 +61,14 @@ if (not -d $userTemplateDir) {
 	close FILE;
 }
 
-my $debugMode = $config->{debugMode};
-my $databaseGenNeeded = !($debugMode and -r DEBUG_DATABASE);
-WARN "DEBUG mode is activated" if $debugMode;
-WARN "results won't be updated (DEBUG mode and a DEBUG database)" unless $databaseGenNeeded;
+my $DEBUG_MODE = $config->{debugMode};
+my $DATABASE_GEN_NEEDED = $config->{databaseGenNeeded};
+WARN "!!!DEBUG mode is activated!!!" if $DEBUG_MODE;
+WARN "!!!DATABASEGEN mode is activated!!!" if $DATABASE_GEN_NEEDED;
 
-my $Clearquest_password = checkPasswordAndAskIfIncorrect($CQConfig->{clearquest_shared}->{password}) if $databaseGenNeeded;
+my $connectionRequired = $DATABASE_GEN_NEEDED or not $DEBUG_MODE;
+
+my $Clearquest_password = checkPasswordAndAskIfIncorrect($CQConfig->{clearquest_shared}->{password}) if $connectionRequired;
 
 #########################################################
 # Generic fields customisation / replacing
@@ -91,8 +93,8 @@ my $ANALYSED_DIRECTORY =  $config->{defaultParams}->{analysedDirectory};
 my $EQUIV_TABLE = loadCSV($config->{defaultParams}->{equivTable}) if $config->{defaultParams}->{equivTable};
 
 INFO "Connecting to Clearquest with login $CQConfig->{clearquest_shared}->{login}";
-connectCQ($CQConfig->{clearquest_shared}->{login}, $Clearquest_password, $CQConfig->{clearquest_shared}->{database}) if $databaseGenNeeded;
-
+connectCQ($CQConfig->{clearquest_shared}->{login}, $Clearquest_password, $CQConfig->{clearquest_shared}->{database}) if $connectionRequired;
+my $debug_index = 0;
 
 foreach my $document (@{$config->{documents}->{document}}) {
 	INFO "Processing document \"$document->{title}\"";
@@ -105,50 +107,43 @@ foreach my $document (@{$config->{documents}->{document}}) {
 	$document->{defaultParams}->{analysedDirectory} = localizeVariable($ANALYSED_DIRECTORY, $document->{defaultParams}->{analysedDirectory});
 	
 	my @tables;
-	if($databaseGenNeeded) {
-		foreach my $table (@{$document->{tables}->{table}}) {
-			INFO "Processing table \"$table->{title}\"";	
-			$table->{title} = 'Titre manquant' unless $table->{title};
-			while(my($key, $value) = each(%GENERIC_FIELDS)) {
-				$table->{title} =~ s/\*\*$key\*\*/$value/; 
-			}
-			
-			my %tableElements;
-			if(not $table->{type}) {
-				DEBUG "Requesting classic template";
-				%tableElements = %{genClassicTable($table)};
-			}
-			elsif($table->{type} =~ /^generic$/) {
-				DEBUG "Requesting generic template";
-				%tableElements = %{genGenericTable($table)};
-				$tableElements{GENERICLIST} = 1;
-			}
-			elsif($table->{type} =~ /^formattedByTemplate$/) {
-				DEBUG "Requesting Formatted template";
-				%tableElements = %{genFormattedByTemplateTable($table)};
-				$tableElements{FORMATTED_BY_TEMPLATE} = 1;
-			}
-			elsif ($table->{type} =~ /^documentation$/) {
-				DEBUG "Requesting documentation template";
-				$table->{references}->{reference} = localizeVariable($document->{defaultParams}->{references}->{reference}, $table->{references}->{reference});
-				$table->{references}->{target} = localizeVariable($document->{defaultParams}->{references}->{target}, $table->{references}->{target});
-				$table->{analysedDirectory} = localizeVariable($document->{defaultParams}->{analysedDirectory}, $table->{analysedDirectory});
-
-				%tableElements = %{genDocumentTable($table)};
-				$tableElements{DOCLIST} = 1;
-			}
-			else {
-				LOGDIE "Type $table->{type} is unknown";
-			}
-			
-			$tableElements{TABLE_NAME} = $table->{title};
-			push(@tables, \%tableElements);
+	foreach my $table (@{$document->{tables}->{table}}) {
+		INFO "Processing table \"$table->{title}\"";	
+		$table->{title} = 'Titre manquant' unless $table->{title};
+		while(my($key, $value) = each(%GENERIC_FIELDS)) {
+			$table->{title} =~ s/\*\*$key\*\*/$value/; 
 		}
-		#store(\@tables, DEBUG_DATABASE);
-	}
-	else {
-		my $results = retrieve(DEBUG_DATABASE);
-		@tables = @$results;
+		
+		my %tableElements;
+		if(not $table->{type}) {
+			DEBUG "Requesting classic template";
+			%tableElements = %{genClassicTable($table)};
+		}
+		elsif($table->{type} =~ /^generic$/) {
+			DEBUG "Requesting generic template";
+			%tableElements = %{genGenericTable($table)};
+			$tableElements{GENERICLIST} = 1;
+		}
+		elsif($table->{type} =~ /^formattedByTemplate$/) {
+			DEBUG "Requesting Formatted template";
+			%tableElements = %{genFormattedByTemplateTable($table)};
+			$tableElements{FORMATTED_BY_TEMPLATE} = 1;
+		}
+		elsif ($table->{type} =~ /^documentation$/) {
+			DEBUG "Requesting documentation template";
+			$table->{references}->{reference} = localizeVariable($document->{defaultParams}->{references}->{reference}, $table->{references}->{reference});
+			$table->{references}->{target} = localizeVariable($document->{defaultParams}->{references}->{target}, $table->{references}->{target});
+			$table->{analysedDirectory} = localizeVariable($document->{defaultParams}->{analysedDirectory}, $table->{analysedDirectory});
+
+			%tableElements = %{genDocumentTable($table)};
+			$tableElements{DOCLIST} = 1;
+		}
+		else {
+			LOGDIE "Type $table->{type} is unknown";
+		}
+		
+		$tableElements{TABLE_NAME} = $table->{title};
+		push(@tables, \%tableElements);
 	}
 	
 	####################################################################
@@ -237,7 +232,7 @@ sub genDocumentTable {
 	LOGDIE "This table is not available at the moment";
 	
 	my @fields = split(/\s*,\s*/, $config->{CQ_Queries}->{listCR}->{fieldsToRetrieve});
-	my $listCR = makeQuery("ChangeRequest", \@fields, $config->{CQ_Queries}->{listCR}, -GENERIC_VALUES => \%GENERIC_FIELDS);
+	my $listCR = usedebugQuery ("ChangeRequest", \@fields, $config->{CQ_Queries}->{listCR}, -GENERIC_VALUES => \%GENERIC_FIELDS);
 	
 	my $docBiasis = getListOfBiases($listCR);
 	my $results = compareLabels($table->{analysedDirectory}, $table->{references}->{reference}, $table->{references}->{target});
@@ -352,13 +347,23 @@ sub buildTable {
 	return \%results;
 }
 
+sub usedebugQuery {
+	if($DEBUG) {
+		return makeQuery(@_, -USE_DEBUG_FILE => DEBUG_DATABASE_PREFIX."_".$debug_index++.'.db');
+	}
+	else {
+		return makeQuery(@_);
+	}
+
+}
+
 sub genFormattedByTemplateTable {
 	my ($table, $debugStore) = @_;
 	
 	my @fieldsSort = genFilterFields($table->{fieldsSorting});
 	my ($listFields, $listAliases) = genFieldNames($table->{fieldsToRetrieve});
 	
-	my $results = makeQuery("ChangeRequest", \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);
+	my $results = usedebugQuery("ChangeRequest", \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);
 	
 	my @resultsToPrint;
 	my $number = 0;
@@ -410,7 +415,7 @@ sub genClassicTable {
 	}
 
 	
-	my $results = makeQuery("ChangeRequest", \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);
+	my $results = usedebugQuery("ChangeRequest", \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS);
 	
 	
 	my @resultsToPrint;
@@ -437,7 +442,7 @@ sub genGenericTable {
 	my @fieldsGroup = genFilterFields($table->{fieldsGrouping});
 	my ($listFields, $listAliases) = genFieldNames($table->{fieldsToRetrieve});
 
-	my $results = makeQuery($table->{clearquestType}, \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS, -GROUP_BY=> \@fieldsGroup);
+	my $results = usedebugQuery ($table->{clearquestType}, \@$listFields, $table->{filtering}, -SORT_BY => \@fieldsSort, -GENERIC_VALUES => \%GENERIC_FIELDS, -GROUP_BY=> \@fieldsGroup);
 	
 	
 	my @headerToPrint;
