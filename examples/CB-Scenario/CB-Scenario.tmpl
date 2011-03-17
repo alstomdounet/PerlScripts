@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Generator: ControlBuild -->
+
+<project xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<fileHeader companyName="GEENSYS" productName="ControlBuild" productVersion="2009-4c" creationDateTime="2011-03-14T16:47:35-01:00" />
+	<contentHeader name="cb_scenario_data" language="ST_source_code" />
+	<types>
+		<pous>
+			<pou name="hvs_bt.cb_scenario_data">
+				<interface><TMPL_LOOP name=INTERFACE>
+					<variable name="<TMPL_VAR name=RELAY_NAME>">
+						<type>
+							<<TMPL_VAR name=TYPE> />
+						</type>
+						<mnemonic>
+							<identifier name="<TMPL_VAR name=CB_PATH><TMPL_VAR name=RELAY_NAME>" />
+						</mnemonic>
+					</variable></TMPL_LOOP>
+				</interface>
+				<actions>
+				</actions>
+				<body>
+					<step name="init" breakpoints="">
+						<body>
+							<ST></ST>
+						</body>
+					</step><TMPL_LOOP name=LOCATION>
+					<step name="<TMPL_VAR name=LOCATION>" breakpoints="">
+						<body>
+							<ST><TMPL_LOOP name=INSTRUCTION>
+
+forceVariableToValue(<TMPL_VAR name=RELAY_NAME>, <TMPL_VAR name=INIT_VALUE>); (* <TMPL_VAR name=VARIABLE_NAME> *)
+pasSimu();</TMPL_LOOP>
+							</ST>
+						</body>
+					</step></TMPL_LOOP>
+				</body>
+			</pou>
+		</pous>
+	</types>
+</project>
