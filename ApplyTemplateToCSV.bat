@@ -13,7 +13,6 @@ use lib qw(lib);
 use strict;
 use warnings;
 use Common;
-use DisplayMgt qw(displayBox);
 use File::Copy;
 use Data::Dumper;
 
@@ -22,7 +21,7 @@ use HTML::Template;
 use XML::Simple;
 
 use constant {
-	PROGRAM_VERSION => '0.2',
+	PROGRAM_VERSION => '0.1',
 	TEMPLATE_ROOT_DIR => 'Templates',
 	INPUT_DIR => 'inputs',
 	OUTPUT_DIR => 'outputs',
@@ -36,7 +35,7 @@ INFO("Starting program (V ".PROGRAM_VERSION.")");
 #########################################################
 # loading of Configuration files
 #########################################################
-my $config = loadLocalConfig("CBCreateXmlModule.config.xml", 'config.xml', KeyAttr => {}, ForceArray => qr/^(component|rule)$/);
+my $config = loadLocalConfig("ApplyTemplateToCSV.config.xml", 'config.xml', KeyAttr => {}, ForceArray => qr/^(component|rule)$/);
 
 #########################################################
 # Using template files
@@ -44,7 +43,6 @@ my $config = loadLocalConfig("CBCreateXmlModule.config.xml", 'config.xml', KeyAt
 my $SCRIPT_DIRECTORY = getScriptDirectory();
 my $rootTemplateDirectory = "./";
 
-my $defaultTemplateDir = DEFAULT_TEMPLATE_DIR."/".TEMPLATE_ROOT_DIR.'/'.DEFAULT_TEMPLATE;
 my $userTemplateDir = $SCRIPT_DIRECTORY.TEMPLATE_ROOT_DIR;
 
 createDirInput($userTemplateDir, 'Templates files for current user has to be put in this directory');
@@ -56,25 +54,9 @@ createDirInput($SCRIPT_DIRECTORY.OUTPUT_DIR, 'All output files are put in this f
 #########################################################
 foreach my $component (@{$config->{components}->{component}}) {
 	INFO "Processing Component \"$component->{name}\"";
-
+	my $currentTemplateDir = DEFAULT_TEMPLATE_DIR."/".TEMPLATE_ROOT_DIR.'/'.$component->{template};
+	
 	my %modulesDescriptors;
-	my $extracted_interfaces = "";
-
-	my $_start_offset_X = 408;
-	my $_start_offset_Y = 144;
-	my $start_position_input_X = -24;
-	my $start_position_input_Y = 48;
-
-	my $start_position_output_X = 24; # Has to be added to component width
-	my $start_position_output_Y = $start_position_input_Y;
-
-	my $space_between_comps = 40;
-	my $space_between_vars = 24;
-
-	my $current_base_offset_X = 0;
-	my $current_base_offset_Y = 0;
-	my $current_local_id = 0;
-
 	
 	my $file = $SCRIPT_DIRECTORY.INPUT_DIR.'/'.$component->{refFile};
 	
@@ -89,128 +71,144 @@ foreach my $component (@{$config->{components}->{component}}) {
 	my %variablesList;
 	my @tab;
 	my $lineNumber = 0;
+	
+	my $headerRaw = <IN_FILE>;
+	chomp($headerRaw);
+	my @header = split(/;/, $headerRaw);
+	
+	my $offset = 0;
+	foreach my $column (@header) {
+		$offset++;
+		next unless $column =~ /^\s*$/;
+		WARN "Column $offset is not named. it will be ignored";	
+	}
+	
+	my %flatGroupsList;
+	
+	# Creating list of list, in an flat manner
 	foreach my $line (<IN_FILE>) {
 		chomp($line);
-		my @line = split(/\t/, $line);
 		
-		my $module = $line[0];
-		$lineNumber++;
+		my @line = split(/;/, $line);
 		
-		#########################################################
-		# Loading model description if it is not already done
-		#########################################################
-		unless($modulesDescriptors{$module}) {
-			DEBUG "Adding informations for module $module";
-			if(my $comp = loadModule($module)) {
-
-				$modulesDescriptors{$module} = $comp;
-				push(@tab, \@line);
-			}
-			else {
-				ERROR "Line $lineNumber will be ignored";
-			}
-		}
-		else {
-			push(@tab, \@line);
-		}
-	}
-	
-	#########################################################
-	# This part generates modules positions
-	#########################################################
-	my @list_modules;
-	my @list_connections_in;
-	my @list_connections_out;
-	
-	foreach my $line (@tab) {
-
-		my %currModuleChars;
-		DEBUG "Using module \"$line->[0]\"";		
-		my $moduleCharacteristics = $modulesDescriptors{$line->[0]};
-
-		#########################################################
-		# This part generates modules positions
-		#########################################################
-		$currModuleChars{LOCAL_ID} = $current_local_id;
-		
-		
-		$currModuleChars{MODULE_WIDTH} = $moduleCharacteristics->{size}->{width};
-		$currModuleChars{MODULE_HEIGHT} = $moduleCharacteristics->{size}->{height};
-		$currModuleChars{MODULE_GENERIC_NAME} = $moduleCharacteristics->{CBname};
-		$currModuleChars{MODULE_INST_NAME} = $line->[1];
-		$currModuleChars{MODULE_POS_X} = $_start_offset_X;
-		$currModuleChars{MODULE_POS_Y} = $_start_offset_Y + $current_base_offset_Y;
-		
-		$current_base_offset_Y += $currModuleChars{MODULE_HEIGHT} + $space_between_comps;
-		$current_local_id++;
-		
-		my @module_inputs;
-		my @module_outputs;
+		my %line;
 		
 		my $offset = 0;
-		my $var_position_y = 0;
-		foreach my $input (@{$moduleCharacteristics->{interface}->{inputs}->{pin}}) {
-			if($line->[$offset+2]) {
-				my %inputVariable;
-				$inputVariable{LOCAL_ID} = $current_local_id++;
-				$inputVariable{EXPRESSION} = $line->[$offset+2];
-				$inputVariable{VAR_POS_X} = $currModuleChars{MODULE_POS_X} + $start_position_input_X;
-				$inputVariable{VAR_POS_Y} = $currModuleChars{MODULE_POS_Y} + $start_position_input_Y + ($space_between_vars * $var_position_y);
-				push(@list_connections_in, \%inputVariable);
-				
-				my %moduleInputVar;
-				$moduleInputVar{LOCAL_ID} = $inputVariable{LOCAL_ID};
-				$moduleInputVar{FORMAL_NAME} = $input->{content};
-				push(@module_inputs, \%moduleInputVar);
-			}
+		foreach my $column (@header) {
 			$offset++;
-			$var_position_y++;
+			next if $column =~ /^\s*$/;
+			$line{$column} = $line[$offset - 1];
 		}
 		
-		$var_position_y = 0;
-		foreach my $output (@{$moduleCharacteristics->{interface}->{outputs}->{pin}}) {
-			if($line->[$offset+2]) {
-				my %outputVariable;
-				$outputVariable{LOCAL_ID} = $current_local_id++;
-				$outputVariable{EXPRESSION} = $line->[$offset+2];
-				$outputVariable{MODULE_LOCAL_ID} = $currModuleChars{LOCAL_ID};
-				$outputVariable{FORMAL_NAME} = $output->{content};
-				
-				$outputVariable{VAR_POS_X} = $currModuleChars{MODULE_POS_X} + $currModuleChars{MODULE_WIDTH} + $start_position_output_X;
-				$outputVariable{VAR_POS_Y} = $currModuleChars{MODULE_POS_Y} + $start_position_output_Y + ($space_between_vars * $var_position_y);
-				push(@list_connections_out, \%outputVariable);
-				
-			}
-			$offset++;
-			$var_position_y++;
+		my $pathRaw = $line{"PATH"} or LOGDIE("Column \"PATH\" (case-sensitive) is not defined, and it is mandatory.");
+		
+		foreach my $path (split(/\s*,\s*/, $pathRaw)) {
+			push(@{$flatGroupsList{$path}}, \%line);
 		}
-		
-		$currModuleChars{MODULE_VARS_IN} = \@module_inputs;
-		$currModuleChars{MODULE_VARS_OUT} = \@module_outputs;
-		
-		push(@list_modules, \%currModuleChars);
 	}
+	
+	close IN_FILE;
+	
+	# Creating list of list, in an imbricated manner
+	my %imbricatedList;
+	foreach my $flatPath (keys %flatGroupsList) {
+		DEBUG "Processing group \"$flatPath\"";
+		my @groups = split(/\./, $flatPath);
+		
+		my $results = createGroup(\@groups, $flatGroupsList{$flatPath});
+		$imbricatedList{$flatPath} = $results;
+	}	
+	
+	# Merging lists, because they are eventually duplicate keys
+	my $mergedList;
+	foreach my $flatPath (keys %imbricatedList) {
+		$mergedList = merge_hashes_normal ($mergedList, $imbricatedList{$flatPath});
+	}
+	
+	my $finalList = make_arrays($mergedList);
 	
 	#########################################################
 	# This part generates input / output files
 	#########################################################
 	my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
 	
-	open OUTFILE, ">$outDir/$component->{name}.xml";
+	open OUTFILE, ">$outDir/$component->{outFile}";
 	
-	my $template_file = $defaultTemplateDir.'/body.tmpl';
+	my $template_file = $currentTemplateDir.'/main.tmpl';
 	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file );
-			
-	$mainTemplate->param(MODULE_NAME => $component->{name});
 	
-	$mainTemplate->param(INTERFACES => $extracted_interfaces);
-	$mainTemplate->param(CONNECT_VARS_IN => \@list_connections_in);
-	$mainTemplate->param(CONNECT_VARS_OUT => \@list_connections_out);
-	$mainTemplate->param(MODULES => \@list_modules);
+	foreach my $key (keys %$mergedList) {
+		$mainTemplate->param($key => $mergedList->{$key} );
+	}
 	
-	INFO "Generating $component->{name}.xml";
+	INFO "Generating \"$component->{outFile}\"";
 	print OUTFILE $mainTemplate->output;
 	close OUTFILE;
+
+
+	exit;
+}
+	
+sub createGroup {
+	my ($keyList, $list) = @_;
+	
+	
+	my @localKeyList = @$keyList;
+	my $currentKeyField = shift @localKeyList;
+	
+	LOGDIE "ERRREURRRR" unless $currentKeyField;
+	
+	my %table;
+	foreach my $item (@$list) {
+		my $keyValue = $currentKeyField;
+		
+		$keyValue = $currentKeyField.":".$item->{$currentKeyField} if defined ($item->{$currentKeyField});
+		
+		push(@{$table{$keyValue}}, $item);
+	}
+	
+	if(scalar (@localKeyList) > 0) {
+		foreach my $keyValue (keys %table) {
+			$table{$keyValue} = createGroup(\@localKeyList, $table{$keyValue});
+		}
+	}
+	
+	return \%table;
+}
+
+sub merge_hashes_normal {
+    my ($x, $y) = @_;
+
+    foreach my $k (keys %$y) {
+
+		if (!defined($x->{$k})) {
+				$x->{$k} = $y->{$k};
+			} else {
+				$x->{$k} = merge_hashes_normal($x->{$k}, $y->{$k});
+			}
+    }
+    return $x;
+}
+
+sub make_arrays {
+    my ($x) = @_;
+
+    foreach my $key (keys %$x) {
+
+		if($key =~ /(.*):(.*)/) {
+			my $realKey = $1;
+			my $value = $2;
+			my $hash = $x->{$key};
+			$hash->{$realKey} = $value;
+			
+			push(@{$x->{$realKey}}, $hash);
+			delete $x->{$key};
+		}
+		else {
+			$x->{$key} = $x->{$key};
+		}
+    }
+    return $x;
 }
 
 sub loadModule {
