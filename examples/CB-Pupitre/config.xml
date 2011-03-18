@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<config version='0.1'>
+	<components>
+		<component>
+			<name>CB-Pupitre-example</name><!-- Nom du module. Attention aux caractères interdits par ControlBuild -->
+			<refFile>CB-Pupitre-Data.csv</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format XML -->
+			<outFile>test.xpup</outFile><!-- Fichier de sortie -->
+			<templateFile>CB-Pupitre.tmpl</templateFile><!-- Name of template to use -->
+		</component>
+	</components>
+</config>
