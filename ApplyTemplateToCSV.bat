@@ -54,7 +54,6 @@ createDirInput($SCRIPT_DIRECTORY.OUTPUT_DIR, 'All output files are put in this f
 #########################################################
 foreach my $component (@{$config->{components}->{component}}) {
 	INFO "Processing Component \"$component->{name}\"";
-	my $currentTemplateDir = DEFAULT_TEMPLATE_DIR."/".TEMPLATE_ROOT_DIR.'/'.$component->{template};
 	
 	my %modulesDescriptors;
 	
@@ -109,7 +108,7 @@ foreach my $component (@{$config->{components}->{component}}) {
 	
 	close IN_FILE;
 	
-	# Creating list of list, in an imbricated manner
+	INFO "Creating list of list, in an imbricated manner";
 	my %imbricatedList;
 	foreach my $flatPath (keys %flatGroupsList) {
 		DEBUG "Processing group \"$flatPath\"";
@@ -119,12 +118,13 @@ foreach my $component (@{$config->{components}->{component}}) {
 		$imbricatedList{$flatPath} = $results;
 	}	
 	
-	# Merging lists, because they are eventually duplicate keys
+	INFO "Merging lists, because they are eventually duplicate keys";
 	my $mergedList;
 	foreach my $flatPath (keys %imbricatedList) {
 		$mergedList = merge_hashes_normal ($mergedList, $imbricatedList{$flatPath});
 	}
 	
+	INFO "Generating Final array";
 	my $finalList = make_arrays($mergedList);
 	
 	#########################################################
@@ -134,7 +134,7 @@ foreach my $component (@{$config->{components}->{component}}) {
 	
 	open OUTFILE, ">$outDir/$component->{outFile}";
 	
-	my $template_file = $currentTemplateDir.'/main.tmpl';
+	my $template_file = $SCRIPT_DIRECTORY.INPUT_DIR.'/'.$component->{templateFile};
 	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file );
 	
 	foreach my $key (keys %$mergedList) {
