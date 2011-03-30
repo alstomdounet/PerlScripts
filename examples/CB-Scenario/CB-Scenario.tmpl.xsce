@@ -8,7 +8,7 @@
 		<pous>
 			<pou name="hvs_bt.cb_scenario_data">
 				<interface><TMPL_LOOP name=INTERFACE>
-					<variable name="<TMPL_VAR name=RELAY_NAME>">
+					<variable name="<TMPL_VAR name=RELAY_NAME_INST>">
 						<type>
 							<<TMPL_VAR name=TYPE> />
 						</type>
@@ -29,7 +29,7 @@
 						<body>
 							<ST><TMPL_LOOP name=INSTRUCTION>
 
-forceVariableToValue(<TMPL_VAR name=RELAY_NAME>, <TMPL_VAR name=INIT_VALUE>); (* <TMPL_VAR name=VARIABLE_NAME> *)
+forceVariableToValue(<TMPL_VAR name=RELAY_NAME_INST>, <TMPL_VAR name=INIT_VALUE>); (* <TMPL_VAR name=VARIABLE_NAME_1> et <TMPL_VAR name=VARIABLE_NAME_2> *)
 pasSimu();</TMPL_LOOP>
 							</ST>
 						</body>
