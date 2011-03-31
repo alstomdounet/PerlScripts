@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TracerConfigurationDTO xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:type="ParameterConfigurationDTO">
+  <AppliVersion Val="0.0" />
+  <CompatibleTrainSetTypes>
+    <string xsi:nil="true" />
+  </CompatibleTrainSetTypes>
+  <IncompatibleTrainSetTypes />
+  <Id>b57660f4-611e-4cb5-bbf8-5645a3a03f91</Id>
+  <Name>Jeu de paramètres 1</Name>
+  <Description />
+  <ProjectName>CP_MPU</ProjectName>
+  <ProjectVersion Val="1.4.0.1" />
+  <SamplingPeriod xsi:nil="true" />
+  <ChangeAccess>Authorized</ChangeAccess>
+  <Variables><TMPL_LOOP name=LIST>
+    <VariableConfigurationDTO xsi:type="ParamVariableConfigurationDTO">
+      <VariableFullName><TMPL_VAR name=TT_PATH>/<TMPL_VAR name=VARIABLE_NAME></VariableFullName>
+      <DicoVersion />
+      <TagList />
+      <Value xsi:type="xsd:<TMPL_VAR name=TT_TYPE>"><TMPL_VAR name=TT_FORCE_VALUE></Value>
+      <Action>Force</Action>
+      <DelayInMilliSeconds>100</DelayInMilliSeconds>
+    </VariableConfigurationDTO></TMPL_LOOP>
+  </Variables>
+  <VariableSections />
+  <DataGridSettings />
+</TracerConfigurationDTO>

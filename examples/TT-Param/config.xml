@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<config version='0.1'>
+	<components>
+		<component>
+			<refFile>TT-Param-Data.csv</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format XML -->
+			<outFile>Jeu de parametre genere.xml</outFile><!-- Fichier de sortie -->
+			<templateFile>TT-Param.tmpl.xml</templateFile><!-- Name of template to use -->
+		</component>
+	</components>
+</config>
