@@ -1,6 +1,6 @@
-@rem = ' PERL for Windows NT - ccperl must be in search path
+@rem = ' PERL for Windows NT - ratlperl must be in search path
 @echo off
-cqperl %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
+ratlperl %0 %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto endofperl
 @rem ';
 
@@ -22,7 +22,6 @@ use ClearquestCommon qw(checkPasswordAndAskIfIncorrect getAnswer);
 
 use Storable qw(store retrieve thaw freeze);
 use HTML::Template;
-use Time::localtime;
 use POSIX qw(strftime);
 use Text::CSV;
 use XML::Simple;
@@ -202,7 +201,7 @@ foreach my $document (@{$config->{documents}->{document}}) {
 			push(@tmpTable, $table);
 			
 			$subTemplate->param(TABLE => \@tmpTable);
-			my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
+			my $tm = strftime "%d-%m-%Y à %H:%M:%S", localtime;
 			$subTemplate->param(DATE => $tm);
 			$subTemplate->param(TITLE => $document->{title});
 			
@@ -217,7 +216,7 @@ foreach my $document (@{$config->{documents}->{document}}) {
 	}
 
 	$mainTemplate->param(TABLES => \@finalTables);
-	my $tm = strftime "%d-%m-%Y à %H:%M:%S", gmtime;
+	my $tm = strftime "%d-%m-%Y à %H:%M:%S", localtime;
 	$mainTemplate->param(DATE => $tm);
 	$mainTemplate->param(TITLE => $document->{title});
 	
@@ -397,6 +396,7 @@ sub genFormattedByTemplateTable {
 	}
 	
 	my %tableProperties = (RESULTS => \@resultsToPrint);
+	$tableProperties{COUNT_ROW} = $#resultsToPrint + 1;
 	return \%tableProperties;
 }
 
