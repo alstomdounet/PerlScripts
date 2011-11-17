@@ -1,0 +1,8 @@
+(* Ce module a été généré automatiquement *)
+
+<TMPL_LOOP name=MODULES>
+(* Module de gestion de la redondance des variables <TMPL_VAR name=BASENAME> *)
+MOD_<TMPL_VAR name=BASENAME>(<TMPL_VAR name=BASENAME>R1 , <TMPL_VAR name=BASENAME>R2 , FALSE);
+<TMPL_VAR name=BASENAME> := MOD_<TMPL_VAR name=BASENAME>.Li_cons;
+<TMPL_VAR name=BASENAME>Err := MOD_<TMPL_VAR name=BASENAME>.Li_err_value;
+</TMPL_LOOP>
