@@ -2,10 +2,9 @@
 <config version='0.1'>
 	<components>
 		<component>
-			<name>riom_testability</name><!-- Nom du module. Attention aux caractères interdits par ControlBuild -->
-			<refFile>testability_riom.txt</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format XML -->
-			<outDir>**NAME**</outDir><!-- Répertoire de sortie. **NAME** prends le nom du module comme sortie -->
-			<template>Default</template><!-- Name of template to use -->
+			<name>hvs_riom_proc_ve1</name><!-- Nom du module. Attention aux caractères interdits par ControlBuild -->
+			<inject_path>N:\rei_tcms_coradiap\Projet\XPU\CP_MPU\Applications\hvs\functional</inject_path><!-- Chemin vers le fichier à altérer. Supprimer / commenter cette ligne si modification manuelle -->
+			<refFile>table_red_ve1.txt</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format XML -->
 		</component>
 	</components>
 </config>

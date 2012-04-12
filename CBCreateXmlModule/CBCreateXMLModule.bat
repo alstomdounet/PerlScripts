@@ -193,23 +193,78 @@ foreach my $component (@{$config->{components}->{component}}) {
 	#########################################################
 	# This part generates input / output files
 	#########################################################
-	my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
-	
-	open OUTFILE, ">$outDir/$component->{name}.xml";
-	
-	my $template_file = $defaultTemplateDir.'/body.tmpl';
-	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file );
+	if(-d $component->{inject_path}) {
+		INFO "injecting results in $component->{inject_path}\\$component->{name}\\$component->{name}.xml";
+		
+		my $template_file = DEFAULT_TEMPLATE_DIR."/".TEMPLATE_ROOT_DIR.'/InjectXml/body.tmpl';
+		my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file );
+		$mainTemplate->param(CONNECT_VARS_IN => \@list_connections_in);
+		$mainTemplate->param(CONNECT_VARS_OUT => \@list_connections_out);
+		$mainTemplate->param(MODULES => \@list_modules);
+		
+		INFO "Generating $component->{name}.xml";
+		my $results = $mainTemplate->output;
+		
+		open OUTFILE, "$component->{inject_path}/$component->{name}/$component->{name}.xml";
+		
+		my $insideBody = 0;
+		my $insideFBD = 0;
+		
+		my $newFile = "";
+		foreach my $line (<OUTFILE>) {
+			if($line =~ /^\s*<body>\s*$/) {
+				INFO "Found <body> tag";
+				
+				$insideBody = 1;
+			}
 			
-	$mainTemplate->param(MODULE_NAME => $component->{name});
+			if($line =~ /^\s*<\/body>\s*$/) {
+				INFO "Found </body> tag";
+				
+				$insideBody = 0;
+			}
+			
+			if($line =~ /^\s*<FBD>\s*$/ && $insideBody) {
+				INFO "Found <FBD> tag";
+				
+				$insideFBD = 1;
+				$newFile = $newFile . $results;
+			}
+			
+			if(($insideBody && ! $insideFBD)|| !$insideBody) {
+				$newFile = $newFile . $line;
+			}
+			
+			if($line =~ /^\s*<\/FBD>\s*$/ && $insideBody) {
+				INFO "Found </FBD> tag";
+				$insideFBD = 0;
+			}
+		}
+		
+		close OUTFILE;
+		open OUTFILE, ">$component->{inject_path}/$component->{name}/$component->{name}.xml";
+		print OUTFILE $newFile;
+		close OUTFILE;
+	}
+	else {
+		my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
 	
-	$mainTemplate->param(INTERFACES => $extracted_interfaces);
-	$mainTemplate->param(CONNECT_VARS_IN => \@list_connections_in);
-	$mainTemplate->param(CONNECT_VARS_OUT => \@list_connections_out);
-	$mainTemplate->param(MODULES => \@list_modules);
-	
-	INFO "Generating $component->{name}.xml";
-	print OUTFILE $mainTemplate->output;
-	close OUTFILE;
+		open OUTFILE, ">$outDir/$component->{name}.xml";
+		
+		my $template_file = $defaultTemplateDir.'/body.tmpl';
+		my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file );
+				
+		$mainTemplate->param(MODULE_NAME => $component->{name});
+		
+		$mainTemplate->param(INTERFACES => $extracted_interfaces);
+		$mainTemplate->param(CONNECT_VARS_IN => \@list_connections_in);
+		$mainTemplate->param(CONNECT_VARS_OUT => \@list_connections_out);
+		$mainTemplate->param(MODULES => \@list_modules);
+		
+		INFO "Generating $component->{name}.xml";
+		print OUTFILE $mainTemplate->output;
+		close OUTFILE;
+	}
 }
 
 sub loadModule {
