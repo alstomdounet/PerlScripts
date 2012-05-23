@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Generator: ControlBuild -->
+
+<project xmlns="http://www.plcopen.org/xml/tc6.xsd" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.plcopen.org/xml/tc6.xsd TC6_XML_V10.xsd">
+	<fileHeader companyName="GEENSYS" productName="ControlBuild" productVersion="2009-4c" creationDateTime="2010-12-13T14:01:30-01:00" />
+	<contentHeader name="<TMPL_VAR name=MODULE_NAME>">
+		<coordinateInfo>
+			<fbd>
+				<scaling x="100" y="100" />
+			</fbd>
+			<ld>
+				<scaling x="100" y="100" />
+			</ld>
+			<sfc>
+				<scaling x="32" y="8" />
+			</sfc>
+		</coordinateInfo>
+	</contentHeader>
+	<types>
+		<dataTypes />
+		<pous>
+			<pou name="hvs.<TMPL_VAR name=MODULE_NAME>" pouType="program">
+				<interface><TMPL_VAR name=INTERFACES></interface>
+				<actions>
+				</actions>
+				<body>
+					<FBD><TMPL_LOOP name=CONNECT_VARS_IN><TMPL_INCLUDE NAME="_connectVarsIn.tmpl"></TMPL_LOOP><TMPL_LOOP name=CONNECT_VARS_OUT><TMPL_INCLUDE NAME="_connectVarsOut.tmpl"></TMPL_LOOP><TMPL_LOOP name=MODULES><TMPL_INCLUDE NAME="_module.tmpl"></TMPL_LOOP>	
+					</FBD>
+				</body>
+				<addData>
+				</addData>
+			</pou>
+		</pous>
+	</types>
+	<instances>
+		<configurations />
+	</instances>
+</project>
