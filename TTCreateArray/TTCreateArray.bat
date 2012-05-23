@@ -54,10 +54,12 @@ createDirInput($SCRIPT_DIRECTORY.OUTPUT_DIR, 'All output files are put in this f
 #########################################################
 # Foreach component to generate
 #########################################################
+my $csv = Text::CSV->new ({sep_char => "\t"});
+
 foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDashboard}}) {
 	INFO "Processing Component \"$graphicalDashboard->{properties}->{TITLE}\"";
 
-	my %modulesDescriptors;
+	#my %modulesDescriptors;
 	my @list_of_vars;
 	my @list_of_elements;
 
@@ -66,11 +68,30 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 	#########################################################
 	# Reading connections variables
 	#########################################################
-	unless (open IN_FILE, $file) {
+	my $fh;
+	unless (open $fh, $file) {
 		ERROR "input file \"$file\" cannot be processed. Component is skipped.";
 		next;
 	}
 	
+	$csv->column_names ($csv->getline($fh));
+	
+	
+	while (my $arrayref = $csv->getline_hr ($fh)) {
+		push(@list_of_vars, {PATH => $arrayref ->{PATH}});
+		
+		my %list;
+		foreach my $key (qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED ELEMENT_TYPE PATH)) {
+			$list{$key} = $arrayref->{$key};
+		}
+		
+		$list{PATH} =~ s#\/#\\\/#g;
+		
+		push(@list_of_elements, \%list);
+
+	}
+	
+	print Dumper @list_of_elements;
 		
 	my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
 	
