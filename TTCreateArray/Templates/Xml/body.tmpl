@@ -3,16 +3,13 @@
   <AppliVersion Val="0.0" />
   <Id><TMPL_VAR name=FILE_ID></Id>
   <Name><TMPL_VAR name=TITLE></Name>
-  <Description />
+  <Description><TMPL_VAR name=DESCRIPTION></Description>
   <ProjectName><TMPL_VAR name=PROJECT></ProjectName>
-  <ProjectVersion Val="<TMPL_VAR name=VERSION>" />
+  <ProjectVersion Val="<TMPL_VAR name=PROJECT_VERSION>" />
   <SamplingPeriod><TMPL_VAR name=SAMPLING_PERIOD></SamplingPeriod>
   <ChangeAccess>Authorized</ChangeAccess>
   <Variables><TMPL_LOOP name=LIST_OF_VARS><TMPL_INCLUDE NAME="_listOfVars.tmpl"></TMPL_LOOP>
   </Variables>
   <VariableSections />
-<SerialisedGraphicalView>
-  {"Children":[
-  <TMPL_LOOP name=LIST_OF_ELEMENTS><TMPL_INCLUDE NAME="_listOfElements.tmpl"></TMPL_LOOP>
-  ],"ComponentAssembly":null,"ComponentType":null,"CustomPtyDictionary":[{"Key":"Width","Value":10000},{"Key":"Height","Value":10000}],"Left":0,"Top":0}</SerialisedGraphicalView>
+  <SerialisedGraphicalView>{"Children":[<TMPL_LOOP name=LIST_OF_ELEMENTS><TMPL_INCLUDE NAME="_listOfElements.tmpl"></TMPL_LOOP>],"ComponentAssembly":null,"ComponentType":null,"CustomPtyDictionary":[{"Key":"Width","Value":10000},{"Key":"Height","Value":10000}],"Left":0,"Top":0}</SerialisedGraphicalView>
 </TracerConfigurationDTO>

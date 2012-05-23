@@ -1,10 +1,16 @@
 <?xml version='1.0' encoding='ISO-8859-1'?>
 <config version='0.1'>
-	<components>
-		<component>
-			<name>hvs_riom_proc_ve1</name><!-- Nom du module. Attention aux caractères interdits par ControlBuild -->
-			<inject_path>N:\rei_tcms_coradiap\Projet\XPU\CP_MPU\Applications\hvs\functional</inject_path><!-- Chemin vers le fichier à altérer. Supprimer / commenter cette ligne si modification manuelle -->
-			<refFile>table_red_ve1.txt</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format XML -->
-		</component>
-	</components>
+	<GraphicalDashboards>
+		<GraphicalDashboard>
+			<properties>
+				<FILE_ID>3f2d5dac-5cea-4643-a2a0-7eee0d340c3e</FILE_ID>
+				<TITLE>TOTO_TEST</TITLE>
+				<DESCRIPTION>TDB de test</DESCRIPTION>
+				<PROJECT>TCMS_REGIOLIS</PROJECT>
+				<PROJECT_VERSION>4.4.0.0</PROJECT_VERSION>
+				<SAMPLING_PERIOD>250</SAMPLING_PERIOD>
+			</properties>
+			<refFile>sample.txt</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format CSV (voir exemples) -->
+		</GraphicalDashboard>
+	</GraphicalDashboards>
 </config>
