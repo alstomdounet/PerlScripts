@@ -99,7 +99,7 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 	open OUTFILE, ">$outDir/$graphicalDashboard->{properties}->{FILE_ID}.xml";
 		
 	my $template_file = $defaultTemplateDir.'/body.tmpl';
-	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file );
+	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file, loop_context_vars => 1 );
 		
 	foreach my $property (keys %{$graphicalDashboard->{properties}}) {
 		$mainTemplate->param($property => $graphicalDashboard->{properties}->{$property});
