@@ -110,6 +110,7 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 				$range{RANGE_MAX} = $ranges{$key_range}{RANGE_MAX};
 				$range{SMALL_IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{SMALL_IMAGE} if $range{SMALL_IMAGE};
 				$range{IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{IMAGE} if $range{IMAGE};
+				$range{COLOR} = 'R=0 G=0 B=0' unless $range{COLOR};
 				push(@lists_ranges, \%range);
 			}
 		}
