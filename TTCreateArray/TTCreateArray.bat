@@ -91,9 +91,6 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 	# End of process
 	
 	while (my $arrayref = $csv->getline_hr ($fh)) {
-		
-		
-		
 		my %list;
 		foreach my $key (qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH)) {
 			$list{$key} = $arrayref->{$key};
@@ -111,11 +108,13 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 			if(%range) {
 				$range{RANGE_MIN} = $ranges{$key_range}{RANGE_MIN};
 				$range{RANGE_MAX} = $ranges{$key_range}{RANGE_MAX};
+				$range{SMALL_IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{SMALL_IMAGE} if $range{SMALL_IMAGE};
+				$range{IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{IMAGE} if $range{IMAGE};
 				push(@lists_ranges, \%range);
 			}
 		}
 		
-		push(@list_of_vars, {PATH => $arrayref ->{PATH}, RANGES => \@lists_ranges });
+		push(@list_of_vars, {PATH => $arrayref->{PATH}, RANGES => \@lists_ranges });
 		
 		$list{$arrayref->{ELEMENT_TYPE}} = 1;
 		$list{PATH} =~ s#\/#\\\/#g;
@@ -126,7 +125,7 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 		
 	my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
 	
-	open OUTFILE, ">$outDir/$graphicalDashboard->{properties}->{FILE_ID}.xml";
+	open OUTFILE, ">:encoding(UTF-8)", "$outDir/$graphicalDashboard->{properties}->{FILE_ID}.xml";
 		
 	my $template_file = $defaultTemplateDir.'/body.tmpl';
 	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file, loop_context_vars => 1 );
