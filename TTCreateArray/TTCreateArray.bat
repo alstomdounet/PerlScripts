@@ -81,14 +81,15 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 		push(@list_of_vars, {PATH => $arrayref ->{PATH}});
 		
 		my %list;
-		foreach my $key (qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED ELEMENT_TYPE PATH)) {
+		foreach my $key (qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH)) {
 			$list{$key} = $arrayref->{$key};
 		}
+		
+		$list{$arrayref->{ELEMENT_TYPE}} = 1;
 		
 		$list{PATH} =~ s#\/#\\\/#g;
 		
 		push(@list_of_elements, \%list);
-
 	}
 	
 	print Dumper @list_of_elements;
