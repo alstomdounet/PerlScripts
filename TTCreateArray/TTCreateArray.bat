@@ -22,7 +22,7 @@ use HTML::Template;
 use XML::Simple;
 
 use constant {
-	PROGRAM_VERSION => '0.2',
+	PROGRAM_VERSION => '0.1',
 	TEMPLATE_ROOT_DIR => 'Templates',
 	INPUT_DIR => 'inputs',
 	OUTPUT_DIR => 'outputs',
@@ -54,7 +54,7 @@ createDirInput($SCRIPT_DIRECTORY.OUTPUT_DIR, 'All output files are put in this f
 #########################################################
 # Foreach component to generate
 #########################################################
-my $csv = Text::CSV->new ({sep_char => "\t"});
+my $csv = Text::CSV->new ({sep_char => "\t", empty_is_undef => 0, auto_diag => 1, binary => 1});
 
 foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDashboard}}) {
 	INFO "Processing Component \"$graphicalDashboard->{properties}->{TITLE}\"";
@@ -66,7 +66,7 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 	my $file = $SCRIPT_DIRECTORY.INPUT_DIR.'/'.$graphicalDashboard->{refFile};
 	
 	#########################################################
-	# Reading connections variables
+	# Reading input file
 	#########################################################
 	my $fh;
 	unless (open $fh, $file) {
@@ -74,25 +74,55 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 		next;
 	}
 	
-	$csv->column_names ($csv->getline($fh));
+	my @columns = @{$csv->getline($fh)};
+	$csv->column_names (@columns);
 	
+	# Building ranges arrays
+	my %ranges;
+	if(my @results = sort grep(/^RNGE\[\d+-\d+\]_/, @columns)) {
+		foreach my $result (@results) {
+			if($result =~ /^(RNGE\[(\d+)-(\d+)\])_(.*)$/) {
+				$ranges{$1}{RANGE_MIN} = $2;
+				$ranges{$1}{RANGE_MAX} = $3;
+				push(@{$ranges{$1}{KEYS}}, $4);
+			}
+		}
+	}
+	# End of process
 	
 	while (my $arrayref = $csv->getline_hr ($fh)) {
-		push(@list_of_vars, {PATH => $arrayref ->{PATH}});
+		
+		
 		
 		my %list;
 		foreach my $key (qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH)) {
 			$list{$key} = $arrayref->{$key};
 		}
 		
+		# Checking ranges
+		my @lists_ranges;
+		foreach my $key_range (keys %ranges) {
+
+			my %range;
+			foreach my $key (@{$ranges{$key_range}{KEYS}}) {
+				$range{$key} = $arrayref->{"${key_range}_$key"} if($arrayref->{"${key_range}_$key"});
+			}
+			
+			if(%range) {
+				$range{RANGE_MIN} = $ranges{$key_range}{RANGE_MIN};
+				$range{RANGE_MAX} = $ranges{$key_range}{RANGE_MAX};
+				push(@lists_ranges, \%range);
+			}
+		}
+		
+		push(@list_of_vars, {PATH => $arrayref ->{PATH}, RANGES => \@lists_ranges });
+		
 		$list{$arrayref->{ELEMENT_TYPE}} = 1;
-		
 		$list{PATH} =~ s#\/#\\\/#g;
-		
 		push(@list_of_elements, \%list);
 	}
 	
-	print Dumper @list_of_elements;
+	#print Dumper @list_of_vars;
 		
 	my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
 	
