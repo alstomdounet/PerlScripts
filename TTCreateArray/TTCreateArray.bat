@@ -92,9 +92,11 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 	
 	while (my $arrayref = $csv->getline_hr ($fh)) {
 		my %list;
-		foreach my $key (qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH)) {
-			$list{$key} = $arrayref->{$key};
+		foreach my $key (qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH IMAGE_PATH)) {
+			$list{$key} = $arrayref->{$key} if ($arrayref->{$key});
 		}
+		
+		$list{PATH} = $graphicalDashboard->{TrainTracerVariablesPath}.$list{PATH} if $list{PATH};
 		
 		# Checking ranges
 		my @lists_ranges;
@@ -115,14 +117,13 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 			}
 		}
 		
-		push(@list_of_vars, {PATH => $arrayref->{PATH}, RANGES => \@lists_ranges });
+		push(@list_of_vars, {PATH => $list{PATH}, RANGES => \@lists_ranges });
 		
 		$list{$arrayref->{ELEMENT_TYPE}} = 1;
-		$list{PATH} =~ s#\/#\\\/#g;
+		$list{PATH} =~ s#\/#\\\/#g if $list{PATH};
+		$list{IMAGE_PATH} = $graphicalDashboard->{TrainTracerImagePath}.$list{IMAGE_PATH} if $list{IMAGE_PATH};
 		push(@list_of_elements, \%list);
 	}
-	
-	#print Dumper @list_of_vars;
 		
 	my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
 	
