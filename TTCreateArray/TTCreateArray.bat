@@ -101,18 +101,26 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 			$list{IMAGE_PATH} =~ s#\\#\\\/#g if $list{IMAGE_PATH};
 			$foundElement = 1;			
 		}
+		elsif($arrayref->{ELEMENT_TYPE} eq 'ImageViewVariable' or $arrayref->{ELEMENT_TYPE} eq 'SimpleView') {
+			DEBUG "Found Element of type \"$arrayref->{ELEMENT_TYPE}\"";
+			%list = extract_keys($arrayref, qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH));
+			
+			$foundElement = 1;	
+		}
 		else {
-			WARN "Unknown Element type";
-			%list = extract_keys(qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH IMAGE_PATH));
+			WARN "Unknown Element type : \"$arrayref->{ELEMENT_TYPE}\"";
+			%list = extract_keys($arrayref, qw(POS_X POS_Y LOCKED PATH));
 		}
 
 		if ($foundElement) {
 			$list{$arrayref->{ELEMENT_TYPE}} = 1;
+			$list{PATH} = $graphicalDashboard->{TrainTracerVariablesPath}.$list{PATH}  if $list{PATH};	
 			$list{PATH} =~ s#\/#\\\/#g if $list{PATH};
 			$list{SIZE_X} = 'NaN' unless $list{SIZE_X};
 			$list{SIZE_Y} = 'NaN' unless $list{SIZE_Y};
 			$list{POS_X} = '0' unless $list{POS_X};
 			$list{POS_Y} = '0' unless $list{POS_Y};
+			$list{LOCKED} = 'true' unless $list{LOCKED};
 			push(@list_of_elements, \%list);
 		}
 		
@@ -152,8 +160,6 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 				push(@list_of_vars, {PATH => $path, RANGES => \@lists_ranges });	
 			}
 		}
-		
-		last;
 	}
 	
 	if(%variablesInserted) {
