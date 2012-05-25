@@ -62,6 +62,7 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 	#my %modulesDescriptors;
 	my @list_of_vars;
 	my @list_of_elements;
+	my %variablesInserted;
 
 	my $file = $SCRIPT_DIRECTORY.INPUT_DIR.'/'.$graphicalDashboard->{refFile};
 	
@@ -92,69 +93,103 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 	
 	while (my $arrayref = $csv->getline_hr ($fh)) {
 		my %list;
-		foreach my $key (qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH IMAGE_PATH)) {
-			$list{$key} = $arrayref->{$key} if ($arrayref->{$key});
+		my $foundElement = 0;
+		if($arrayref->{ELEMENT_TYPE} eq 'ImageControl') {
+			DEBUG "Found Element of type \"$arrayref->{ELEMENT_TYPE}\"";
+			%list = extract_keys($arrayref, qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED IMAGE_PATH));
+			$list{IMAGE_PATH} = $graphicalDashboard->{properties}->{PROJECT}."\\".$graphicalDashboard->{TrainTracerImagePath}.$list{IMAGE_PATH} if $list{IMAGE_PATH};	
+			$list{IMAGE_PATH} =~ s#\\#\\\/#g if $list{IMAGE_PATH};
+			$foundElement = 1;			
+		}
+		else {
+			WARN "Unknown Element type";
+			%list = extract_keys(qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH IMAGE_PATH));
+		}
+
+		if ($foundElement) {
+			$list{$arrayref->{ELEMENT_TYPE}} = 1;
+			$list{PATH} =~ s#\/#\\\/#g if $list{PATH};
+			$list{SIZE_X} = 'NaN' unless $list{SIZE_X};
+			$list{SIZE_Y} = 'NaN' unless $list{SIZE_Y};
+			$list{POS_X} = '0' unless $list{POS_X};
+			$list{POS_Y} = '0' unless $list{POS_Y};
+			push(@list_of_elements, \%list);
 		}
 		
-		$list{PATH} = $graphicalDashboard->{TrainTracerVariablesPath}.$list{PATH} if $list{PATH};
+		###################################################
+		# managing variables
+		###################################################
+		if($arrayref->{PATH}) {
 		
-		# Checking ranges
-		my @lists_ranges;
-		foreach my $key_range (keys %ranges) {
+			my $path = $arrayref->{PATH};
+			my @lists_ranges;
+			
+			# Checking ranges
+			foreach my $key_range (keys %ranges) {
 
-			my %range;
-			foreach my $key (@{$ranges{$key_range}{KEYS}}) {
-				$range{$key} = $arrayref->{"${key_range}_$key"} if($arrayref->{"${key_range}_$key"});
+				my %range;
+				foreach my $key (@{$ranges{$key_range}{KEYS}}) {
+					$range{$key} = $arrayref->{"${key_range}_$key"} if($arrayref->{"${key_range}_$key"});
+				}
+				
+				if(%range) {
+					$range{RANGE_MIN} = $ranges{$key_range}{RANGE_MIN};
+					$range{RANGE_MAX} = $ranges{$key_range}{RANGE_MAX};
+					$range{SMALL_IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{SMALL_IMAGE} if $range{SMALL_IMAGE};
+					$range{IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{IMAGE} if $range{IMAGE};
+					$range{COLOR} = 'R=0 G=0 B=0' unless $range{COLOR};
+					push(@lists_ranges, \%range);
+				}
 			}
 			
-			if(%range) {
-				$range{RANGE_MIN} = $ranges{$key_range}{RANGE_MIN};
-				$range{RANGE_MAX} = $ranges{$key_range}{RANGE_MAX};
-				$range{SMALL_IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{SMALL_IMAGE} if $range{SMALL_IMAGE};
-				$range{IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{IMAGE} if $range{IMAGE};
-				$range{COLOR} = 'R=0 G=0 B=0' unless $range{COLOR};
-				push(@lists_ranges, \%range);
+			if ($variablesInserted{$path}) {
+				WARN "Variable $path already inserted. It will be skipped" if $variablesInserted{$path}; 
+			}
+			else {
+				DEBUG "Adding variable \"$path\"";
+				$variablesInserted{$path} = 1;
+				$path = $graphicalDashboard->{TrainTracerVariablesPath}.$path;	
+				push(@list_of_vars, {PATH => $path, RANGES => \@lists_ranges });	
 			}
 		}
 		
-		push(@list_of_vars, {PATH => $list{PATH}, RANGES => \@lists_ranges });
-		
-		$list{$arrayref->{ELEMENT_TYPE}} = 1;
-		$list{PATH} =~ s#\/#\\\/#g if $list{PATH};
-		$list{IMAGE_PATH} = $graphicalDashboard->{TrainTracerImagePath}.$list{IMAGE_PATH} if $list{IMAGE_PATH};
-		push(@list_of_elements, \%list);
+		last;
 	}
-		
-	my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
 	
-	open OUTFILE, ">:encoding(UTF-8)", "$outDir/$graphicalDashboard->{properties}->{FILE_ID}.xml";
+	if(%variablesInserted) {
+		my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
 		
-	my $template_file = $defaultTemplateDir.'/body.tmpl';
-	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file, loop_context_vars => 1 );
-		
-	foreach my $property (keys %{$graphicalDashboard->{properties}}) {
-		$mainTemplate->param($property => $graphicalDashboard->{properties}->{$property});
+		open OUTFILE, ">:encoding(UTF-8)", "$outDir/$graphicalDashboard->{properties}->{FILE_ID}.xml";
+			
+		my $template_file = $defaultTemplateDir.'/body.tmpl';
+		my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file, loop_context_vars => 1 );
+			
+		foreach my $property (keys %{$graphicalDashboard->{properties}}) {
+			$mainTemplate->param($property => $graphicalDashboard->{properties}->{$property});
+		}
+			
+		$mainTemplate->param(LIST_OF_VARS => \@list_of_vars);
+		$mainTemplate->param(LIST_OF_ELEMENTS => \@list_of_elements);
+			
+		INFO "Generating $graphicalDashboard->{properties}->{FILE_ID}.xml";
+		print OUTFILE $mainTemplate->output;
+		close OUTFILE;
 	}
-		
-	$mainTemplate->param(LIST_OF_VARS => \@list_of_vars);
-	$mainTemplate->param(LIST_OF_ELEMENTS => \@list_of_elements);
-		
-	INFO "Generating $graphicalDashboard->{properties}->{FILE_ID}.xml";
-	print OUTFILE $mainTemplate->output;
-	close OUTFILE;
+	else {
+		ERROR "Dashboard cannot be generated, because no variables are defined.";
+	}
 }
 
-sub loadModule {
-	my ($module_name) = @_;
+sub extract_keys {
+	my $ref_array = shift;
+	my @elements = @_;
 
-	my $file = $SCRIPT_DIRECTORY.INPUT_DIR.'/model_'.$module_name.'.descr.xml';
-	unless (-r $file) {
-		ERROR("FileName of module \"$module_name\" has not been found on path \"$file\"");
-		return;
+	my %list;
+	foreach my $key (@elements) {
+		$list{$key} = $ref_array->{$key} if ($ref_array->{$key});
 	}
-	my $graphicalDashboard = XMLin($file, KeyAttr => {}, ForceArray => qr/^(pin)$/);
 	
-	return $graphicalDashboard;
+	return %list;
 }
 
 sub createDirInput {

@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+ï»¿<?xml version='1.0' encoding='UTF-8'?>
 <config version='0.1'>
 	<GraphicalDashboards>
 		<GraphicalDashboard>
@@ -12,7 +12,7 @@
 			</properties>
 			<TrainTracerImagePath>.\Images\</TrainTracerImagePath>
 			<TrainTracerVariablesPath>MPU_E1/MPU_E1_sil0_t_sil0//MPU_E1_sil0_t_sil0/hvs/hvs_xpu/</TrainTracerVariablesPath>
-			<refFile>sample.txt</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format CSV (voir exemples) -->
+			<refFile>sample.txt</refFile><!-- Nom du fichier a traiter en entrÃ©e. Ceci doit Ãªtre un fichier de variables ControlBuild au format CSV (voir exemples) -->
 		</GraphicalDashboard>
 	</GraphicalDashboards>
 </config>
