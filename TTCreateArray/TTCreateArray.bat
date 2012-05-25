@@ -145,7 +145,12 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 					$range{RANGE_MAX} = $ranges{$key_range}{RANGE_MAX};
 					$range{SMALL_IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{SMALL_IMAGE} if $range{SMALL_IMAGE};
 					$range{IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{IMAGE} if $range{IMAGE};
-					$range{COLOR} = 'R=0 G=0 B=0' unless $range{COLOR};
+					
+					my $defaultColor = 'R=255 G=255 B=255';
+					$defaultColor = 'R=0 G=255 B=0' if $range{RANGE_MIN} == 0 and $range{RANGE_MAX} == 0;
+					$defaultColor = 'R=255 G=0 B=0' if $range{RANGE_MIN} == 1 and $range{RANGE_MAX} == 1;
+
+					$range{COLOR} = $defaultColor unless $range{COLOR};
 					push(@lists_ranges, \%range);
 				}
 			}
