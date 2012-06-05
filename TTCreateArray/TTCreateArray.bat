@@ -12,10 +12,10 @@ BEGIN {
 use lib qw(lib);
 use strict;
 use warnings;
-use Common;
 use File::Copy;
 use Data::Dumper;
 use Text::CSV;
+use Log::Log4perl qw(:easy);
 
 use Storable qw(store retrieve thaw freeze);
 use HTML::Template;
@@ -31,17 +31,25 @@ use constant {
 	MAIN_TEMPLATE_NAME => 'body.tmpl',
 };
 
+Log::Log4perl->init_once("./config/log-config.conf" );
+
+my $logger = Log::Log4perl->get_logger();
+
 INFO("Starting program (V ".PROGRAM_VERSION.")");
 
 #########################################################
 # loading of Configuration files
 #########################################################
-my $config = loadLocalConfig("TTCreateArray.config.xml", 'config.xml', KeyAttr => {}, ForceArray => qr/^(GraphicalDashboard|rule)$/);
+
+my $config = XMLin( './config/config.xml', KeyAttr => {}, ForceArray => qr/^(GraphicalDashboard|rule)$/);
+
+
+
 
 #########################################################
 # Using template files
 #########################################################
-my $SCRIPT_DIRECTORY = getScriptDirectory();
+my $SCRIPT_DIRECTORY = "./";
 my $rootTemplateDirectory = "./";
 
 my $defaultTemplateDir = DEFAULT_TEMPLATE_DIR."/".TEMPLATE_ROOT_DIR.'/'.DEFAULT_TEMPLATE;
@@ -212,6 +220,12 @@ sub createDirInput {
 		printf FILE $readme_message;
 		close FILE;
 	}
+}
+
+sub logFile {
+	my $type = shift;
+	my $file = OUTPUT_DIR.'/logfile.csv';
+	return $file;
 }
 
 __END__
