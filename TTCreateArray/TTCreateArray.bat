@@ -59,11 +59,34 @@ createDirInput($userTemplateDir, 'Templates files for current user has to be put
 createDirInput($SCRIPT_DIRECTORY.INPUT_DIR, 'Place all inputs XML documents in this folder');
 createDirInput($SCRIPT_DIRECTORY.OUTPUT_DIR, 'All output files are put in this folder');
 
-#########################################################
-# Foreach component to generate
-#########################################################
+
 my $csv = Text::CSV->new ({sep_char => "\t", empty_is_undef => 0, auto_diag => 1, binary => 1});
 
+#########################################################
+# Allowed colors retrieval
+#########################################################
+my %STANDARD_COLORS;
+
+my $fh;
+unless (open $fh, "allowed_colors.csv") {
+	ERROR "input file \"allowed_colors.csv\" cannot be processed. Program cannot continue.";
+	die;
+}
+else {
+	my @columns = @{$csv->getline($fh)};
+	$csv->column_names (@columns);
+	
+	while (my $arrayref = $csv->getline_hr ($fh)) {
+		ERROR "Color is not defined" and die $arrayref->{ALLOWED_COLORS} unless defined $arrayref->{ALLOWED_COLORS};
+		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{RED} = $arrayref->{RED} if check_color_validity($arrayref->{ALLOWED_COLORS}, $arrayref->{RED});
+		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{GREEN} = $arrayref->{GREEN} if check_color_validity($arrayref->{ALLOWED_COLORS}, $arrayref->{GREEN});
+		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{BLUE} = $arrayref->{BLUE} if check_color_validity($arrayref->{ALLOWED_COLORS}, $arrayref->{BLUE});
+	}
+}
+
+#########################################################
+# For each graphical dashboard to generate
+#########################################################
 foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDashboard}}) {
 	INFO "Processing Component \"$graphicalDashboard->{properties}->{TITLE}\"";
 
@@ -154,11 +177,10 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 					$range{SMALL_IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{SMALL_IMAGE} if $range{SMALL_IMAGE};
 					$range{IMAGE} = $graphicalDashboard->{TrainTracerImagePath}.$range{IMAGE} if $range{IMAGE};
 					
-					my $defaultColor = 'R=255 G=255 B=255';
-					$defaultColor = 'R=0 G=255 B=0' if $range{RANGE_MIN} == 0 and $range{RANGE_MAX} == 0;
-					$defaultColor = 'R=255 G=0 B=0' if $range{RANGE_MIN} == 1 and $range{RANGE_MAX} == 1;
+					my $defaultColor = 'WHITE';
+					
+					$range{COLOR} = translateColor($range{COLOR});
 
-					$range{COLOR} = $defaultColor unless $range{COLOR};
 					push(@lists_ranges, \%range);
 				}
 			}
@@ -226,6 +248,24 @@ sub logFile {
 	my $type = shift;
 	my $file = OUTPUT_DIR.'/logfile.csv';
 	return $file;
+}
+
+sub check_color_validity {
+	my $color_name = shift;
+	my $color = shift;
+	ERROR "Color $color_name is not a valid value (integer between 0 and 255). Read \"$color\"." and die unless defined $color and $color =~ /^\d{1,3}$/;
+	ERROR "Color $color_name is not inside valid range (integer between 0 and 255). Read \"$color\"." and die unless $color >= 0 and $color <= 255;
+	return 1;
+}
+
+sub translateColor {
+	my $color_name = shift;
+	
+	$color_name = 'WHITE' unless $color_name;
+	ERROR "Color \"$color_name\" is not recognized. Default color will be used." and $color_name = 'WHITE' unless defined $STANDARD_COLORS{$color_name};
+	
+	
+	return "R=$STANDARD_COLORS{$color_name}{RED} G=$STANDARD_COLORS{$color_name}{GREEN} B=$STANDARD_COLORS{$color_name}{BLUE}";
 }
 
 __END__
