@@ -1,0 +1,25 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<meta content="text/html; utf-8" http-equiv="content-type"><title>Color rendering</title>
+
+</head><body style="color: white; background-color: rgb(75, 75, 75);" alink="#000099" link="#000099" vlink="#990099">
+<table style="text-align: center; width: 900px;" border="1" cellpadding="5" cellspacing="0">
+<tbody>
+<tr style="background-color: rgb(11, 11, 11);">
+<td style="width: 200px;">Color(authorized name)</td>
+<td style="width: 144px;">Color</td>
+<td style="width: 150px;">TrainTracer complementary color</td>
+<td>Example</td>
+</tr>
+<TMPL_LOOP name=LIST_OF_COLORS>
+<tr>
+<td style="width: 200px; height: 34px;" align="undefined" valign="undefined"><TMPL_VAR name=ALLOWED_COLORS></td>
+<td style="background-color: rgb(<TMPL_VAR name=RED>, <TMPL_VAR name=GREEN>, <TMPL_VAR name=BLUE>); width: 144px; height: 34px;" align="undefined" valign="undefined"></td>
+<td style="background-color: rgb(<TMPL_VAR name=COMPL_RED>, <TMPL_VAR name=COMPL_GREEN>, <TMPL_VAR name=COMPL_BLUE>); width: 150px; height: 34px;" align="undefined" valign="undefined"></td>
+<td style="background-color: rgb(<TMPL_VAR name=RED>, <TMPL_VAR name=GREEN>, <TMPL_VAR name=BLUE>); width: 356px; height: 34px;" align="undefined" valign="undefined"><span style="color: rgb(<TMPL_VAR name=COMPL_RED>, <TMPL_VAR name=COMPL_GREEN>, <TMPL_VAR name=COMPL_BLUE>);">Is this text easily readable?</span></td>
+</tr>
+</TMPL_LOOP>
+</tbody>
+</table>
+<br>
+</body></html>
