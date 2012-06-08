@@ -76,12 +76,31 @@ else {
 	my @columns = @{$csv->getline($fh)};
 	$csv->column_names (@columns);
 	
+	my @render_array;
 	while (my $arrayref = $csv->getline_hr ($fh)) {
 		ERROR "Color is not defined" and die $arrayref->{ALLOWED_COLORS} unless defined $arrayref->{ALLOWED_COLORS};
+		
+		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{ALLOWED_COLORS} = $arrayref->{ALLOWED_COLORS};
 		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{RED} = $arrayref->{RED} if check_color_validity($arrayref->{ALLOWED_COLORS}, $arrayref->{RED});
 		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{GREEN} = $arrayref->{GREEN} if check_color_validity($arrayref->{ALLOWED_COLORS}, $arrayref->{GREEN});
 		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{BLUE} = $arrayref->{BLUE} if check_color_validity($arrayref->{ALLOWED_COLORS}, $arrayref->{BLUE});
+		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{COMPL_RED} = 255 - $STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{RED};
+		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{COMPL_GREEN} = 255 - $STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{GREEN};
+		$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{COMPL_BLUE} = 255 - $STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}}{BLUE};
+		
+		push(@render_array,$STANDARD_COLORS{$arrayref->{ALLOWED_COLORS}});
 	}
+	
+	open OUTFILE, ">:encoding(UTF-8)", "render_allowed_colors.html";
+			
+	my $template_file = './Templates/Color_Html/body.tmpl';
+	my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file, loop_context_vars => 1 );
+			
+	$mainTemplate->param(LIST_OF_COLORS => \@render_array);
+			
+	INFO "Generating render_allowed_colors.html";
+	print OUTFILE $mainTemplate->output;
+	close OUTFILE;
 }
 
 #########################################################
