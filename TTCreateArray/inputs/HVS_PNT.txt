@@ -1,0 +1,37 @@
+PATH	ELEMENT_TYPE	IMAGE_PATH	POS_X	POS_Y	SIZE_X	SIZE_Y	RNGE[0-0]_LEGEND	RNGE[0-0]_COLOR	RNGE[0-0]_IMAGE	RNGE[1-1]_LEGEND	RNGE[1-1]_IMAGE	RNGE[1-1]_COLOR
+	ImageControl	HVS_BGND_PNT.png	0	0	1500	641						
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/Hvs_ISyncStatePnt	SimpleView		422	48								
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/INormPntCondsPerm	ImageViewVariable		967	65	16	16	Pas de conditions réunies	RED	HVS_BTN_KO_16.png	Conditions OK	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ILvViuDjIsPt	ImageViewVariable		1242	0	16	16	OK	GREEN	HVS_BTN_OK_16.png	Déclenché	HVS_BTN_KO_16.png	RED
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/Hvs_IQDetQt	ImageViewVariable		1242	23	16	16	Pas de diesel	GREEN	HVS_BTN_OK_16.png	Diesel détecté	HVS_BTN_KO_16.png	RED
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/Atp_ICLLowrPnt	ImageViewVariable		1242	46	16	16	OK	GREEN	HVS_BTN_OK_16.png	Ordre de baisser pantographe	HVS_BTN_KO_16.png	RED
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/Hvs_CHvSel	ImageViewVariable		1242	69	16	16	Pas de sélection de tension	RED	HVS_BTN_KO_16.png	Sélection de tension effectuée	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/Hvs_FWrongHvSel	ImageViewVariable		1242	92	16	16	OK	GREEN	HVS_BTN_OK_16.png	Tension invalide par rapport à ATP	HVS_BTN_KO_16.png	RED
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/hvs_1b_pnt_conds/IPntRaiseCondsTrans	ImageViewVariable		967	160	16	16	Pas de conditions réunies	GREY	HVS_BTN_IND_16.png	Conditions OK	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ILvViuHocc	ImageViewVariable		1230	115	16	16	H(0)C pas en position continue 	GREEN	HVS_BTN_OK_16.png	H(0)C en position continue 	HVS_BTN_IND_16.png	GREY
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ILvViuHoco	ImageViewVariable		1230	138	16	16	H(0)C pas en position terre	GREY	HVS_BTN_IND_16.png	H(0)C en position Terre	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ILvViuQaDj	ImageViewVariable		1230	161	16	16	Disjoncteurs détectés	GREY	HVS_BTN_IND_16.png	Absence de disjoncteurs	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/CL_Hvs_CPntRaiseReqUM	ImageViewVariable		1088	184	16	16		GREY	HVS_BTN_IND_16.png	Commande de montée pantographe provenant de l'UM	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/Hvs_IPntRaiseReq	ImageViewVariable		1088	207	16	16		GREY	HVS_BTN_IND_16.png	Commande de montée pantographe locale	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/IAuthHoldPnt	ImageViewVariable		1343	230	16	16	Pas de Q(Z)PT dans l'unité maître	RED	HVS_BTN_KO_16.png	Q(Z)PT de l'unité maître active	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ILvViuQxPt	ImageViewVariable		1343	253	16	16	Pas de commande des pantographes Q1(PT) et Q2(PT)	RED	HVS_BTN_KO_16.png	Commande des pantographes Q1(PT) ou Q2(PT) OK	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/FFallCbNotOpened	ImageViewVariable		1345	276	16	16	Pas de défaut	GREEN	HVS_BTN_OK_16.png	Défaut détecté	HVS_BTN_KO_16.png	RED
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/FFallNoPntCondsPerm	ImageViewVariable		1345	299	16	16	Pas de défaut	GREEN	HVS_BTN_OK_16.png	Défaut détecté	HVS_BTN_KO_16.png	RED
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/FFallWrongSeldVoltage	ImageViewVariable		1345	322	16	16	Pas de défaut	GREEN	HVS_BTN_OK_16.png	Défaut détecté	HVS_BTN_KO_16.png	RED
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ISeldPntOK	ImageViewVariable		1345	345	16	16	Pas de sélection de tension valide	RED	HVS_BTN_KO_16.png	Sélection de pantographe conforme à la configuration train	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/IPntSeld1	ImageViewVariable		1234	368	16	16		GREY	HVS_BTN_IND_16.png	Pantographe sélectionné	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/hvs_1b_pnt_select/IPntCmd1	ImageViewVariable		1234	391	16	16		GREY	HVS_BTN_IND_16.png	Pantographe commandé	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/CLvViuRaisePanto11	ImageViewVariable		1234	414	16	16		GREY	HVS_BTN_IND_16.png	Contacts RIOMS activé par le TCMS	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/CLvViuRaisePanto14	ImageViewVariable		1234	437	16	16		GREY	HVS_BTN_IND_16.png	Contacts RIOMS activé par le TCMS	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ILvViuQxZPt1	ImageViewVariable		1234	460	16	16		GREY	HVS_BTN_IND_16.png	Q1(Z)PT1 ou Q2(Z)PT1 actifs	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ILvViuMaSuPt1	ImageViewVariable		1234	483	16	16		GREY	HVS_BTN_IND_16.png	Pression dans le pantographe détectée	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/IPntSeld2	ImageViewVariable		1234	506	16	16		GREY	HVS_BTN_IND_16.png	Pantographe sélectionné	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/hvs_1b_pnt_select/IPntCmd2	ImageViewVariable		1234	529	16	16	Pantographe pas commandé	GREY	HVS_BTN_IND_16.png	Pantographe commandé	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/CLvViuRaisePanto21	ImageViewVariable		1234	552	16	16		GREY	HVS_BTN_IND_16.png	Contacts RIOMS activé par le TCMS	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/CLvViuRaisePanto24	ImageViewVariable		1234	575	16	16		GREY	HVS_BTN_IND_16.png	Contacts RIOMS activé par le TCMS	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ILvViuQxZPt2	ImageViewVariable		1234	598	16	16		GREY	HVS_BTN_IND_16.png	Q1(Z)PT2 ou Q2(Z)PT2 actifs	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/ILvViuMaSuPt2	ImageViewVariable		1234	621	16	16		GREY	HVS_BTN_IND_16.png	Pression dans le pantographe détectée	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/Hvs_IPntRaised1					16	16	Pas de pantographe monté	GREY	HVS_BTN_IND_16.png	Pantographe monté	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/Hvs_IPntRaised2					16	16	Pas de pantographe monté	GREY	HVS_BTN_IND_16.png	Pantographe monté	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/Hvs_IPntLowrd1					16	16	Pas de pantographe descendu	GREY	HVS_BTN_IND_16.png	Pantographe descendu	HVS_BTN_OK_16.png	GREEN
+hvs_xpu_app/hvs_1b/hvs_1b_pnt_mgt/Hvs_IPntLowrd2					16	16	Pas de pantographe descendu	GREY	HVS_BTN_IND_16.png	Pantographe descendu	HVS_BTN_OK_16.png	GREEN

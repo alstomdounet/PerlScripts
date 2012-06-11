@@ -1,0 +1,53 @@
+PATH	ELEMENT_TYPE	IMAGE_PATH	POS_X	POS_Y	SIZE_X	SIZE_Y	RNGE[0-0]_LEGEND	RNGE[0-0]_COLOR	RNGE[0-0]_IMAGE	RNGE[1-1]_LEGEND	RNGE[1-1]_IMAGE	RNGE[1-1]_COLOR	RNGE[10-12]_COLOR	RNGE[10-12]_LEGEND	RNGE[10-12]_IMAGE	RNGE[13-255]_COLOR	RNGE[13-255]_IMAGE	RNGE[13-255]_LEGEND
+	ImageControl	HVS_BGND_CIRCUITBREAKER.png	0	0	1568	1103												
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_ISyncStateDjM	SimpleView		615	180	16	16	Valeur invalide						GREEN	Grafcet dans état normal	HVS_BTN_OK_16.png	RED	HVS_BTN_KO_16.png	Grafcet dans état transitoire
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_ISyncStateDjC1	SimpleView		615	216	16	16	Valeur invalide						GREEN	Grafcet dans état normal	HVS_BTN_OK_16.png	RED	HVS_BTN_KO_16.png	Grafcet dans état transitoire
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_ISyncStateDjC2	SimpleView		615	250	16	16	Valeur invalide						GREEN	Grafcet dans état normal	HVS_BTN_OK_16.png	RED	HVS_BTN_KO_16.png	Grafcet dans état transitoire
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/ILvViuDjIsPt	ImageViewVariable		1257	0	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png									
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/ILvViuQD	ImageViewVariable		1257	23	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png									
+Hvs_FVe1BpUrgPtDe	ImageViewVariable		1257	46	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png									
+Hvs_FVe2BpUrgPtDe	ImageViewVariable		1257	69	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png									
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IPresCatSelected	ImageViewVariable		1259	92	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IModeElec	ImageViewVariable		1259	115	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IPntDown	ImageViewVariable		1259	138	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/IOpengCbByAtp	ImageViewVariable		1259	161	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IPresMonoCat	ImageViewVariable		1231	184	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IHocDC	ImageViewVariable		1231	207	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/IPntRaisedDc	ImageViewVariable		1231	230	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IPntDownAc	ImageViewVariable		1231	253	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/Hvs_IPresMonoCat	ImageViewVariable		1231	276	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IHocGround	ImageViewVariable		1231	299	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/ILvViuDjSiQlmCcTfp	ImageViewVariable		1231	322	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/IPntRaisedAc	ImageViewVariable		1231	345	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IPntDownDc	ImageViewVariable		1231	368	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_FVc2CritFaultTfp	ImageViewVariable		1415	391	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_FVe1CritFaultTfp	ImageViewVariable		1415	414	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_FViuCritFaultTfp1	ImageViewVariable		1415	437	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_FViuCritFaultTfp2	ImageViewVariable		1415	460	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_FVc2CritFaultTfp	ImageViewVariable		1415	483	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_FVe2CritFaultTfp	ImageViewVariable		1415	506	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_FVi2CritFaultTfp	ImageViewVariable		1415	529	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Trc_IAuthCbc1	ImageViewVariable		1239	552	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IViuDjC1Isold	ImageViewVariable		1239	575	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_ISyncStateDjC1	ImageViewVariable		1239	598	16	16												
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Trc_IAuthCbc2	ImageViewVariable		1239	621	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IViuDjC2Isold	ImageViewVariable		1239	644	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_ISyncStateDjC2	ImageViewVariable		1239	667	16	16												
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Trc_IAuthCbm	ImageViewVariable		1232	690	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_IViuDjMIsold	ImageViewVariable		1232	713	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_ISyncStateDjM	ImageViewVariable		1232	736	16	16												
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Air_IAuxCompPressSwitch	ImageViewVariable		1155	759	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/ITrBrManipAuth	ImageViewVariable		1155	782	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/ITrBrManipAuth	ImageViewVariable		1167	805	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_gen_hold/IWaitBtwCloseDjQtPulses	ImageViewVariable		1167	828	16	16	Etat correct	GREEN	HVS_BTN_OK_16.png	Etat incorrect	HVS_BTN_KO_16.png	RED						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/CL_Hvs_CCloseGenDj	ImageViewVariable		1167	851	16	16	Inactif	GREY	HVS_BTN_IND_16.png	Actif	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_gen_hold/CL_Hvs_CHoldGenDj	ImageViewVariable		1167	874	16	16	Inactif	GREY	HVS_BTN_IND_16.png	Actif	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_gen_hold/gen_cbqt_ctrl/LActivateQMtVe1	ImageViewVariable		1167	897	16	16	Inactif	GREY	HVS_BTN_IND_16.png	Actif	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_gen_hold/gen_cbqt_ctrl/LActivateQMtVe2	ImageViewVariable		1167	920	16	16	Inactif	GREY	HVS_BTN_IND_16.png	Actif	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/IHoldDjQtSoft	ImageViewVariable		1360	943	16	16	Etat incorrect	RED	HVS_BTN_KO_16.png	Etat correct	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/ILvViuDjc1	ImageViewVariable		1339	968	16	16	Inactif	GREY	HVS_BTN_IND_16.png	Actif	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_ISyncStateDjC1	ImageViewVariable		1339	991	16	16												
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/ILvViuDjc2	ImageViewVariable		1339	1014	16	16	Inactif	GREY	HVS_BTN_IND_16.png	Actif	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_ISyncStateDjC2	ImageViewVariable		1339	1037	16	16												
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/ILvViuDjm	ImageViewVariable		1332	1060	16	16	Inactif	GREY	HVS_BTN_IND_16.png	Actif	HVS_BTN_OK_16.png	GREEN						
+hvs_xpu_app/hvs_2c/hvs_2c_loc_cb_mgt/Hvs_ISyncStateDjM	ImageViewVariable		1332	1083	16	16												
