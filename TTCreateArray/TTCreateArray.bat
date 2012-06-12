@@ -219,7 +219,7 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 	if(%variablesInserted) {
 		my $outDir = $SCRIPT_DIRECTORY.OUTPUT_DIR.'/';
 		
-		open OUTFILE, ">:encoding(UTF-8)", "$outDir/$graphicalDashboard->{properties}->{FILE_ID}.xml";
+		open OUTFILE, ">:encoding(UTF-8)", "$outDir/$graphicalDashboard->{properties}->{TITLE}.xml";
 			
 		my $template_file = $defaultTemplateDir.'/body.tmpl';
 		my $mainTemplate = HTML::Template -> new( die_on_bad_params => 0, filename => $template_file, loop_context_vars => 1 );
@@ -231,7 +231,7 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 		$mainTemplate->param(LIST_OF_VARS => \@list_of_vars);
 		$mainTemplate->param(LIST_OF_ELEMENTS => \@list_of_elements);
 			
-		INFO "Generating $graphicalDashboard->{properties}->{FILE_ID}.xml";
+		INFO "Generating \"$graphicalDashboard->{properties}->{TITLE}.xml\"";
 		print OUTFILE $mainTemplate->output;
 		close OUTFILE;
 	}
