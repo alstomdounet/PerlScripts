@@ -113,7 +113,9 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 	my @list_of_vars;
 	my @list_of_elements;
 	my %variablesInserted;
-
+	my $DASHBOARD_WIDTH = 0;
+	my $DASHBOARD_HEIGHT = 0;
+	
 	my $file = $SCRIPT_DIRECTORY.INPUT_DIR.'/'.$graphicalDashboard->{refFile};
 	
 	#########################################################
@@ -140,29 +142,52 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 		}
 	}
 	# End of process
-	
+
 	while (my $arrayref = $csv->getline_hr ($fh)) {
 		my %list;
 		my $foundElement = 0;
+		
+		my @COMMON_ELEMENTS = qw(POS_X POS_Y SCALE ANGLE LOCKED);
+		
 		if($arrayref->{ELEMENT_TYPE} eq 'ImageControl') {
 			DEBUG "Found Element of type \"$arrayref->{ELEMENT_TYPE}\"";
-			%list = extract_keys($arrayref, qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED IMAGE_PATH));
+			%list = extract_keys($arrayref, @COMMON_ELEMENTS, qw(SIZE_X SIZE_Y IMAGE_PATH));
 			$list{IMAGE_PATH} = $graphicalDashboard->{properties}->{PROJECT}."\\".$graphicalDashboard->{TrainTracerImagePath}.$list{IMAGE_PATH} if $list{IMAGE_PATH};	
 			$list{IMAGE_PATH} =~ s#\\#\\\/#g if $list{IMAGE_PATH};
 			$foundElement = 1;			
 		}
 		elsif($arrayref->{ELEMENT_TYPE} eq 'ImageViewVariable' or $arrayref->{ELEMENT_TYPE} eq 'SimpleView') {
 			DEBUG "Found Element of type \"$arrayref->{ELEMENT_TYPE}\"";
-			%list = extract_keys($arrayref, qw(SIZE_X SIZE_Y POS_X POS_Y LOCKED PATH));
+			%list = extract_keys($arrayref, @COMMON_ELEMENTS, qw(SIZE_X SIZE_Y PATH));
 			
 			$foundElement = 1;	
 		}
+		elsif($arrayref->{ELEMENT_TYPE} eq 'Label') {
+			DEBUG "Found Element of type \"$arrayref->{ELEMENT_TYPE}\"";
+			%list = extract_keys($arrayref, @COMMON_ELEMENTS, qw(TEXT));
+			
+			$foundElement = 1;	
+		}
+		elsif($arrayref->{ELEMENT_TYPE}) {
+			ERROR "Unknown Element type : \"$arrayref->{ELEMENT_TYPE}\"";
+		}
 		else {
-			WARN "Unknown Element type : \"$arrayref->{ELEMENT_TYPE}\"";
-			%list = extract_keys($arrayref, qw(POS_X POS_Y LOCKED PATH));
+			DEBUG "No Element type found.";
 		}
 
 		if ($foundElement) {
+			my $tmp_width = 2; # to correct anomaly of TrainTracer with sizes...
+			$tmp_width += $list{POS_X} if $list{POS_X};
+			$tmp_width += $list{SIZE_X} if $list{SIZE_X};
+			
+			$DASHBOARD_WIDTH = $tmp_width if $tmp_width > $DASHBOARD_WIDTH;
+			
+			my $tmp_height = 2; # to correct anomaly of TrainTracer with sizes...
+			$tmp_height = $list{POS_Y} if $list{POS_Y};
+			$tmp_height += $list{SIZE_Y} if $list{SIZE_Y};
+			
+			$DASHBOARD_HEIGHT = $tmp_height if $tmp_height > $DASHBOARD_HEIGHT;
+		
 			$list{$arrayref->{ELEMENT_TYPE}} = 1;
 			$list{PATH} = $graphicalDashboard->{TrainTracerVariablesPath}.$list{PATH}  if $list{PATH};	
 			$list{PATH} =~ s#\/#\\\/#g if $list{PATH};
@@ -227,6 +252,13 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 		foreach my $property (keys %{$graphicalDashboard->{properties}}) {
 			$mainTemplate->param($property => $graphicalDashboard->{properties}->{$property});
 		}
+		
+		$DASHBOARD_WIDTH = 10000 unless $DASHBOARD_WIDTH;
+		$DASHBOARD_HEIGHT = 10000 unless $DASHBOARD_HEIGHT;
+		
+		$mainTemplate->param(DASHBOARD_WIDTH => $DASHBOARD_WIDTH) unless $graphicalDashboard->{properties}->{DASHBOARD_WIDTH} and ref $graphicalDashboard->{properties}->{DASHBOARD_WIDTH} eq "";;
+		
+		$mainTemplate->param(DASHBOARD_HEIGHT => $DASHBOARD_HEIGHT) unless $graphicalDashboard->{properties}->{DASHBOARD_HEIGHT} and ref $graphicalDashboard->{properties}->{DASHBOARD_HEIGHT} eq "";
 			
 		$mainTemplate->param(LIST_OF_VARS => \@list_of_vars);
 		$mainTemplate->param(LIST_OF_ELEMENTS => \@list_of_elements);

@@ -1,17 +1,19 @@
 ﻿<?xml version='1.0' encoding='UTF-8'?>
 <config version='0.1'>
 	<GraphicalDashboards>
-		<GraphicalDashboard>
+		<GraphicalDashboard><!-- Cette section (<GraphicalDashboard> à </GraphicalDashboard>) doit être instanciée autant de fois que vous voulez générer de tableaux de bords différents  -->
 			<properties>
-				<FILE_ID>1f2d5dac-5cea-4643-a2a0-7eee0d340c3e</FILE_ID>
-				<TITLE>HVS - Tableau de bord des disjoncteurs</TITLE>
-				<DESCRIPTION>HVS - Tableau de bord des disjoncteurs</DESCRIPTION>
-				<PROJECT>TCMS_REGIOLIS</PROJECT>
-				<PROJECT_VERSION>4.4.0.0</PROJECT_VERSION>
-				<SAMPLING_PERIOD>250</SAMPLING_PERIOD>
+				<FILE_ID>1f2d5dac-5cea-4643-a2a0-7eee0d340c3e</FILE_ID><!-- Identifiant du tableau de bord. Pas réellement exploité par TrainTracer, puisque celui-ci en crée un nouveau à l'import.  -->
+				<TITLE>HVS - Tableau de bord des disjoncteurs</TITLE><!-- Nom du Tableau de bord. Doit impérativement être complété.  -->
+				<DESCRIPTION>HVS - Tableau de bord des disjoncteurs</DESCRIPTION><!-- Description du Tableau de bord. Facultatif. -->
+				<PROJECT>TCMS_REGIOLIS</PROJECT><!-- Nom du projet Traintracer. Si celui-ci n'est pas correct, TrainTracer refuse d'importer le tableau de bord.  -->
+				<PROJECT_VERSION>4.4.0.0</PROJECT_VERSION><!-- Version du projet. Pas réellement exploité par TrainTracer, puisque celui-ci vérifie l'existence des variables à l'import.  -->
+				<SAMPLING_PERIOD>250</SAMPLING_PERIOD><!-- Période de rafraîchissement du tableau de bord en millisecondes.  -->
+				<DASHBOARD_WIDTH></DASHBOARD_WIDTH><!-- largeur en pixel du tableau de bord. Si c'est vide, la valeur est calculée automatiquement en fonction des élements.  -->
+				<DASHBOARD_HEIGHT></DASHBOARD_HEIGHT><!-- hauteur en pixel du tableau de bord. Si c'est vide, la valeur est calculée automatiquement en fonction des élements.  -->
 			</properties>
-			<TrainTracerImagePath>.\Images\</TrainTracerImagePath>
-			<TrainTracerVariablesPath>MPU_E1/MPU_E1_sil0_t_sil0//MPU_E1_sil0_t_sil0/hvs/hvs_xpu/</TrainTracerVariablesPath>
+			<TrainTracerImagePath>.\Images\</TrainTracerImagePath><!-- Chemin Vers les images. Il est formellement déconseillé de le changer (seules les images dans ce répertoire sont inclues à la génération de l'ETR  -->
+			<TrainTracerVariablesPath>MPU_E1/MPU_E1_sil0_t_sil0//MPU_E1_sil0_t_sil0/hvs/hvs_xpu/</TrainTracerVariablesPath><!-- Chemin à mettre en guise de préfixe, pour TOUTES les variables du tableau de bord -->
 			<refFile>HVS_CIRCUITBREAKER.txt</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format CSV (voir exemples) -->
 		</GraphicalDashboard>
 		<GraphicalDashboard>
@@ -22,10 +24,12 @@
 				<PROJECT>TCMS_REGIOLIS</PROJECT>
 				<PROJECT_VERSION>4.4.0.0</PROJECT_VERSION>
 				<SAMPLING_PERIOD>250</SAMPLING_PERIOD>
+				<DASHBOARD_WIDTH></DASHBOARD_WIDTH>
+				<DASHBOARD_HEIGHT></DASHBOARD_HEIGHT>
 			</properties>
 			<TrainTracerImagePath>.\Images\</TrainTracerImagePath>
 			<TrainTracerVariablesPath>MPU_E1/MPU_E1_sil0_t_sil0//MPU_E1_sil0_t_sil0/hvs/hvs_xpu/</TrainTracerVariablesPath>
-			<refFile>HVS_PNT.txt</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format CSV (voir exemples) -->
+			<refFile>HVS_PNT.txt</refFile>
 		</GraphicalDashboard>
 		<GraphicalDashboard>
 			<properties>
@@ -35,10 +39,27 @@
 				<PROJECT>TCMS_REGIOLIS</PROJECT>
 				<PROJECT_VERSION>4.4.0.0</PROJECT_VERSION>
 				<SAMPLING_PERIOD>250</SAMPLING_PERIOD>
+				<DASHBOARD_WIDTH></DASHBOARD_WIDTH>
+				<DASHBOARD_HEIGHT></DASHBOARD_HEIGHT>
 			</properties>
 			<TrainTracerImagePath>.\Images\</TrainTracerImagePath>
 			<TrainTracerVariablesPath>MPU_E1/MPU_E1_sil0_t_sil0//MPU_E1_sil0_t_sil0/hvs/hvs_xpu/</TrainTracerVariablesPath>
-			<refFile>HVS_TFP.txt</refFile><!-- Nom du fichier a traiter en entrée. Ceci doit être un fichier de variables ControlBuild au format CSV (voir exemples) -->
+			<refFile>HVS_TFP.txt</refFile>
+		</GraphicalDashboard>
+		<GraphicalDashboard>
+			<properties>
+				<FILE_ID>4f2d5dac-5cea-4643-a2a0-7eee0d340c3e</FILE_ID>
+				<TITLE>FSD - Tableau de bord de la detection d'incendie</TITLE>
+				<DESCRIPTION>FSD - Tableau de bord de la detection d'incendie</DESCRIPTION>
+				<PROJECT>TCMS_REGIOLIS</PROJECT>
+				<PROJECT_VERSION>4.0.0.0</PROJECT_VERSION>
+				<SAMPLING_PERIOD>250</SAMPLING_PERIOD>
+				<DASHBOARD_WIDTH></DASHBOARD_WIDTH>
+				<DASHBOARD_HEIGHT></DASHBOARD_HEIGHT>
+			</properties>
+			<TrainTracerImagePath>.\Images\</TrainTracerImagePath>
+			<TrainTracerVariablesPath>MPU_E1/MPU_E1_sil0_t_sil0//MPU_E1_sil0_t_sil0/fsd/fsd_xpu/fsd_d/</TrainTracerVariablesPath>
+			<refFile>FSD.txt</refFile>
 		</GraphicalDashboard>
 	</GraphicalDashboards>
 </config>
