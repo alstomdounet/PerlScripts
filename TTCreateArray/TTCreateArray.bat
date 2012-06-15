@@ -196,6 +196,8 @@ foreach my $graphicalDashboard (@{$config->{GraphicalDashboards}->{GraphicalDash
 			$list{POS_X} = '0' unless $list{POS_X};
 			$list{POS_Y} = '0' unless $list{POS_Y};
 			$list{LOCKED} = 'true' unless $list{LOCKED};
+			$list{ANGLE} = '0' unless $list{ANGLE};
+			$list{SCALE} = '1' unless $list{SCALE};
 			push(@list_of_elements, \%list);
 		}
 		

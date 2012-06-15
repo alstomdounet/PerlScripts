@@ -1,0 +1,78 @@
+PATH	ELEMENT_TYPE	IMAGE_PATH	POS_X	POS_Y	SIZE_X	SIZE_Y	RNGE[0-0]_LEGEND	RNGE[0-0]_COLOR	RNGE[0-0]_IMAGE	RNGE[1-1]_LEGEND	RNGE[1-1]_IMAGE	RNGE[1-1]_COLOR
+	ImageControl	FSD_BGND.png	0	0	1312	328						
+Fsd_FVc1FireDtcdPwp1	ImageViewVariable		270	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVc1FireDtcdPwp2	ImageViewVariable		318	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVc1FltFsdPwp1	ImageViewVariable		270	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVc1FltFsdPwp2	ImageViewVariable		318	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVc1FsdStopNotRequestPwp1	ImageViewVariable		270	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVc1FsdStopNotRequestPwp2	ImageViewVariable		318	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVc1IsolPwp1	ImageViewVariable		270	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVc1IsolPwp2	ImageViewVariable		318	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVc1LostWatchPwp1	ImageViewVariable		270	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVc1LostWatchPwp2	ImageViewVariable		318	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVc2FireDtcdPo	ImageViewVariable		366	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVc2FireDtcdTfp	ImageViewVariable		414	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVc2FltFsdPo	ImageViewVariable		366	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVc2FltFsdTfp	ImageViewVariable		414	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVc2FsdStopNotRequestPo	ImageViewVariable		366	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVc2FsdStopNotRequestTfp	ImageViewVariable		414	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVc2IsolPo	ImageViewVariable		366	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVc2IsolTfp	ImageViewVariable		414	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVc2LostWatchPo	ImageViewVariable		366	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVc2LostWatchTfp	ImageViewVariable		414	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVe1FireDtcdPoc	ImageViewVariable		462	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVe1FireDtcdPwp1	ImageViewVariable		510	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVe1FireDtcdPwp2	ImageViewVariable		558	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVe1FireDtcdTfp	ImageViewVariable		606	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVe1FltFsdPoc	ImageViewVariable		462	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVe1FltFsdPwp1	ImageViewVariable		510	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVe1FltFsdPwp2	ImageViewVariable		558	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVe1FltFsdTfp	ImageViewVariable		606	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVe1FsdStopNotRequestPoc	ImageViewVariable		462	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVe1FsdStopNotRequestPwp1	ImageViewVariable		510	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVe1FsdStopNotRequestPwp2	ImageViewVariable		558	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVe1FsdStopNotRequestTfp	ImageViewVariable		606	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVe1IsolPoc	ImageViewVariable		462	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVe1IsolPwp1	ImageViewVariable		510	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVe1IsolPwp2	ImageViewVariable		558	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVe1IsolTfp	ImageViewVariable		606	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVe1LostWatchPoc	ImageViewVariable		462	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVe1LostWatchPwp1	ImageViewVariable		510	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVe1LostWatchPwp2	ImageViewVariable		558	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVe1LostWatchTfp	ImageViewVariable		606	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVe2FireDtcdPoc	ImageViewVariable		654	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVe2FireDtcdPwp1	ImageViewVariable		702	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVe2FireDtcdPwp2	ImageViewVariable		750	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVe2FireDtcdTfp	ImageViewVariable		798	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVe2FltFsdPoc	ImageViewVariable		654	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVe2FltFsdPwp1	ImageViewVariable		702	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVe2FltFsdPwp2	ImageViewVariable		750	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVe2FltFsdTfp	ImageViewVariable		798	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVe2FsdStopNotRequestPoc	ImageViewVariable		654	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVe2FsdStopNotRequestPwp1	ImageViewVariable		702	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVe2FsdStopNotRequestPwp2	ImageViewVariable		750	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVe2FsdStopNotRequestTfp	ImageViewVariable		798	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVe2IsolPoc	ImageViewVariable		654	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVe2IsolPwp1	ImageViewVariable		702	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVe2IsolPwp2	ImageViewVariable		750	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVe2IsolTfp	ImageViewVariable		798	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVe2LostWatchPoc	ImageViewVariable		654	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVe2LostWatchPwp1	ImageViewVariable		702	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVe2LostWatchPwp2	ImageViewVariable		750	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVe2LostWatchTfp	ImageViewVariable		798	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVi2FireDtcdTfp	ImageViewVariable		846	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FVi2FltFsdTfp	ImageViewVariable		846	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FVi2FsdStopNotRequestTfp	ImageViewVariable		846	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FVi2IsolTfp	ImageViewVariable		846	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FVi2LostWatchTfp	ImageViewVariable		846	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FViuFireDtcdDjc	ImageViewVariable		894	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FViuFireDtcdTfp	ImageViewVariable		942	172	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Incendie détecté	HVS_BTN_KO_16.png	RED
+Fsd_FViuFltFsdDjc	ImageViewVariable		894	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FViuFltFsdTfp	ImageViewVariable		942	125	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Détection d'incendie en défaut	HVS_BTN_KO_16.png	RED
+Fsd_FViuFsdStopNotRequestDjc	ImageViewVariable		894	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FViuFsdStopNotRequestTfp	ImageViewVariable		942	217	16	16	Arrêt demandé par FSD	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
+Fsd_FViuIsolDjc	ImageViewVariable		894	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FViuIsolTfp	ImageViewVariable		942	262	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Isolement de l'équipement demandé	HVS_BTN_KO_16.png	RED
+Fsd_FViuLostWatchDjc	ImageViewVariable		894	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FViuLostWatchTfp	ImageViewVariable		942	79	16	16	R.A.S.	GREEN	HVS_BTN_OK_16.png	Perte de la surveillande d'incendie	HVS_BTN_KO_16.png	RED
+Fsd_FVe2CbWatchFsd	ImageViewVariable		155	1157	16	16	Perte du DJ de la détection d'incendie	RED	HVS_BTN_KO_16.png	R.A.S.	HVS_BTN_OK_16.png	GREEN
