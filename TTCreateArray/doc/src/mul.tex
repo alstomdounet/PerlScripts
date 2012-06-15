@@ -200,11 +200,30 @@ Champ & Texte & Description & G\footnote{Propriété apparaissant dans la visual
 \#3 & \INTERVLEGEND  & légende visible en pointant l'élément graphique. & X & \\
 \#4 & \texttt{SMALL\_IMAGE}  & Représentation dans le tableau de bord tabulaire. & & X \\
 \#5 & \texttt{IMAGE} &  Représentation dans le tableau de bord graphique. & X & \\
-\#6 & \texttt{COLOR} &  Couleur utilisée dans le tableau de bord graphique pour colorer le texte en fonction des valeurs. & X & X \\
+\#6 & \texttt{COLOR} &  Couleur utilisée dans le tableau de bord graphique pour colorer le texte en fonction des valeurs (voir section~\vref{SECT_COLORS}). & X & X \\
 \bottomrule
 \end{tabular}
 \caption{Tableau des propriétés liées aux intervalles.}\label{TAB_PROPS_INTERVAL}
 \end{table}
+
+\section{Couleurs autorisées} \label{SECT_COLORS}
+
+\subsection{Problématique}
+
+\TT calcule automatiquement les couleurs de textes en fonction de la couleur de fond. Il peux en résulter un texte illisible, du fait du manque de contraste entre le fonds et le texte. Pour cette raison, seules un certain nombre de couleurs sont autorisées, afin d'éviter ce genre de problématiques.
+
+\subsection{Ajout/édition des couleurs}
+
+Pour ajouter ou éditer une couleur, il faut éditer le fichier \texttt{allowed\_colors.csv}.
+
+\subsection{Validation du rendu}
+
+ Un aperçu est généré automatiquement à chaque exécution du programme, et se nomme  \texttt{render\_allowed\_colors.html}. Ce fichier permet d'aborder les situations les plus fréquentes, qui sont:
+ \begin{itemize}
+\item \textbf{Color on white} : Ce cas arrive si l'on place un texte dynamique sur un fonds blanc, dans la représentation graphique. Le texte change de couleur en fonction de l'intervalle défini, la problématique peut donc éventuellement se poser.
+\item \textbf{Color on black} : Ce cas arrive si l'on place un texte dynamique sur un fonds noir, dans la représentation graphique. Le texte change de couleur en fonction de l'intervalle défini, la problématique peut donc éventuellement se poser.
+\item \textbf{Color on "complementary" color} : Ce cas arrive dans les tableaux de bords tabulaires, dans les cellules indiquant la valeur. Le texte et le fond change de couleur en fonction de l'intervalle défini, la problématique peut donc éventuellement se poser.
+\end{itemize}
 
 \chapter{Exemples}
 
