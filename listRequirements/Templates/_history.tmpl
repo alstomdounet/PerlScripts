@@ -1,0 +1,15 @@
+<table class='main' summary="History for each requirement">
+    <caption>History for each requirement</caption>
+    <tr class="header1">
+	  <th width="10%">Link</th>
+	  <th width="90%">History</th>
+    </tr>
+	<TMPL_LOOP name=HISTORY_LIST>
+	<tr>
+		<th><a href='#e_<TMPL_VAR name=link_key>' name='h_<TMPL_VAR name=link_key>' title='Return to original requirement'>Back<br>(<TMPL_VAR name=link_key>)</a></th>
+		<td class='text'>
+			<TMPL_VAR name=HISTORY>
+		</td>
+	</tr>
+	</TMPL_LOOP>
+</table>

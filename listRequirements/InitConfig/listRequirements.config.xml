@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<config>
+	<DebugMode>0</DebugMode>
+	<genPartiallyCoveredReqDocument>0</genPartiallyCoveredReqDocument>
+	<genRiskfullReqDocument>0</genRiskfullReqDocument>
+	<genAnalysisTable>0</genAnalysisTable>
+	<documents>
+		<ClauseByClause>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\SyRB_PP_contractuel_iw.xls</FileName>
+			<Sheet>Exigences contractuelles</Sheet>
+		</ClauseByClause>
+		<Requirements_VBN>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\SyRB_PP_contractuel_iw.xls</FileName>
+			<Sheet>Exigences RB</Sheet>
+		</Requirements_VBN>
+		<Requirements_REI>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\Requirements_REI_iw.xls</FileName>
+			<Sheet>Sheet1</Sheet>
+		</Requirements_REI>
+		<Requirements_VBN_CBC>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\SyRB_PP_contractuel_iw.xls</FileName>
+			<Sheet>matrice tracabilite contrat-RB</Sheet>
+		</Requirements_VBN_CBC>
+		<Requirements_REI_CBC>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\70_RSAD\20_TGC\Couverture_RSAD_CdC_iw.xls</FileName>
+			<Sheet>Couverture</Sheet>
+		</Requirements_REI_CBC>
+		<Assigned_REQ_TGC>
+			<FileName>G:\00_Affaires\V800_PP\00_ST\02_Etudes\25_TCMS\02_Projet\01_Management_TCMS\12_Gestion des exigences\Maitrise_Exigences_Techniques_TCM.xls</FileName>
+			<Sheet>Exigences</Sheet>
+		</Assigned_REQ_TGC>
+	</documents>
+</config>

@@ -1,0 +1,10 @@
+<td <TMPL_IF name=APPLICABILITE>class='Applicable_<TMPL_VAR name=APPLICABILITE>'</TMPL_IF> <TMPL_IF name=ORIGIN>class='origin_<TMPL_VAR name=ORIGIN>'</TMPL_IF>>
+	<div class="header-cell">
+		<div class='req_id'>F_<TMPL_VAR name=REQ_ID><TMPL_IF name=RISK><div class='<TMPL_VAR name=RISK>'><a href='#h_<TMPL_VAR name=link_key>' name='e_<TMPL_VAR name=link_key>' title="View History of this requirement"><TMPL_VAR name=RISK></a></div></TMPL_IF>
+		<TMPL_IF name=CLASSIFICATION><div class='<TMPL_VAR name=CLASSIFICATION>'>&nbsp;</div></TMPL_IF></div>
+	</div>
+	<TMPL_IF name=REF_DOC><div class='text'><div class='text_title'>Reference : </div><TMPL_VAR name=REF_DOC></div></TMPL_IF>
+	<div class='text'><div class='text_title'>Text: </div><TMPL_VAR name=TEXTE></div>
+	<TMPL_IF name=COMMENT_1><div class='text_comment'><div class='text_title'>Comment : </div><TMPL_VAR name=COMMENT_1></div></TMPL_IF>
+	<TMPL_IF name=COMMENT_2><div class='text_comment'><div class='text_title'>Comment : </div><TMPL_VAR name=COMMENT_2></div></TMPL_IF>
+</td>
