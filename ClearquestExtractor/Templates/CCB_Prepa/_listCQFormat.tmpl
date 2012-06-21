@@ -1,0 +1,49 @@
+<TMPL_IF name=RESULTS>
+<p><TMPL_VAR name=TABLE_NAME></p>
+<TMPL_LOOP name=RESULTS>
+<table style="page-break-before: always;" border="1" cellpadding="0" cellspacing="0" width="100%">
+<tbody>
+<tr>
+	<td style="width: 90px;" class="datafield bold"><a target="_blank" href="http://iww.cquest.villeurbanne.transport.alstom.com/cqweb/restapi/CQatv/atvcm/RECORD/<TMPL_VAR name=ID>?format=HTML&recordType=ChangeRequest"><TMPL_VAR name=ID></a></td>
+	<td class="textfield" colspan="5"><TMPL_VAR name=HEADLINE></td>
+	<td bgcolor="#cccccc" style="width: 33%;" class="head">Modification Proposée</td>
+	<td bgcolor="#cccccc" class="head">Commentaire</td>
+</tr>
+<tr>
+	<td bgcolor="#cccccc" class="head">Ref.</td>
+	<td bgcolor="#cccccc" class="head">État</td>
+	<td bgcolor="#cccccc" class="head">Type</td>
+	<td bgcolor="#cccccc" class="head">Priorité</td>
+	<td bgcolor="#cccccc" class="head">Sévérité</td>
+	<td bgcolor="#cccccc" class="head">Catégorie</td>
+	<td class="textfield" rowspan="4"><TMPL_VAR name=PROPOSED_CHANGE></td>
+	<td class="textfield" rowspan="4"><TMPL_VAR name=ANALYST_COMMENT></td>
+</tr>
+<tr>
+	<td class="datafield"><TMPL_VAR name=REF></td>
+	<td class="datafield"><TMPL_VAR name=STATE></td>
+	<td class="datafield"><TMPL_VAR name=TYPE></td>
+	<td class="datafield"><TMPL_VAR name=PRIORITY></td>
+	<td class="datafield"><TMPL_VAR name=SEVERITY></td>
+	<td class="datafield"><TMPL_VAR name=CATEGORY></td>
+</tr>
+<tr>
+	<td bgcolor="#cccccc" style="width: 33%;" class="head" colspan="6">Description</td>
+</tr>
+<tr>
+	<td class="textfield" colspan="6">
+	<TMPL_IF name=STATE_DUPLICATED>
+	<p class="bold">Original : <a target="_blank" href="http://iww.cquest.villeurbanne.transport.alstom.com/cqweb/restapi/CQatv/atvcm/RECORD/<TMPL_VAR name=ORIGINAL_ID>?format=HTML&recordType=ChangeRequest"><TMPL_VAR name=ORIGINAL_ID></a></p>
+	<p style="font-style:italic;"><TMPL_VAR name=CCB_COMMENT></p>
+	</TMPL_IF>
+	<p><TMPL_VAR name=DESCRIPTION></p>
+	</td>
+</tr>
+</tbody>
+</table>
+<p>@</p>
+</TMPL_LOOP><!-- RESULTS -->
+<p><TMPL_VAR name=DATE></p>
+<TMPL_ELSE>
+<h2>La table "<TMPL_VAR name=TABLE_NAME>" ne donne pas de résultats</h2>
+</TMPL_IF>

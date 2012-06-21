@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC -//W3C//DTD HTML 4.01 Transitional//EN>
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1 http-equiv=content-type">
+  <title><TMPL_VAR name=TITLE></title>
+   <!-- http://colorschemedesigner.com/#2A42P8Uuew0w0 -->
+ <style type="text/css">
+
+  body { margin: 1em;
+	font-family: "Alstom";
+    font-size: 10pt;
+	color: rgb(0, 10, 80);
+    text-align: left;
+    background-color: #FEFEFE;
+    }
+
+  table { border: 0.5em solid;
+    font-size: 10pt;
+    background-color: #FFFFFF;
+    color: rgb(0, 10, 80);
+    width: 90%;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    }
+
+p pre {
+  color: #000000;
+  font-family: "Alstom";
+  font-size: 10pt;
+  line-height: 10pt;
+}
+td p li ul {
+  color: #000000;
+  font-family: "Alstom";
+  font-size: 10pt;
+  line-height: 10pt;
+}
+ul {
+  font-family: "Alstom";
+}
+li {
+  list-style-type: circle;
+}
+p.center {
+  text-align: center;
+}
+
+.titre {
+  font-size: 1.3em;
+  font-family: "Alstom Black";
+  line-height: 1.4em;
+}
+
+.arrow {
+  font-family: Wingdings,"Wingdings 3",Webdings,monospace;
+}
+.black {
+  font-family: "Alstom Black";
+  font-style: italic;
+}
+.Bold {
+  font-style: bold;
+}
+.BoldGreen {
+  color: #008000;
+  font-weight: bold;
+}
+.BoldYellow {
+  color: rgb(218, 165, 32);
+  font-weight: bold;
+}
+.BoldRed {
+  color: rgb(255, 0, 0);
+  font-weight: bold;
+}
+.BoldIta {
+  font-weight: bold;
+  font-style:italic;
+}
+.Blue {
+  color: #3366ff;
+}
+  </style>
+</head>
+<body>
+<h3>Fichier généré le <TMPL_VAR name=DATE></h3>
+<TMPL_LOOP name=TABLES>
+<TMPL_IF name=DOCLIST>
+<h2>Générateur document : <TMPL_VAR name=TABLE_NAME></h2>
+<TMPL_ELSE>
+<TMPL_IF name=GENERICLIST>
+<TMPL_INCLUDE NAME="_listCQGeneric.tmpl">
+<TMPL_ELSE>
+<TMPL_IF name=FORMATTED_BY_TEMPLATE>
+<TMPL_INCLUDE NAME="_listCQCCB.tmpl">
+<TMPL_ELSE>
+<TMPL_INCLUDE NAME="_listCR.tmpl">
+</TMPL_IF>
+</TMPL_IF>
+</TMPL_IF>
+</TMPL_LOOP>
+</body>
+</html>

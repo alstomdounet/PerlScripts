@@ -1,0 +1,23 @@
+<TMPL_IF name=RESULTS>
+<table summary="<TMPL_VAR name=TABLE_NAME>">
+    <caption><TMPL_VAR name=TABLE_NAME></caption>
+    <tr class="header1">
+	  <th>#</th><TMPL_LOOP name=HEADER>
+      <th><TMPL_VAR name=FIELD></th>
+    </TMPL_LOOP>
+    </tr>
+	<TMPL_LOOP name=RESULTS>
+	<TMPL_IF name=IS_ODD>
+	<tr class='odd_line'>
+	<TMPL_ELSE>
+	<tr class='even_line'>
+	</TMPL_IF>		
+		<td><TMPL_VAR name=NUMBER></td><TMPL_LOOP name=RESULT>
+		<td><TMPL_VAR name=CONTENT></td>
+		</TMPL_LOOP>
+	</tr>
+	</TMPL_LOOP>
+</table>
+<TMPL_ELSE>
+<h2>La table "<TMPL_VAR name=TABLE_NAME>" ne donne pas de résultats</h2>
+</TMPL_IF>

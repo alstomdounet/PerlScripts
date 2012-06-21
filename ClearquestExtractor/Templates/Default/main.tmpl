@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC -//W3C//DTD HTML 4.01 Transitional//EN>
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1 http-equiv=content-type">
+  <title><TMPL_VAR name=TITLE></title>
+   <!-- http://colorschemedesigner.com/#2A42P8Uuew0w0 -->
+ <style type="text/css">
+
+  body { margin: 1em;
+    font-family: Arial,Helvetica,sans-serif;
+    color: #2A2A6E;
+    text-align: left;
+    background-color: #D7EBC7;
+    }
+
+  table { border: 0.2em solid;
+    font-size: 0.8em;
+    background-color: #F8EED2;
+    color: rgb(0, 10, 20);
+    width: 90%;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-bottom: 10px;
+    border-collapse: collapse;
+    }
+
+  td { border: 1px dotted #2A2A6E;
+    padding: 0.2em 1em;
+    }
+
+  td.head { padding: 0.2em 1em;
+    text-align: right;
+    font-weight: bold;
+    }
+
+  tr { border: 0.1em solid #5B8B32;
+    }
+	
+	tr.odd_line { background-color: #FFFFF0;
+    }
+	
+	tr.even_line { background-color: #F0F0FF;
+    }
+
+  th.subheader { padding: 0.4em 1.5em;
+    text-align: left;
+    background-color: #8FA17F;
+    }
+
+  th { border: 0.1em solid #EBC7D2;
+    padding: 0.5em;
+    font-size: 1.2em;
+    background-color: #8FA17F;
+    }
+	
+  td.CodeDoc { 
+    padding: 0.5em;
+    font-size: 1.2em;
+	font-weight: bold;
+  }
+
+  caption { margin: 1em;
+    font-size: 2em;
+    font-weight: bold;
+    font-style: italic;
+    text-align: left;
+    color: #5B8B32;
+  }
+  
+  .scheduled_version {
+	font-weight: bold; 
+	text-decoration: underline
+  }
+
+  .upgraded { background-color: #B6D69B; }
+  .downgraded {	background-color: #8C334E; }
+  .new { background-color: #68687E;  }
+  .deleted { background-color: #9D8339; }
+  </style>
+</head>
+<body>
+<h3>Fichier généré le <TMPL_VAR name=DATE></h3>
+<TMPL_LOOP name=TABLES>
+<TMPL_IF name=DOCLIST>
+<h2>Générateur document : <TMPL_VAR name=TABLE_NAME></h2>
+<TMPL_ELSE>
+<TMPL_IF name=GENERICLIST>
+<TMPL_INCLUDE NAME="_listCQGeneric.tmpl">
+<TMPL_ELSE>
+<TMPL_INCLUDE NAME="_listCR.tmpl">
+</TMPL_IF>
+</TMPL_IF>
+</TMPL_LOOP>
+</body>
+</html>

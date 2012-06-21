@@ -1,0 +1,81 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1 http-equiv=content-type">
+  <title><TMPL_VAR name=TITLE></title>
+ <style type="text/css">
+body {
+	font-family: Alstom;
+	line-height: normal;
+	text-decoration: none;
+	font-style: normal;
+	font-size: 10pt;
+	color: black;
+	text-align: left;
+	speak: normal;
+}
+table {
+	margin-right: auto;
+	font-family: Alstom;
+	text-align: left;
+	margin-left: auto;
+}
+td.head {
+	background-color: #cccccc;
+	font-family: Alstom Black;
+	font-size: 10pt;
+	color: #000066;
+	text-align: center;
+	vertical-align: middle;
+	font-style: normal;
+	line-height: normal;
+}
+	td.datafield {
+	text-align: center;
+	vertical-align: middle;
+}
+	td.textfield {
+	text-align: left;
+	vertical-align: top;
+}
+.bold {
+	font-family: Alstom Medium;
+	font-style: normal;
+	font-size: 10pt;
+	line-height: normal;
+	color: #000066;
+}
+
+p {
+  color: #000000;
+  font-family: "Alstom";
+  font-size: 10pt;
+  line-height: 10pt;
+}
+li {
+  list-style-type: circle;
+}
+p.center {
+  text-align: center;
+}
+  </style>
+</head>
+<body>
+<h3>Fichier généré le <TMPL_VAR name=DATE></h3>
+<TMPL_LOOP name=TABLES>
+<TMPL_IF name=DOCLIST>
+<h2>Générateur document : <TMPL_VAR name=TABLE_NAME></h2>
+<TMPL_ELSE>
+<TMPL_IF name=GENERICLIST>
+<TMPL_INCLUDE NAME="_listCQGeneric.tmpl">
+<TMPL_ELSE>
+<TMPL_IF name=FORMATTED_BY_TEMPLATE>
+<TMPL_INCLUDE NAME="_listCQFormat.tmpl">
+<TMPL_ELSE>
+<TMPL_INCLUDE NAME="_listCR.tmpl">
+</TMPL_IF>
+</TMPL_IF>
+</TMPL_IF>
+</TMPL_LOOP>
+</body>
+</html>

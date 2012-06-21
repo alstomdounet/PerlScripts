@@ -1,0 +1,183 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<config version='0.1'>
+	<debugMode>0</debugMode>
+	<genericFields>
+		<LAST_CCB_DATE>**ASK: When occured Last CCB (for instance 2011-03-11): **</LAST_CCB_DATE>
+		<END_OF_MONTH>**ASK: Last day of Report Month (for instance 2011-03-31): **</END_OF_MONTH>
+		<PRODUCT>TCMS CoradiaP</PRODUCT>
+	</genericFields>
+	<documents>
+		<document>
+			<title>Liste des CR Pour le SwCCB  (**LAST_CCB_DATE**)</title>
+			<filename>SwCCB_Preparation.xls</filename>
+			<templateDir2>ExcelReport</templateDir2>
+			<indexedDocument2>
+				<subDirectory>SwCCB_Preparation</subDirectory>
+				<template>subdocument.tmpl</template>
+			</indexedDocument2>
+			<tables>
+				<table>
+					<title>CR for CCB</title><!-- Ceci est le titre de la table -->
+					<fieldsToRetrieve>
+					CR_reference AS Ref,
+					submitter_CR_reference AS 'N° FMT',
+					State AS État,
+					priority AS Priorité,
+					severity AS Sévérité,
+					CR_type AS Type,
+					CR_category AS Categorie,
+					sub_system AS 'Sous-Systeme',
+					component AS 'Composant',
+					headline AS Titre,
+					description AS Description,
+					proposed_change AS 'Changement Proposé',
+					analyst_comment AS 'Commentaire Analyste'
+					</fieldsToRetrieve><!-- Liste des champs qui doivent être récupérés. Les champs apparaîtront dans l'ordre -->
+					<fieldsSorting>State, severity, priority, CR_type</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product><!-- Allows to limit bugs to one or more specific product (use "," as a separator) -->
+						<node operator="OR">
+							<state>Duplicated, Postponed, Updated</state>
+							<node operator="AND">
+								<state>Analysed</state>
+								<substate>complete</substate>
+							</node>
+						</node>
+					</filtering>
+				</table>			
+				<table>
+					<title>CR Opened since **LAST_CCB_DATE**</title>
+					<fieldsToRetrieve>
+					CR_reference AS Ref,
+					submitter_CR_reference AS 'N° FMT',
+					State AS État,
+					subState AS Sous-état,
+					headline AS Titre,
+					priority AS Priorité,
+					CR_type AS Type,
+					CR_category AS Categorie,
+					submitter_date AS 'Date de soumission',
+					validator.fullname As 'Validateur',
+					sub_system AS 'Sous-Systeme',
+					component AS 'Composant'
+					</fieldsToRetrieve><!-- Liste des champs qui doivent être récupérés. Les champs apparaîtront dans l'ordre -->
+					<fieldsSorting>submitter_date, State, subState</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product>
+						<submitter_date operator="GTE">**LAST_CCB_DATE**</submitter_date>
+					</filtering>
+				</table>			
+				<table>
+					<title>CR closed</title>
+					<fieldsToRetrieve>
+					CR_reference AS Ref,
+					submitter_CR_reference AS 'N° FMT',
+					tested_version AS Label,
+					headline AS Titre,
+					State AS État,
+					subState AS Sous-État,
+					priority AS Priorité,
+					severity AS Sévérité,
+					CR_type AS Type,
+					CR_category AS Categorie,
+					closure_date AS 'Date de clôture',
+					validator.fullname As 'Validateur',
+					sub_system AS 'Sous-Systeme',
+					component AS 'Composant'
+					</fieldsToRetrieve>
+					<fieldsSorting>closure_date, subState</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product>
+						<state>Closed</state>
+					</filtering>
+				</table>
+				<table>
+					<title>Others Non Closed</title>
+					<fieldsToRetrieve>
+					CR_reference AS Ref,
+					submitter_CR_reference AS 'N° FMT',
+					State AS État,
+					subState AS Sous-État,
+					headline AS Titre,
+					tested_version AS Label,
+					priority AS Priorité,
+					severity AS Sévérité,
+					CR_type AS Type,
+					CR_category AS Categorie,
+					submitter_date AS 'Date Soumission',
+					realisation_date AS 'Date Enregistrement'
+					analysis_date AS 'Date Analyse',
+					CCB_meeting_date AS 'Date CCB',
+					realisation_date AS 'Date de Réalisation',
+					validation_date AS 'Date de Validation',
+					closure_date AS 'Date de Clôture',
+					last_change_state_date AS 'Dernier Changement',
+					validator.fullname As 'Validateur',
+					sub_system AS 'Sous-Systeme',
+					component AS 'Composant'
+					</fieldsToRetrieve>
+					<fieldsSorting>State, subState</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product>
+						<state operator="NEQ">Closed</state>
+					</filtering>
+				</table>
+				<table type='generic'>
+					<title>List of releases</title>
+					<clearquestType>product_version</clearquestType>
+					<fieldsToRetrieve>
+					name AS Nom,
+					comment AS Commentaire,
+					date,
+					effective_date AS 'Date réelle',
+					scheduled_date AS 'Date planifiée',
+					software_version AS 'Version'
+					</fieldsToRetrieve>
+					<fieldsSorting>name</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product>
+					</filtering>
+				</table>
+			</tables>
+		</document>
+		<document>
+			<title>Liste des CR Pour le CCB</title>
+			<filename>Rapport_TCMS_CCB_Train.html</filename>
+			<templateDir2>ExcelReport</templateDir2>
+			<tables>
+				<table>
+					<title>Liste des CR au **END_OF_MONTH**</title>
+					<fieldsToRetrieve>
+						CR_reference AS 'Ref Int',
+						submitter_CR_reference AS 'N° FMT',
+						State AS État,
+						substate AS Sous-Etat,
+						site.name AS 'Site',
+						headline AS Titre,
+						submitter AS Soumissionaire,
+						priority AS Priorité,
+						severity AS Sévérité,
+						CR_type AS Type,
+						CR_origin AS Origine,
+						CR_category AS Catégorie,
+						sub_system AS 'Sous-Systeme',
+						component AS 'Composant',
+						submitter_date AS 'Date Soumission',
+						realisation_date AS 'Date Enregistrement'
+						analysis_date AS 'Date Analyse',
+						CCB_meeting_date AS 'Date CCB',
+						realisation_date AS 'Date de Réalisation',
+						validation_date AS 'Date de Validation',
+						closure_date AS 'Date de Clôture',
+						last_change_state_date AS 'Dernier Changement'
+					</fieldsToRetrieve>
+					<fieldsSorting>State, subState, priority, CR_type</fieldsSorting>
+					<filtering>
+						<product>**PRODUCT**</product>
+						<submitter_date operator="LTE">**END_OF_MONTH**</submitter_date>
+					</filtering>
+				</table>
+			</tables>
+		</document>
+	</documents>
+</config>
