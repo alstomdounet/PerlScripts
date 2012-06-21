@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding="ISO-8859-1" ?>
+<Config>
+	<offlineMode>
+		<isActive>1</isActive>
+		<isSnapshotView>1</isSnapshotView>
+	</offlineMode>
+</Config>
