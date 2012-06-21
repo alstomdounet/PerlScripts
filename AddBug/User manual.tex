@@ -1,0 +1,50 @@
+\documentclass[11pt,a4paper,final]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[french]{varioref}
+\author{Guillaume MANCIET}
+\title{Manuel d'utilisation\\\textbf{Outil de saisie de CR déporté}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Cet outil permet de dissocier les moments où l'on saisit les CR de celles où on les envoies : par conséquent, la saisie de CR sous Clearquest n'impose plus de disposer de manière permanente d'une connection à l'intranet Alstom.
+
+Il permet également de conserver les champs les plus représentatifs d'une saisie à l'autre, permettant par là-même:
+\begin{itemize}
+\item un gain de temps;
+\item une diminution du risque d'erreurs liée à une saisie répétitive. 
+\end{itemize}
+ 
+\end{abstract}
+
+\tableofcontents
+
+\part{Profils d'utilisation}
+
+Ces profils ne sont pas absolus. Une même personne physique peut être alternativement l'un ou l'autre de ces profils.
+
+\section{Valideur}
+
+Le valideur ne dispose que rarement d'une connexion à Clearquest. Par conséquent, l'outil est utilisé pour enregistrer les CR durant la campagne d'essai. 
+
+Une fois revenu dans un lieu permettant une connexion, celui-ci utilise l'outil pour envoyer les CR sous son nom.
+
+\section{Valideur sous-traitant}
+
+Le profil est identique que précedemment, hormis que celui-ci devra faire envoyer les CR par son référent.
+
+\section{Référent}
+
+Celui-ci récupère le lot de CR écrit par une personne n'ayant pas de droits pour écrire dans la base Clearquest. Le référent relis les CR, les corrige si besoin avant de les enregistrer les CR sous son nom (il en a la responsabilité) dans la base.
+
+\section{Intermédiaire}
+
+Celui-ci récupère un paquet crypté provenant d'une personne \textbf{A} n'ayant pas de connexion à Clearquest, contenant toutes les données les enregistrer. Le paquet est décrypté, et le contenu est envoyé sous l'identifiant de la personne \textbf{A}.
+
+\end{document}
