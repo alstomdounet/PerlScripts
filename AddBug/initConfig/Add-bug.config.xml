@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding="ISO-8859-1" ?>
+<Config version='0.2'>
+	<scriptInfos>
+		<offlineMode>0</offlineMode><!-- Offline mode disables all connections to Clearquest -->
+		<refreshDatabase>86400</refreshDatabase><!-- Refreshness of fields database (default is 86400 seconds - one day) -->
+		<optionalFields></optionalFields><!-- Describe which fields are optional -->
+	</scriptInfos>
+	<clearquest>
+		<userHasLogin>1</userHasLogin><!-- Indicates if user of this script has an accreditation in Clearquest database -->
+		<clearquest_installed>1</clearquest_installed><!-- Indicates if clearquest is physically installed on this computer -->
+	</clearquest>
+</Config>
