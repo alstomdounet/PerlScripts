@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Generator: ControlBuild -->
+
+<AWTSynoptic screenX="1200" screenY="1697" name="test.xpup" description="" date="17/03/2011" time="11:19" version="3.0_draft3" source="controlbuild " bkgColor="white" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<Colors>
+		<Color colorId="black" r="0" g="0" b="0" invisible="false" />
+		<Color colorId="white" r="255" g="255" b="255" invisible="false" />
+		<Color colorId="red" r="255" g="0" b="0" invisible="false" />
+		<Color colorId="yellow" r="255" g="255" b="0" invisible="false" />
+		<Color colorId="blue" r="0" g="0" b="255" invisible="false" />
+		<Color colorId="green" r="0" g="255" b="0" invisible="false" />
+		<Color colorId="purple" r="128" g="0" b="128" invisible="false" />
+		<Color colorId="brown" r="128" g="64" b="0" invisible="false" />
+		<Color colorId="gray" r="192" g="192" b="192" invisible="false" />
+		<Color colorId="orange" r="255" g="128" b="0" invisible="false" />
+		<Color colorId="pink" r="255" g="128" b="255" invisible="false" />
+		<Color colorId="transparent" invisible="true" />
+		<Color colorId="other" r="0" g="0" b="0" invisible="false" />
+		<Color colorId="visible" invisible="false" />
+	</Colors>
+	<Objects><TMPL_LOOP name=INTERFACE><TMPL_IF NAME="BOOLEAN">
+		<CustomObject name="Light" author="GEENSYS">
+			<Basic xInit="<TMPL_VAR name=X_POS_I>" yInit="<TMPL_VAR name=Y_POS_I>" xFinal="<TMPL_VAR name=X_POS_F>" yFinal="<TMPL_VAR name=Y_POS_F>" xCenter="<TMPL_VAR name=X_CENTER>" yCenter="<TMPL_VAR name=Y_CENTER>" />
+			<Param>
+				<ParamName>lightOnColor</ParamName>
+				<ParamValue>red</ParamValue>
+			</Param>
+			<Param>
+				<ParamName>lightOffColor</ParamName>
+				<ParamValue>rgb(212,208,200)</ParamValue>
+			</Param>
+			<Param>
+				<ParamName>lightOnImage</ParamName>
+				<ParamValue>null</ParamValue>
+			</Param>
+			<Param>
+				<ParamName>lightOffImage</ParamName>
+				<ParamValue>null</ParamValue>
+			</Param>
+			<Param>
+				<ParamName>readOnly</ParamName>
+				<ParamValue>false</ParamValue>
+			</Param>
+			<CustomAnimation name="Light" author="GEENSYS">
+				<Condition var="<TMPL_VAR name=ID_REF>" rank="0" index="0" />
+			</CustomAnimation>
+		</CustomObject><TMPL_ELSE>
+		<CustomObject name="DisplayText" author="GEENSYS">
+			<Basic xInit="<TMPL_VAR name=X_POS_I>" yInit="<TMPL_VAR name=Y_POS_I>" xFinal="<TMPL_VAR name=X_POS_F>" yFinal="<TMPL_VAR name=Y_POS_F>" xCenter="<TMPL_VAR name=X_CENTER>" yCenter="<TMPL_VAR name=Y_CENTER>" />
+			<Param>
+				<ParamName>backgroundColor</ParamName>
+				<ParamValue>white</ParamValue>
+			</Param>
+			<Param>
+				<ParamName>drawingColor</ParamName>
+				<ParamValue>black</ParamValue>
+			</Param>
+			<Param>
+				<ParamName>fontSize</ParamName>
+				<ParamValue>10</ParamValue>
+			</Param>
+			<Param>
+				<ParamName>basisDisplayFormat</ParamName>
+				<ParamValue>10</ParamValue>
+			</Param>
+			<Param>
+				<ParamName>readOnly</ParamName>
+				<ParamValue>false</ParamValue>
+			</Param>
+			<CustomAnimation name="DisplayText" author="GEENSYS">
+				<Condition var="<TMPL_VAR name=ID_REF>" rank="0" index="0" />
+			</CustomAnimation>
+		</CustomObject></TMPL_IF></TMPL_LOOP>
+	</Objects>
+	<Vars><TMPL_LOOP name=INTERFACE>
+		<Var varId="<TMPL_VAR name=ID_REF>" type="<TMPL_VAR name=TYPE_MPU>" name="<TMPL_VAR name=VARIABLE_NAME>" /></TMPL_LOOP>
+	</Vars>
+	<Fonts>
+	</Fonts>
+	<Meta>
+	</Meta>
+</AWTSynoptic>
