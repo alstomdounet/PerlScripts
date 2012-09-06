@@ -13,7 +13,7 @@ use vars qw($VERSION @EXPORT_OK @ISA @EXPORT);
 require Exporter;
 @ISA       = qw(Exporter);
 @EXPORT    = qw();
-@EXPORT_OK = qw(addToSource findVersions getDirectoryStructure getBranchListVOB getLabelListVOB getLabelListElement setLabel checkoutElement isSnapshotView getViewNameByElement isLatest renameElement getAttributes getAttribute getConfigSpec setConfigSpec setAttribute isCheckedoutElement isPrivateElement uncheckoutElement checkinElement moveElement unlockFile lockFile);
+@EXPORT_OK = qw(getComment addToSource findVersions getDirectoryStructure getBranchListVOB getLabelListVOB getLabelListElement setLabel checkoutElement isSnapshotView getViewNameByElement isLatest renameElement getAttributes getAttribute getConfigSpec setConfigSpec setAttribute isCheckedoutElement isPrivateElement isDifferentElement uncheckoutElement checkinElement moveElement unlockFile lockFile doCleartool);
 
 
 $VERSION = sprintf('%d.%02d', (q$Revision: 1.15 $ =~ /\d+/g));
@@ -22,6 +22,13 @@ my $cc = Win32::OLE->new('ClearCase.Application');
 my $ct = Win32::OLE->new('ClearCase.ClearTool');
 
 
+sub getComment {
+	my ($element, $version) = @_;
+
+	my $versionedElement = _getVersionedElement($element, $version) or return undef;
+	return $versionedElement->Comment;
+}
+
 sub addToSource {
 	my $element = shift;
 	my $comment = shift;
@@ -29,25 +36,23 @@ sub addToSource {
 	LOGDIE "It is mandatory to add a comment." unless $comment;
 	LOGDIE "Element \"$element\" is not readable" unless -r $element;
 	
-	my $chechedOutElement;
+	my $checkedOutElement;
 	#=# / mkelem -eltype directory / do not work in command line to add a directory to source control #=#
 	if (-d $element) {
-		eval { $ct->CmdExec("mkelem -c \"$comment\" -mkpath \"$element\" "); };
-		if ($@) { 
-			ERROR "Error while trying to add element: $@"; 
-			return undef;
-		}
-		
-		$chechedOutElement = _getVersionedElement($element) or return undef;
-		return $chechedOutElement;
+	    my $CommandResponse;
+		$CommandResponse = doCleartool("mkelem -ptime -c \"$comment\" -mkpath \"$element\" ");
+		ERROR "Error while trying to add directory : \"$element\"" unless $CommandResponse;
+		return undef unless $CommandResponse;
+		$checkedOutElement = _getVersionedElement($element) or return undef;
+		return $checkedOutElement;
 	} else {
-		eval { $chechedOutElement = $cc->CreateElement($element, $comment, undef, $type); };
+		eval { $checkedOutElement = $cc->CreateElement($element, $comment); };
 		if ($@) { 
 			ERROR "Error while trying to add element: $@"; 
 			return undef;
 		}
 	}
-	return $chechedOutElement;
+	return $checkedOutElement;
 }
 
 sub checkinElement {
@@ -219,7 +224,7 @@ sub moveElement {
 	my $newElement = shift;
 	
 	LOGDIE "Not implemented";
-	#DEBUG doCommand("cleartool move \"$oldelement\" \"$newElement\"");
+	#DEBUG doCleartool(" move \"$oldelement\" \"$newElement\"");
 }
 
 sub renameElement {
@@ -248,17 +253,18 @@ sub renameElement {
 sub unlockFile {
 	my $file = shift;
 	my $comment = shift;
-	LOGDIE "Not implemented";
-	#DEBUG doCommand("cleartool unlock -c \"$comment\" \"$file\"");
+	doCleartool("unlock -c \"$comment\" \"$file\"");
+	#LOGDIE "Not implemented";
+	#DEBUG doCleartool("unlock -c \"$comment\" \"$file\"");
 }
 
 sub lockFile {
 	my $file = shift;
 	my $user = shift;
 	my $comment = shift;
-
-	LOGDIE "Not implemented";
-	#DEBUG doCommand("cleartool unlock -c \"$comment\" -nuser \"$user\" \"$file\"", 0, 1);
+    doCleartool("unlock -c \"$comment\" -nuser \"$user\" \"$file\"", 0, 1);
+	#LOGDIE "Not implemented";
+	#DEBUG doCleartool("unlock -c \"$comment\" -nuser \"$user\" \"$file\"", 0, 1);
 }
 
 sub isCheckedoutElement {
@@ -269,6 +275,17 @@ sub isCheckedoutElement {
 	
 	return $versionedElement->IsCheckedOut();
 }
+
+sub isDifferentElement {
+	my $element = shift;
+	my $version = shift;
+
+	my $versionedElement = _getVersionedElement($element, $version) or return undef;
+	my $PrecedElement = $versionedElement->Predecessor() or return 1;
+
+	return $versionedElement->IsDifferent();
+}
+
 
 sub getConfigSpec {
 	my $desiredView = shift;
@@ -293,12 +310,12 @@ sub setConfigSpec {
 		my $oldDir = cwd();
 		$configSpecFilename = abs_path($configSpecFilename);
 		chdir($desiredViewPath);
-		my $result = doCommand("cleartool setcs \"$configSpecFilename\"", undef, 1);
+		my $result = doCleartool("setcs \"$configSpecFilename\"", undef, 1);
 		chdir($oldDir);
 		return $result;
 	}
 	else {
-		my $result = doCommand("cleartool setcs -tag \"$viewName\" \"$configSpecFilename\"", undef, 1);
+		my $result = doCleartool("setcs -tag \"$viewName\" \"$configSpecFilename\"", undef, 1);
 	}
 }
 
@@ -398,26 +415,45 @@ sub _getVOB {
 
 sub getDirectoryStructure {
 	my ($directory, %params) = @_;
-	
 	my $filter = 'version(/main/LATEST)';
+	my %opts;
+	
 	if($params{-label}) {
 		$filter = "lbtype(".$params{-label}.")";
 	}
+	if($params{-withAttributes}) {
+		$opts{-withAttributes} = 1;
+	}
 	
 	return undef unless -d $directory;
-	return findVersions($directory, $filter);
+	return findVersions($directory, $filter, %opts);
 }
 
 sub findVersions {
 	my ($element, $filter, %args) = @_;
 	
-	DEBUG "Performing find operation on \"$element\" with filter \"filter\"";
-	my $list = doCommand("cleartool find \"$element\" -version \"$filter\" -print", undef, 1);
+	DEBUG "Performing find operation on \"$element\" with filter \"$filter\"";
+	my $list = doCleartool("find \"$element\" -version \"$filter\" -print");
 
 	my %list;
+	my $getAttributes = 0;
+	$getAttributes = 1 if $args{'-withAttributes'};
+	DEBUG "\$getAttributes = $getAttributes";
 	foreach my $file (split(/\n/, $list)) {
-		if($file =~ /^(.*)@@[\\\/]([^\\\/]+)[\\\/](\d+)$/) {
-			push(@{$list{$1}{$2}}, $3);
+		chomp($file);
+		chop($file);
+		DEBUG "\$file : \"$file\"";
+		if($file =~ /^(.*)@@[\\\/]([^\\\/]+)[\\\/](\d+)\s*$/) {
+		    my($FileName,$FileVersion) = split(/@@/,$file);
+			push(@{$list{$FileName}{'FileVersion'}}, $FileVersion);
+			my @AttrList = getAttributes($FileName,$FileVersion);
+			foreach my $Attribute (@AttrList)
+			{
+				push(@{$list{$FileName}{$Attribute}}, getAttribute($FileName,$Attribute,$FileVersion));
+			}
+			#print Dumper(%list);
+			#exit;
+			sleep(1);
 		}
 		else {
 			ERROR "Unknown answer \"$file\"";
@@ -462,6 +498,22 @@ sub isPrivateElement {
 	return 0;
 }
 
+
+sub doCleartool {
+	my $command = shift;
+	
+    my $CommandResponse;
+	DEBUG "Command: $command";
+	eval { $CommandResponse = $ct->CmdExec($command); };
+	if ($@) { 
+		ERROR "Error while trying to execute command:\n$command\n Returning: $@";
+		ERROR "Responding: $CommandResponse";
+		return undef;
+	}
+	#DEBUG "Responding: $CommandResponse";
+	return $CommandResponse;
+}
+
 sub doCommand {
 	my $command = shift;
 	my $skipRecording = shift;
@@ -472,6 +524,7 @@ sub doCommand {
 	my $result = `$command 2>&1`;
 
 	WARN "This command has to be updated using cleartool";
+	WARN "Use doCleartool instead !!!";
 	
 	my $returnString = 'UNKNOWN';
 	my $message = '';
